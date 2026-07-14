@@ -157,25 +157,25 @@ function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-gradient-to-b from-sidebar via-sidebar to-background shadow-soft">
-      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-3"}>
+    <Sidebar collapsible="icon" className="border-r border-slate-100 dark:border-slate-800 bg-gradient-to-b from-[#FAFCFF] via-white to-[#F0F4FA] dark:from-slate-900 dark:to-slate-950 shadow-[1px_0_24px_rgba(0,119,182,0.025)] transition-all duration-300">
+      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-4"}>
         <Link
           to="/dasbor"
-          className={isCollapsed ? "flex items-center justify-center w-full" : "flex items-center gap-3 w-full pl-1.5"}
+          className={isCollapsed ? "flex items-center justify-center w-full" : "flex items-center gap-3.5 w-full pl-1.5"}
         >
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.25)] shrink-0 overflow-hidden transition-transform duration-300 hover:rotate-6 relative">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0077B6] to-[#48CAE4] flex items-center justify-center shadow-[0_8px_16px_rgba(0,119,182,0.22)] shrink-0 overflow-hidden transition-all duration-500 hover:scale-105 hover:rotate-6 ring-4 ring-[#90E0EF]/15 relative">
             {logoUrl ? (
               <img src={logoUrl} alt={appName} className="w-full h-full object-cover" />
             ) : (
-              <FileText className="w-5 h-5 text-primary-foreground" />
+              <FileText className="w-5 h-5 text-white" strokeWidth={2.5} />
             )}
           </div>
           {!isCollapsed && (
             <div className="flex flex-col justify-center min-w-0">
-              <div className="font-bold tracking-tight text-foreground text-base leading-tight truncate max-w-[120px]" title={appName}>
+              <div className="font-extrabold tracking-tight text-slate-850 dark:text-white text-base leading-tight truncate max-w-[130px]" title={appName}>
                 {appName}
               </div>
-              <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 leading-none mt-0.5">
+              <div className="text-[9px] uppercase font-bold tracking-widest text-[#0077B6] dark:text-[#48CAE4] leading-none mt-1">
                 Workspace
               </div>
             </div>
@@ -183,17 +183,17 @@ function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className={isCollapsed ? "px-1.5" : "px-3"}>
+      <SidebarContent className={isCollapsed ? "px-1.5 py-2" : "px-3 py-2"}>
         {allowedMain.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-primary/40" />
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
                 Utama
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {allowedMain.map((item) => (
                   <NavLink key={item.to} item={item} active={isActive(item.to)} />
                 ))}
@@ -205,13 +205,13 @@ function AppSidebar() {
         {allowedAdmin.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-primary/40" />
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
                 Administrasi
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {allowedAdmin.map((item) => (
                   <NavLink
                     key={item.to}
@@ -227,13 +227,13 @@ function AppSidebar() {
         {(allowedSettings.length > 0 || (canDev && DEV_NAV.length > 0)) && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-primary/40" />
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
                 Pengaturan
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {allowedSettings.map((item) => (
                   <NavLink key={item.to} item={item} active={isActive(item.to)} />
                 ))}
@@ -253,24 +253,24 @@ function AppSidebar() {
 
       <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4"}>
         {!isCollapsed ? (
-          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-muted/50 via-muted/30 to-transparent border border-border/40 backdrop-blur-sm shadow-soft-sm overflow-hidden w-full transition-all duration-300 hover:border-primary/20">
-            <div className="w-[30px] h-[40px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm ring-1 ring-primary/5 hover:ring-primary/20 transition-all">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-white via-[#FAFCFF] to-transparent dark:from-slate-900 dark:via-slate-900/50 dark:to-transparent border border-slate-100 dark:border-slate-800 shadow-[0_4px_12px_rgba(0,119,182,0.01)] backdrop-blur-md overflow-hidden w-full transition-all duration-300 hover:border-[#0077B6]/25 hover:shadow-[0_8px_24px_rgba(0,119,182,0.06)] hover:-translate-y-0.5">
+            <div className="w-[32px] h-[40px] border border-[#0077B6]/20 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all">
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-primary text-[11px] font-bold">{initials}</span>
+                <span className="text-[#0077B6] dark:text-[#48CAE4] text-[11px] font-bold">{initials}</span>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-foreground truncate">
+              <div className="text-sm font-bold text-slate-800 dark:text-white truncate">
                 {user?.name ?? "…"}
               </div>
-              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+              <div className="flex flex-wrap items-center gap-1 mt-1">
                 {roles.map((r) => (
                   <Badge
                     key={r}
                     variant="secondary"
-                    className="text-[9px] px-1.5 py-0 h-4 bg-primary/8 text-primary border-none font-medium hover:bg-primary/8"
+                    className="text-[9px] px-1.5 py-0 h-4 bg-[#0077B6]/8 text-[#0077B6] dark:bg-[#48CAE4]/10 dark:text-[#48CAE4] border-none font-semibold hover:bg-[#0077B6]/8 uppercase tracking-wider rounded-md"
                   >
                     {ROLE_LABEL[r]}
                   </Badge>
@@ -282,18 +282,18 @@ function AppSidebar() {
               size="icon"
               onClick={handleSignOut}
               title="Keluar"
-              className="shrink-0 h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+              className="shrink-0 h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors duration-200 flex items-center justify-center border border-transparent hover:border-red-100/50"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2.5 w-full">
-            <div className="w-[30px] h-[40px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm ring-2 ring-primary/5 hover:ring-primary/20 transition-all" title={user?.name}>
+            <div className="w-[32px] h-[40px] border border-[#0077B6]/20 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all" title={user?.name}>
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-primary text-[11px] font-bold">{initials}</span>
+                <span className="text-[#0077B6] dark:text-[#48CAE4] text-[11px] font-bold">{initials}</span>
               )}
             </div>
             <Button
@@ -301,7 +301,7 @@ function AppSidebar() {
               size="icon"
               onClick={handleSignOut}
               title="Keluar"
-              className="w-8 h-8 rounded-lg hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              className="w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/30 dark:hover:text-red-400 flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-red-100/50"
             >
               <LogOut className="w-4 h-4" />
             </Button>
@@ -312,42 +312,36 @@ function AppSidebar() {
   );
 }
 
-// ponytail: Modifikasi NavLink sidebar agar lebih estetik sesuai dengan design token (terracotta left bar & primary tint background)
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   return (
     <SidebarMenuItem className="relative">
-      {active && (
-        <div className={`absolute bg-gradient-to-b from-primary to-primary-hover rounded-full transition-all duration-200 shadow-[0_0_6px_rgba(37,99,235,0.4)] ${
-          isCollapsed ? "left-1.5 w-1 top-2 bottom-2" : "left-0 w-[3px] top-1.5 bottom-1.5 rounded-r"
-        }`} />
-      )}
       <SidebarMenuButton
         asChild
         isActive={active}
-        className={`rounded-lg transition-all duration-200 ${
+        className={`rounded-xl transition-all duration-300 ${
           isCollapsed
-            ? "justify-center px-0 mx-auto"
-            : "pl-3.5"
+            ? "justify-center px-0 mx-auto w-10 h-10"
+            : "pl-3.5 py-5.5"
         } ${
           active
             ? isCollapsed
-              ? "bg-gradient-to-tr from-primary/15 to-primary/5 text-primary font-bold shadow-[0_2px_8px_-2px_rgba(37,99,235,0.15)] scale-105"
-              : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent text-primary font-bold shadow-[inset_1.5px_0_0_0_rgba(37,99,235,0.3)]"
+              ? "bg-[#0077B6]/12 text-[#0077B6] font-bold shadow-[0_4px_12px_-2px_rgba(0,119,182,0.15)] scale-105 border border-[#0077B6]/20"
+              : "bg-gradient-to-r from-[#0077B6]/8 via-[#0077B6]/3 to-transparent text-[#0077B6] font-bold shadow-[inset_3px_0_0_0_#0077B6] scale-[1.01]"
             : isCollapsed
-              ? "text-foreground/75 font-bold hover:bg-primary/8 hover:text-primary hover:scale-105"
-              : "text-foreground/75 font-bold hover:bg-primary/5 hover:text-primary hover:translate-x-0.5"
+              ? "text-slate-800 dark:text-slate-200 font-bold hover:bg-[#0077B6]/6 hover:text-[#0077B6] hover:scale-105"
+              : "text-slate-700 dark:text-slate-350 font-bold hover:bg-[#0077B6]/5 hover:text-[#0077B6] hover:translate-x-1 pl-4"
         }`}
       >
-        <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-2.5 w-full"}>
+        <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-3 w-full"}>
           <Icon
-            strokeWidth={2.8}
-            className={`w-4 h-4 transition-colors duration-200 shrink-0 ${
+            strokeWidth={3.0}
+            className={`w-4 h-4 transition-all duration-300 shrink-0 ${
               active
-                ? "text-primary drop-shadow-[0_0_6px_rgba(37,99,235,0.35)]"
-                : "text-black dark:text-white hover:text-primary"
+                ? "text-[#0077B6] scale-110 drop-shadow-[0_0_8px_rgba(0,119,182,0.35)]"
+                : "text-slate-900 dark:text-slate-50 hover:text-[#0077B6]"
             }`}
           />
           {!isCollapsed && <span className="font-bold">{item.label}</span>}
