@@ -1116,7 +1116,7 @@ function ReportPreviewGrid({
           style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
         >
           <div 
-            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
+            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
               width: `${paperWidth}px`,
@@ -1130,7 +1130,7 @@ function ReportPreviewGrid({
               <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="relative z-10 flex flex-col h-full">
               {/* Title */}
               <div className="text-center mb-6 flex flex-col items-center">
                 <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK MEETING</h2>
@@ -1138,31 +1138,29 @@ function ReportPreviewGrid({
               </div>
 
               {/* Metadata Info Box (2 rows) */}
-              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Nama</div>
-                    <div className="truncate font-semibold text-black">: {employeeName}</div>
+              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
+                <div className="grid grid-cols-12 gap-x-4 gap-y-1.5">
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Nama</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {employeeName}</div>
                   </div>
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Divisi</div>
-                    <div className="truncate font-semibold text-black">: {employeePosition}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Divisi</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {employeePosition}</div>
                   </div>
-                </div>
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Bulan</div>
-                    <div className="truncate font-semibold text-black">: {monthName}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Bulan</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {monthName}</div>
                   </div>
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Tahun</div>
-                    <div className="truncate font-semibold text-black">: {yearName}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Tahun</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {yearName}</div>
                   </div>
                 </div>
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide">
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide pl-[24px]">
                 DAFTAR PENUGASAN / HASIL MEETING
               </div>
 
@@ -1222,7 +1220,7 @@ function ReportPreviewGrid({
             </div>
 
             {/* Signature Block */}
-            <div className="mt-12 text-xs text-black space-y-4">
+            <div className="mt-auto pt-12 text-xs text-black space-y-4">
               <div className="grid grid-cols-2 gap-8 text-center">
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
@@ -1304,7 +1302,7 @@ function ReportPreviewGrid({
           style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
         >
           <div 
-            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
+            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
               width: `${paperWidth}px`,
@@ -1318,7 +1316,7 @@ function ReportPreviewGrid({
               <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="relative z-10 flex flex-col h-full">
               {/* Title */}
               <div className="text-center mb-6 flex flex-col items-center">
                 <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK KEGIATAN HARIAN</h2>
@@ -1326,31 +1324,29 @@ function ReportPreviewGrid({
               </div>
 
               {/* Metadata Info Box (2 rows) */}
-              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Nama</div>
-                    <div className="truncate font-semibold text-black">: {employeeName}</div>
+              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
+                <div className="grid grid-cols-12 gap-x-4 gap-y-1.5">
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Nama</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {employeeName}</div>
                   </div>
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Divisi</div>
-                    <div className="truncate font-semibold text-black">: {employeePosition}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Divisi</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {employeePosition}</div>
                   </div>
-                </div>
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Bulan</div>
-                    <div className="truncate font-semibold text-black">: {monthName}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Bulan</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {monthName}</div>
                   </div>
-                  <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-black">Tahun</div>
-                    <div className="truncate font-semibold text-black">: {yearName}</div>
+                  <div className="col-span-6 grid grid-cols-12 items-center">
+                    <div className="col-span-3 font-bold text-black">Tahun</div>
+                    <div className="col-span-9 truncate font-semibold text-black">: {yearName}</div>
                   </div>
                 </div>
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide">
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide pl-[24px]">
                 DAFTAR KEGIATAN HARIAN
               </div>
 
@@ -1413,7 +1409,7 @@ function ReportPreviewGrid({
             </div>
 
             {/* Signature Block */}
-            <div className="mt-12 text-xs text-black space-y-4">
+            <div className="mt-auto pt-12 text-xs text-black space-y-4">
               <div className="grid grid-cols-2 gap-8 text-center">
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
