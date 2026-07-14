@@ -6,13 +6,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Search, Shield, ShieldOff, UserCog } from "lucide-react";
+import { Search, Shield, ShieldOff, UserCog, Pencil, Trash2, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { users as usersTable } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { users as usersTable, accounts as accountsTable } from "@/db/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -89,6 +107,103 @@ const changeUserRole = createServerFn({ method: "POST" })
       .where(eq(usersTable.id, data.userId));
   });
 
+// ponytail: Fungsi server untuk memperbarui data pengguna oleh admin (termasuk email dan kata sandi)
+const updateUserMgmt = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().email(),
+      role: z.enum(["admin", "staff"]),
+      position: z.string().optional().nullable(),
+      password: z.string().optional().nullable(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    // Developer tidak bisa diubah oleh admin, hanya developer lain / ybs yang bisa
+    const targetUser = await db.query.users.findFirst({
+      where: eq(usersTable.id, data.id),
+    });
+    if (!targetUser) throw new Error("User tidak ditemukan");
+    if (targetUser.role === "developer" && role !== "developer") {
+      throw new Error("Forbidden: Tidak dapat memperbarui status Developer");
+    }
+
+    // 1. Perbarui tabel user
+    await db.update(usersTable)
+      .set({
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        position: data.position || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, data.id));
+
+    // 2. Perbarui kata sandi di tabel account jika disediakan
+    if (data.password && data.password.trim() !== "") {
+      const { hashPassword } = await import("better-auth/crypto");
+      const hashedPassword = await hashPassword(data.password);
+      
+      const existingAccount = await db.query.accounts.findFirst({
+        where: and(
+          eq(accountsTable.userId, data.id),
+          eq(accountsTable.providerId, "email")
+        ),
+      });
+
+      if (existingAccount) {
+        await db.update(accountsTable)
+          .set({
+            password: hashedPassword,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(accountsTable.userId, data.id),
+              eq(accountsTable.providerId, "email")
+            )
+          );
+      } else {
+        const crypto = await import("crypto");
+        await db.insert(accountsTable).values({
+          id: crypto.randomUUID(),
+          userId: data.id,
+          accountId: data.email,
+          providerId: "email",
+          password: hashedPassword,
+        });
+      }
+    }
+  });
+
+// ponytail: Fungsi server untuk menghapus pengguna
+const deleteUserMgmt = createServerFn({ method: "POST" })
+  .validator(z.string())
+  .handler(async ({ data: userId }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    if (session.user.id === userId) throw new Error("Tidak dapat menghapus diri sendiri");
+
+    const targetUser = await db.query.users.findFirst({
+      where: eq(usersTable.id, userId),
+    });
+    if (!targetUser) throw new Error("User tidak ditemukan");
+    if (targetUser.role === "developer" && role !== "developer") {
+      throw new Error("Forbidden: Tidak dapat menghapus Developer");
+    }
+
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+  });
+
 export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
   beforeLoad: async () => {
     const session = await getSession();
@@ -151,6 +266,48 @@ function ManajemenPage() {
     onError: (e: Error) =>
       toast.error("Gagal ubah peran", { description: e.message }),
   });
+
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Form states untuk edit
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<"admin" | "staff">("staff");
+  const [editPosition, setEditPosition] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+
+  const updateMutation = useMutation({
+    mutationFn: (v: any) => updateUserMgmt({ data: v }),
+    onSuccess: () => {
+      toast.success("Data pengguna berhasil diperbarui");
+      setEditOpen(false);
+      setEditingUser(null);
+      qc.invalidateQueries({ queryKey: ["users-mgmt"] });
+    },
+    onError: (e: Error) => toast.error("Gagal memperbarui pengguna", { description: e.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteUserMgmt({ data: id }),
+    onSuccess: () => {
+      toast.success("Pengguna berhasil dihapus");
+      setDeletingId(null);
+      qc.invalidateQueries({ queryKey: ["users-mgmt"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menghapus pengguna", { description: e.message }),
+  });
+
+  const handleOpenEdit = (u: any) => {
+    setEditingUser(u);
+    setEditName(u.name || "");
+    setEditEmail(u.email || "");
+    setEditRole(u.role === "admin" ? "admin" : "staff");
+    setEditPosition(u.position || "");
+    setEditPassword("");
+    setEditOpen(true);
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -272,8 +429,35 @@ function ManajemenPage() {
                             locale: idLocale,
                           }) : "—"}
                         </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {isMe ? "Akun Anda" : isDev ? "Sistem Developer" : "Bisa Dikelola"}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1.5">
+                            {!isDev && !isMe ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                  onClick={() => handleOpenEdit(u)}
+                                  title="Edit Pengguna"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => setDeletingId(u.id)}
+                                  title="Hapus Pengguna"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic px-2">
+                                {isMe ? "Akun Anda" : "Sistem"}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -284,6 +468,124 @@ function ManajemenPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal Dialog Edit Pengguna */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Pengguna</DialogTitle>
+            <DialogDescription>
+              Ubah informasi nama, email, peran, jabatan, dan kata sandi pengguna ini.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateMutation.mutate({
+                id: editingUser?.id,
+                name: editName,
+                email: editEmail,
+                role: editRole,
+                position: editPosition,
+                password: editPassword,
+              });
+            }}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nama Lengkap</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Kata Sandi Baru (Opsional)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                placeholder="Kosongkan jika tidak ingin diubah"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-position">Jabatan</Label>
+              <Input
+                id="edit-position"
+                value={editPosition}
+                onChange={(e) => setEditPosition(e.target.value)}
+                placeholder="Staff IT, Manajer, dll."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Peran (Role)</Label>
+              <Select
+                value={editRole}
+                onValueChange={(v: "admin" | "staff") => setEditRole(v)}
+              >
+                <SelectTrigger id="edit-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-2 gap-2 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Simpan Perubahan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog Konfirmasi Hapus Pengguna */}
+      <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Pengguna?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Menghapus pengguna juga akan menghapus data sesi dan kepemilikan yang terkait secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingId) deleteMutation.mutate(deletingId);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Hapus Permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
