@@ -181,14 +181,13 @@ function AppSidebar() {
 
       <SidebarFooter className="p-3">
         <div className="flex items-center gap-3 p-2 rounded-xl surface-panel">
-          <Avatar className="w-9 h-9">
-            {user?.avatarUrl && (
-              <AvatarImage src={user.avatarUrl} alt={user.name} />
+          <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-primary text-[10px] font-bold">{initials}</span>
             )}
-            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium truncate">
               {user?.name ?? "…"}

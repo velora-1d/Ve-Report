@@ -165,14 +165,13 @@ function ProfileForm() {
       <CardContent>
         <form onSubmit={handleSave} className="space-y-5">
           <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60">
-            <Avatar className="w-16 h-16 border-2 border-primary/20">
-              {avatar && (
-                <AvatarImage src={avatar} alt={name} className="object-cover" />
+            <div className="w-24 h-32 border-2 border-primary/20 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 relative">
+              {avatar ? (
+                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-primary text-xl font-bold">{initials || "?"}</span>
               )}
-              <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
-                {initials || "?"}
-              </AvatarFallback>
-            </Avatar>
+            </div>
             <div className="space-y-1">
               <Label className="text-xs font-semibold block text-foreground">Foto Profil</Label>
               <div className="flex items-center gap-2">
