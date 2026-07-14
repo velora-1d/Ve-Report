@@ -41,7 +41,7 @@ import { formatDuration, todayISO, type TrackerLogRow } from "@/lib/tracker";
 export const Route = createFileRoute("/_authenticated/pelacak")({
   head: () => ({
     meta: [
-      { title: "Pelacak — VeReport" },
+      { title: "Pelacak — Log Book" },
       {
         name: "description",
         content: "Catat dan lihat log progres/waktu per tugas.",

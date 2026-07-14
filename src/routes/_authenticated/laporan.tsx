@@ -33,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_authenticated/laporan")({
   head: () => ({
     meta: [
-      { title: "Laporan — VeReport" },
+      { title: "Laporan — Log Book" },
       {
         name: "description",
         content: "Generate dan unduh laporan tim dalam format PDF.",

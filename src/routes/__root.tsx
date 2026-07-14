@@ -82,32 +82,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       meta: [
         { charSet: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "VeReport — Manajemen Tugas & Laporan Tim" },
+        { title: "Log Book — Manajemen Tugas & Laporan Tim" },
         {
           name: "description",
           content:
-            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+            "Log Book: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
         },
-        { name: "author", content: "VeReport" },
+        { name: "author", content: "Log Book" },
         {
           property: "og:title",
-          content: "VeReport — Manajemen Tugas & Laporan Tim",
+          content: "Log Book — Manajemen Tugas & Laporan Tim",
         },
         {
           property: "og:description",
           content:
-            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+            "Log Book: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
         {
           name: "twitter:title",
-          content: "VeReport — Manajemen Tugas & Laporan Tim",
+          content: "Log Book — Manajemen Tugas & Laporan Tim",
         },
         {
           name: "twitter:description",
           content:
-            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+            "Log Book: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
         },
         { property: "og:image", content: "/og-image.png" },
         { name: "twitter:image", content: "/og-image.png" },

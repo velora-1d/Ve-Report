@@ -6,7 +6,7 @@ import { CalendarTab } from "@/components/schedules/calendar-tab";
 export const Route = createFileRoute("/_authenticated/tugas")({
   head: () => ({
     meta: [
-      { title: "Tugas & Jadwal — VeReport" },
+      { title: "Tugas & Jadwal — Log Book" },
       {
         name: "description",
         content: "Kelola daftar tugas dan jadwal kalender tim Anda.",

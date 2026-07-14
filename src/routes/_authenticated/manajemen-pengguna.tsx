@@ -45,7 +45,7 @@ export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
   },
   head: () => ({
     meta: [
-      { title: "Manajemen Pengguna — VeReport" },
+      { title: "Manajemen Pengguna — Log Book" },
       {
         name: "description",
         content: "Kelola daftar pengguna, peran, dan status akun.",

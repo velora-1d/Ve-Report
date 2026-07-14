@@ -22,7 +22,7 @@ import { formatDuration, todayISO } from "@/lib/tracker";
 export const Route = createFileRoute("/_authenticated/dasbor")({
   head: () => ({
     meta: [
-      { title: "Dasbor — VeReport" },
+      { title: "Dasbor — Log Book" },
       {
         name: "description",
         content:

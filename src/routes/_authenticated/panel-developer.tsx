@@ -58,7 +58,7 @@ export const Route = createFileRoute("/_authenticated/panel-developer")({
   },
   head: () => ({
     meta: [
-      { title: "Panel Developer — VeReport" },
+      { title: "Panel Developer — Log Book" },
       {
         name: "description",
         content: "Log sistem, status database, konfigurasi Telegram.",
@@ -274,7 +274,7 @@ function TelegramConfigCard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text: "🔔 Uji coba notifikasi dari VeReport",
+            text: "🔔 Uji coba notifikasi dari Log Book",
           }),
         },
       );

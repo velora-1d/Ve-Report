@@ -88,7 +88,7 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
   const startY = marginMm;
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(cfg?.app_name ?? "VeReport", marginMm, startY);
+  doc.text(cfg?.app_name ?? "Log Book", marginMm, startY);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   if (cfg?.pdf_header_text) {

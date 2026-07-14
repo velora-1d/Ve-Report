@@ -27,7 +27,7 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/pengaturan")({
   head: () => ({
     meta: [
-      { title: "Pengaturan — VeReport" },
+      { title: "Pengaturan — Log Book" },
       {
         name: "description",
         content: "Kelola profil, branding, dan konfigurasi PDF laporan.",

@@ -124,7 +124,7 @@ function AppSidebar() {
             <FileText className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <div className="font-semibold tracking-tight">VeReport</div>
+            <div className="font-semibold tracking-tight">Log Book</div>
             <div className="text-xs text-muted-foreground">Manajemen Tim</div>
           </div>
         </Link>
@@ -263,5 +263,5 @@ function titleFromPath(path: string): string {
   const key = Object.keys(map).find(
     (k) => path === k || path.startsWith(k + "/"),
   );
-  return key ? map[key] : "VeReport";
+  return key ? map[key] : "Log Book";
 }
