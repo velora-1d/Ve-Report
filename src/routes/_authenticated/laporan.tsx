@@ -354,7 +354,8 @@ function LaporanPage() {
             }
           });
           if (res?.url) {
-            setter(reader.result as string);
+            // ponytail: gunakan URL RustFS S3 untuk tanda tangan
+            setter(res.url);
             toast.success("Tanda tangan berhasil di-upload ke S3");
           }
         } catch (err: any) {
@@ -1230,6 +1231,7 @@ function ReportPreviewGrid({
                   <div className="h-12 w-full relative flex items-center justify-center">
                     {makerSigImg ? (
                       <img
+                        crossOrigin="anonymous"
                         src={makerSigImg}
                         alt="Tanda Tangan Karyawan"
                         style={{
@@ -1254,6 +1256,7 @@ function ReportPreviewGrid({
                   <div className="h-12 w-full relative flex items-center justify-center">
                     {checkerSigImg ? (
                       <img
+                        crossOrigin="anonymous"
                         src={checkerSigImg}
                         alt="Tanda Tangan Atasan"
                         style={{
@@ -1419,6 +1422,7 @@ function ReportPreviewGrid({
                   <div className="h-12 w-full relative flex items-center justify-center">
                     {makerSigImg ? (
                       <img
+                        crossOrigin="anonymous"
                         src={makerSigImg}
                         alt="Tanda Tangan Karyawan"
                         style={{
@@ -1443,6 +1447,7 @@ function ReportPreviewGrid({
                   <div className="h-12 w-full relative flex items-center justify-center">
                     {checkerSigImg ? (
                       <img
+                        crossOrigin="anonymous"
                         src={checkerSigImg}
                         alt="Tanda Tangan Atasan"
                         style={{

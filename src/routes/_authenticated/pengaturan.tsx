@@ -294,7 +294,7 @@ function ProfileForm() {
           <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60">
             <div className="w-24 h-32 border-2 border-primary/20 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 relative">
               {avatar ? (
-                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                <img crossOrigin="anonymous" src={avatar} alt={name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
                   <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
