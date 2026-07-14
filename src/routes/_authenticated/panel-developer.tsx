@@ -48,7 +48,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAppConfig, saveAppConfig } from "@/lib/app-config";
 import { ShieldAlert, Database, Cloud, Eye, EyeOff } from "lucide-react";
-import { testRustFSConnection } from "@/lib/storage";
+import { testRustFSConnection, getRustFSConfig } from "@/lib/storage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -665,6 +665,11 @@ function RbacMatrixCard() {
 function RustFsConfigCard() {
   const [testing, setTesting] = useState(false);
 
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["rustfs-config-dev-panel"],
+    queryFn: () => getRustFSConfig(),
+  });
+
   const testConnection = async () => {
     setTesting(true);
     try {
@@ -692,11 +697,18 @@ function RustFsConfigCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-          <div><strong className="text-slate-800 dark:text-white">Provider:</strong> RustFS</div>
-          <div><strong className="text-slate-800 dark:text-white">Endpoint:</strong> https://s3.ve-lora.my.id</div>
-          <div><strong className="text-slate-800 dark:text-white">Bucket:</strong> chat</div>
-        </div>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        ) : (
+          <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <div><strong className="text-slate-800 dark:text-white">Provider:</strong> {config?.provider}</div>
+            <div><strong className="text-slate-800 dark:text-white">Endpoint:</strong> {config?.endpoint}</div>
+            <div><strong className="text-slate-800 dark:text-white">Bucket:</strong> {config?.bucket}</div>
+          </div>
+        )}
         <div className="flex justify-end">
           <Button onClick={testConnection} disabled={testing} className="bg-gradient-to-r from-[#0077B6] to-[#0077B6]/90 hover:from-[#0077B6]/95 hover:to-[#0077B6]/85 text-white font-semibold rounded-xl text-xs py-2 shadow-sm">
             {testing && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}

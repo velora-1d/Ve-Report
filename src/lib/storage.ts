@@ -106,3 +106,11 @@ export const testRustFSConnection = createServerFn({ method: "POST" })
       throw new Error(err.message || "Gagal menghubungi S3 RustFS storage");
     }
   });
+
+export const getRustFSConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return {
+    provider: process.env.STORAGE_PROVIDER || "RustFS",
+    endpoint: process.env.S3_ENDPOINT || "",
+    bucket: process.env.S3_BUCKET || "chat",
+  };
+});
