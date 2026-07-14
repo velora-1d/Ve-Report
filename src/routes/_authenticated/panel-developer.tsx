@@ -449,10 +449,11 @@ function RbacMatrixCard() {
 
   const [permissions, setPermissions] = useState<any>({
     admin: {
-      menus: ["dasbor", "tugas", "pelacak", "laporan", "manajemen-pengguna", "pengaturan"],
+      menus: ["dasbor", "tugas", "pelacak", "validasi", "laporan", "manajemen-pengguna", "pengaturan"],
       actions: {
         tugas: ["create", "read", "update", "delete"],
         pelacak: ["create", "read", "update", "delete"],
+        validasi: ["create", "read", "update", "delete"],
         laporan: ["create", "read", "update", "delete"],
         pengguna: ["create", "read", "update", "delete"]
       }
@@ -462,6 +463,7 @@ function RbacMatrixCard() {
       actions: {
         tugas: ["create", "read", "update"],
         pelacak: ["create", "read", "update"],
+        validasi: [],
         laporan: ["create", "read"],
         pengguna: []
       }
@@ -531,6 +533,7 @@ function RbacMatrixCard() {
     { key: "dasbor", label: "Dasbor" },
     { key: "tugas", label: `${appName} Meeting` },
     { key: "pelacak", label: `${appName} Harian` },
+    { key: "validasi", label: "Validasi Log" },
     { key: "laporan", label: "Laporan" },
     { key: "manajemen-pengguna", label: "Pengguna" },
     { key: "pengaturan", label: "Pengaturan" },
@@ -541,6 +544,7 @@ function RbacMatrixCard() {
   const MODULES = [
     { key: "tugas", label: `${appName} Meeting (Tugas)` },
     { key: "pelacak", label: `${appName} Harian (Tracker)` },
+    { key: "validasi", label: "Validasi Log" },
     { key: "laporan", label: "Laporan" },
     { key: "pengguna", label: "Pengguna" },
     { key: "pengaturan", label: "Pengaturan" },
