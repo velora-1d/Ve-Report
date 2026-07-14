@@ -296,8 +296,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       >
         <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-2.5 w-full"}>
           <Icon
+            strokeWidth={2.8}
             className={`w-4 h-4 transition-colors duration-200 shrink-0 ${
-              active ? "text-primary drop-shadow-[0_0_6px_rgba(37,99,235,0.35)]" : "text-foreground/50 group-hover:text-primary"
+              active
+                ? "text-primary drop-shadow-[0_0_6px_rgba(37,99,235,0.35)]"
+                : "text-black dark:text-white hover:text-primary"
             }`}
           />
           {!isCollapsed && <span className="font-bold">{item.label}</span>}
