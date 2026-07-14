@@ -237,29 +237,41 @@ function generateMeetingPdf(
   doc.setFont("helvetica", "bold");
   doc.text("LOG BOOK MEETING", pageW / 2, marginMm + 5, { align: "center" });
 
-  // 2. Metadata Info Box
+  // 2. Metadata Info Box (2 rows)
   const metadataY = marginMm + 15;
   const boxW = pageW - (marginMm * 2);
-  doc.rect(marginMm, metadataY - 3, boxW, 18);
+  doc.rect(marginMm, metadataY - 3, boxW, 13);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
+  // Row 1: Nama & Divisi
   doc.text("Nama", marginMm + 3, metadataY + 2);
-  doc.text("Divisi", marginMm + 3, metadataY + 7);
-  doc.text("Bulan dan Tahun", marginMm + 3, metadataY + 12);
-  
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${input.generatedByName}`, marginMm + 35, metadataY + 2);
-  doc.text(`: ${position}`, marginMm + 35, metadataY + 7);
-  doc.text(`: ${monthName} ${yearName}`, marginMm + 35, metadataY + 12);
+  doc.text(`: ${input.generatedByName}`, marginMm + 20, metadataY + 2);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Divisi", marginMm + 100, metadataY + 2);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${position}`, marginMm + 115, metadataY + 2);
+
+  // Row 2: Bulan & Tahun
+  doc.setFont("helvetica", "bold");
+  doc.text("Bulan", marginMm + 3, metadataY + 7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${monthName}`, marginMm + 20, metadataY + 7);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Tahun", marginMm + 100, metadataY + 7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 7);
 
   // Subheading
   doc.setFont("helvetica", "bold");
-  doc.text("PENUGASAN ATASAN/HASIL MEETING/.......", marginMm, metadataY + 20);
+  doc.text("PENUGASAN ATASAN/HASIL MEETING/.......", marginMm, metadataY + 18);
 
   // Table
   autoTable(doc, {
-    startY: metadataY + 24,
+    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 22 : marginMm + 22,
     head: [
       [
         { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },

@@ -989,19 +989,27 @@ function ReportPreviewGrid({
                 <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK MEETING</h2>
               </div>
 
-              {/* Metadata Info Box */}
+              {/* Metadata Info Box (2 rows) */}
               <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Nama</div>
-                  <div className="col-span-9">: {employeeName}</div>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Nama</div>
+                    <div className="truncate">: {employeeName}</div>
+                  </div>
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Divisi</div>
+                    <div className="truncate">: {employeePosition}</div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Divisi</div>
-                  <div className="col-span-9">: {employeePosition}</div>
-                </div>
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Bulan dan Tahun</div>
-                  <div className="col-span-9">: {monthName} {yearName}</div>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Bulan</div>
+                    <div className="truncate">: {monthName}</div>
+                  </div>
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Tahun</div>
+                    <div className="truncate">: {yearName}</div>
+                  </div>
                 </div>
               </div>
 
@@ -1035,7 +1043,7 @@ function ReportPreviewGrid({
                     </tr>
                   ) : (
                     tasks.map((t: any, index: number) => {
-                      const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                      const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", { locale: idLocale });
                       const descStr = [t.title, t.description].filter(Boolean).join(" - ");
                       const sourceLower = (t.taskSource ?? "").toLowerCase();
                       const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
@@ -1156,21 +1164,27 @@ function ReportPreviewGrid({
                 <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK KEGIATAN HARIAN</h2>
               </div>
 
-              {/* Metadata Info Box */}
+              {/* Metadata Info Box (2 rows) */}
               <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Nama</div>
-                  <div className="col-span-9">: {employeeName}</div>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Nama</div>
+                    <div className="truncate">: {employeeName}</div>
+                  </div>
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Divisi</div>
+                    <div className="truncate">: {employeePosition}</div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Divisi</div>
-                  <div className="col-span-9">: {employeePosition}</div>
-                </div>
-                <div className="grid grid-cols-12">
-                  <div className="col-span-3 font-bold">Bulan</div>
-                  <div className="col-span-3">: {monthName}</div>
-                  <div className="col-span-3 font-bold text-right pr-4">Tahun</div>
-                  <div className="col-span-3">: {yearName}</div>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Bulan</div>
+                    <div className="truncate">: {monthName}</div>
+                  </div>
+                  <div className="col-span-6 flex">
+                    <div className="w-16 font-bold shrink-0">Tahun</div>
+                    <div className="truncate">: {yearName}</div>
+                  </div>
                 </div>
               </div>
 
@@ -1200,7 +1214,7 @@ function ReportPreviewGrid({
                     </tr>
                   ) : (
                     logs.map((l: any, index: number) => {
-                      const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                      const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", { locale: idLocale });
                       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
                       const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
                       const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
