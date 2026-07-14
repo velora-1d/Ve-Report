@@ -75,21 +75,46 @@ export function BrandingForm() {
           <Input value="Log Book" disabled />
         </div>
         <div className="space-y-2">
-          <Label>URL Logo</Label>
-          <Input
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://…/logo.png"
-          />
-          {logoUrl && (
-            <div className="mt-2 p-3 rounded-lg surface-panel inline-block">
-              <img
-                src={logoUrl}
-                alt="Preview logo"
-                className="h-12 w-auto object-contain"
-              />
+          <Label className="text-xs font-semibold block text-foreground">Upload Logo Aplikasi</Label>
+          <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60 max-w-md">
+            <div className="w-16 h-16 border border-primary/20 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 relative">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-muted-foreground text-xs font-semibold text-center p-1">No Logo</span>
+              )}
             </div>
-          )}
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setLogoUrl(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="h-8 text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                />
+                {logoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLogoUrl("")}
+                    className="h-8 text-xs text-destructive hover:text-destructive/90"
+                  >
+                    Hapus
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
         <div className="flex justify-end">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
