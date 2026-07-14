@@ -29,8 +29,8 @@ export async function generateReportExcel(
 
   const wb = XLSX.utils.book_new();
 
-  if (input.reportType === "meeting") {
-    // === LOG BOOK MEETING ===
+  // === LOG BOOK MEETING ===
+  {
     const rows: unknown[][] = [];
 
     // Rows 1-5: Header & Metadata
@@ -155,8 +155,10 @@ export async function generateReportExcel(
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Log book meeting");
-  } else {
-    // === LOG BOOK HARIAN ===
+  }
+
+  // === LOG BOOK HARIAN ===
+  {
     const rows: unknown[][] = [];
 
     // Headers

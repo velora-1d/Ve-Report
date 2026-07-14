@@ -272,12 +272,9 @@ function LaporanPage() {
       let extension = "";
 
       if (fileFormat === "excel") {
-        if (reportType === "standard") {
-          throw new Error("Format Standard tidak mendukung ekspor Excel.");
-        }
         blob = await generateReportExcel(
           {
-            reportType: reportType as "meeting" | "harian",
+            reportType: "harian", // fallback, ignored by generator
             periodStart: start,
             periodEnd: end,
             generatedByName: me.name,
@@ -430,23 +427,21 @@ function LaporanPage() {
             )}
           </div>
           <div className="flex justify-end gap-2">
-            {reportType !== "standard" && (
-              <Button
-                variant="outline"
-                onClick={() => generate.mutate("excel")}
-                disabled={generate.isPending}
-              >
-                {generate.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat…
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2" /> Buat & Unduh Excel
-                  </>
-                )}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => generate.mutate("excel")}
+              disabled={generate.isPending}
+            >
+              {generate.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat…
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" /> Buat & Unduh Excel
+                </>
+              )}
+            </Button>
             <Button
               onClick={() => generate.mutate("pdf")}
               disabled={generate.isPending}
