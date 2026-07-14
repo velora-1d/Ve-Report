@@ -1,6 +1,8 @@
+// ponytail: Mengganti query Supabase client-side dengan TanStack Start Server Functions dan Drizzle ORM
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
@@ -12,7 +14,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { trackerLogs as logsTable, tasks as tasksTable } from "@/db/schema";
+import { eq, desc, and, gte, inArray } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +42,94 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrackerFormDialog } from "@/components/tracker/tracker-form-dialog";
-import { formatDuration, todayISO, type TrackerLogRow } from "@/lib/tracker";
+import { formatDuration, todayISO } from "@/lib/tracker";
+
+// ponytail: Fungsi server untuk mengambil log pelacak milik user saat ini
+export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  const logs = await db.query.trackerLogs.findMany({
+    where: eq(logsTable.userId, session.user.id),
+    with: {
+      task: {
+        columns: {
+          id: true,
+          title: true,
+        }
+      }
+    },
+    orderBy: [desc(logsTable.loggedDate), desc(logsTable.createdAt)],
+    limit: 200,
+  });
+
+  return logs;
+});
+
+// ponytail: Fungsi server untuk mengambil tugas aktif yang dapat dicatat waktunya
+export const getAssignableTasks = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  const tasksList = await db.query.tasks.findMany({
+    where: inArray(tasksTable.status, ["todo", "in_progress", "review"]),
+    columns: {
+      id: true,
+      title: true,
+      status: true,
+    },
+    orderBy: [desc(tasksTable.createdAt)],
+  });
+
+  return tasksList;
+});
+
+// ponytail: Fungsi server untuk menyimpan/memperbarui log pelacak waktu
+export const saveTrackerLog = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string().optional(),
+      taskId: z.string(),
+      loggedDate: z.string(),
+      durationMinutes: z.number(),
+      note: z.string().nullable().optional(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      remarks: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    const payload = {
+      taskId: data.taskId,
+      userId: session.user.id,
+      loggedDate: data.loggedDate,
+      durationMinutes: data.durationMinutes,
+      note: data.note || null,
+      startTime: data.startTime || "08:00",
+      endTime: data.endTime || "17:00",
+      remarks: data.remarks || null,
+    };
+
+    if (data.id) {
+      await db.update(logsTable).set(payload).where(eq(logsTable.id, data.id));
+    } else {
+      await db.insert(logsTable).values(payload);
+    }
+  });
+
+// ponytail: Fungsi server untuk menghapus log pelacak waktu
+export const deleteTrackerLog = createServerFn({ method: "POST" })
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    await db.delete(logsTable)
+      .where(and(eq(logsTable.id, id), eq(logsTable.userId, session.user.id)));
+  });
 
 export const Route = createFileRoute("/_authenticated/pelacak")({
   head: () => ({
@@ -52,31 +145,17 @@ export const Route = createFileRoute("/_authenticated/pelacak")({
   component: PelacakPage,
 });
 
-interface LogWithTask extends TrackerLogRow {
-  tasks: { id: string; title: string } | null;
-}
-
 function PelacakPage() {
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<TrackerLogRow | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ["tracker-logs", user?.id],
     enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tracker_logs")
-        .select("*, tasks:task_id(id,title)")
-        .eq("user_id", user!.id)
-        .order("logged_date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return (data ?? []) as LogWithTask[];
-    },
+    queryFn: () => getTrackerLogs(),
   });
 
   const summary = useMemo(() => {
@@ -93,12 +172,12 @@ function PelacakPage() {
     const perTask = new Map<string, { title: string; mins: number }>();
 
     for (const l of logs ?? []) {
-      const m = l.duration_minutes ?? 0;
+      const m = l.durationMinutes ?? 0;
       totalMin += m;
-      if (l.logged_date === today) todayMin += m;
-      if (l.logged_date >= weekStartISO) weekMin += m;
-      const key = l.tasks?.id ?? l.task_id;
-      const title = l.tasks?.title ?? "(Tugas dihapus)";
+      if (l.loggedDate === today) todayMin += m;
+      if (l.loggedDate >= weekStartISO) weekMin += m;
+      const key = l.task?.id ?? l.taskId;
+      const title = l.task?.title ?? "(Tugas dihapus)";
       const cur = perTask.get(key);
       perTask.set(key, { title, mins: (cur?.mins ?? 0) + m });
     }
@@ -112,13 +191,7 @@ function PelacakPage() {
   }, [logs]);
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("tracker_logs")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => deleteTrackerLog({ data: id }),
     onSuccess: () => {
       toast.success("Log dihapus");
       qc.invalidateQueries({ queryKey: ["tracker-logs"] });
@@ -224,19 +297,19 @@ function PelacakPage() {
                     {(logs ?? []).map((l) => (
                       <TableRow key={l.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {format(new Date(l.logged_date), "d MMM yyyy", {
+                          {l.loggedDate ? format(new Date(l.loggedDate), "d MMM yyyy", {
                             locale: idLocale,
-                          })}
+                          }) : "—"}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {l.tasks?.title ?? (
+                          {l.task?.title ?? (
                             <span className="text-muted-foreground italic">
                               (dihapus)
                             </span>
                           )}
                         </TableCell>
                         <TableCell className="text-sm font-medium">
-                          {formatDuration(l.duration_minutes)}
+                          {formatDuration(l.durationMinutes)}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                           {l.note ?? "—"}

@@ -1,7 +1,7 @@
+// ponytail: Mengganti query Supabase client-side pada form dialog pelacak dengan Server Functions Drizzle ORM
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { todayISO, type TrackerLogRow } from "@/lib/tracker";
+import { todayISO } from "@/lib/tracker";
+import { getAssignableTasks, saveTrackerLog } from "@/routes/_authenticated/pelacak";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing?: TrackerLogRow | null;
+  editing?: any | null;
   defaultTaskId?: string | null;
 }
 
@@ -52,14 +53,14 @@ export function TrackerFormDialog({
   useEffect(() => {
     if (!open) return;
     if (editing) {
-      setTaskId(editing.task_id);
-      setDate(editing.logged_date);
-      const total = editing.duration_minutes ?? 0;
+      setTaskId(editing.taskId);
+      setDate(editing.loggedDate);
+      const total = editing.durationMinutes ?? 0;
       setHours(String(Math.floor(total / 60)));
       setMinutes(String(total % 60));
       setNote(editing.note ?? "");
-      setStartTime(editing.start_time ?? "08:00");
-      setEndTime(editing.end_time ?? "17:00");
+      setStartTime(editing.startTime ?? "08:00");
+      setEndTime(editing.endTime ?? "17:00");
       setRemarks(editing.remarks ?? "");
     } else {
       setTaskId(defaultTaskId ?? "");
@@ -76,15 +77,7 @@ export function TrackerFormDialog({
   const { data: tasks } = useQuery({
     queryKey: ["tasks", "assignable", user?.id],
     enabled: open && !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("id,title,status")
-        .in("status", ["todo", "in_progress", "review"])
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getAssignableTasks(),
   });
 
   const mutation = useMutation({
@@ -95,26 +88,19 @@ export function TrackerFormDialog({
         (parseInt(hours || "0", 10) || 0) * 60 +
         (parseInt(minutes || "0", 10) || 0);
       if (totalMin <= 0) throw new Error("Durasi harus lebih dari 0 menit");
-      const payload = {
-        task_id: taskId,
-        user_id: user.id,
-        logged_date: date,
-        duration_minutes: totalMin,
-        note: note.trim() || null,
-        start_time: startTime,
-        end_time: endTime,
-        remarks: remarks.trim() || null,
-      };
-      if (editing) {
-        const { error } = await supabase
-          .from("tracker_logs")
-          .update(payload)
-          .eq("id", editing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("tracker_logs").insert(payload);
-        if (error) throw error;
-      }
+      
+      await saveTrackerLog({
+        data: {
+          id: editing?.id,
+          taskId,
+          loggedDate: date,
+          durationMinutes: totalMin,
+          note: note.trim() || null,
+          startTime,
+          endTime,
+          remarks: remarks.trim() || null,
+        }
+      });
     },
     onSuccess: () => {
       toast.success(editing ? "Log diperbarui" : "Log tersimpan");
