@@ -21,8 +21,6 @@ import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
-import { generateReportPdf } from "@/lib/pdf-report";
-import { generateReportExcel } from "@/lib/excel-report";
 import { todayISO } from "@/lib/tracker";
 import { uploadToRustFS } from "@/lib/storage";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -447,6 +445,7 @@ function LaporanPage() {
       let extension = "";
 
       if (fileFormat === "excel") {
+        const { generateReportExcel } = await import("@/lib/excel-report");
         blob = await generateReportExcel(
           {
             reportType: reportType === "meeting" ? "meeting" : "harian",
@@ -466,6 +465,7 @@ function LaporanPage() {
         );
         extension = "xlsx";
       } else {
+        const { generateReportPdf } = await import("@/lib/pdf-report");
         blob = await generateReportPdf(
           {
             title: title.trim(),
