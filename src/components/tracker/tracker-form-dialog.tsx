@@ -48,7 +48,7 @@ export function TrackerFormDialog({
   const [startTime, setStartTime] = useState<string>("08:00");
   const [endTime, setEndTime] = useState<string>("17:00");
   const [status, setStatus] = useState<string>("progress"); // 'progress' | 'done'
-  const [remarks, setRemarks] = useState<string>("—");
+  const [remarks, setRemarks] = useState<string>("");
 
   function parseTimeToMinutes(timeStr: string): number | null {
     const match = timeStr.trim().match(/^(\d{1,2})[:.](\d{2})$/);
@@ -70,7 +70,7 @@ export function TrackerFormDialog({
       setStartTime(editing.startTime ?? "08:00");
       setEndTime(editing.endTime ?? "17:00");
       setStatus(editing.status ?? "progress");
-      setRemarks(editing.remarks ?? "—");
+      setRemarks(editing.remarks ?? "");
     } else {
       setDate(todayISO());
       setHours("0");
@@ -79,7 +79,7 @@ export function TrackerFormDialog({
       setStartTime("08:00");
       setEndTime("17:00");
       setStatus("progress");
-      setRemarks("—");
+      setRemarks("");
     }
   }, [open, editing]);
 
