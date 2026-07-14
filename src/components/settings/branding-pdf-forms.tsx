@@ -94,7 +94,7 @@ export function BrandingForm() {
           <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60 max-w-md">
             <div className="w-16 h-16 border border-primary/20 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 relative">
               {logoUrl ? (
-                <img crossOrigin="anonymous" src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
               ) : (
                 <span className="text-muted-foreground text-xs font-semibold text-center p-1">No Logo</span>
               )}

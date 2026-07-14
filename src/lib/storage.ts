@@ -113,4 +113,25 @@ export const getRustFSConfig = createServerFn({ method: "GET" }).handler(async (
     endpoint: process.env.S3_ENDPOINT || "",
     bucket: process.env.S3_BUCKET || "chat",
   };
-});
+});export const getProxyImageBase64 = createServerFn({ method: "GET" })
+  .validator((url: string) => url)
+  .handler(async ({ data: url }) => {
+    try {
+      // ponytail: proxy image server-side untuk bypass CORS (YAGNI)
+      if (!url.startsWith("http")) {
+        return { success: false, data: url };
+      }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil gambar dari S3");
+      const buffer = await res.arrayBuffer();
+      const contentType = res.headers.get("content-type") || "image/png";
+      const base64 = Buffer.from(buffer).toString("base64");
+      return {
+        success: true,
+        data: `data:${contentType};base64,${base64}`
+      };
+    } catch (err: any) {
+      console.error("[Proxy Image] error:", err);
+      return { success: false, data: url };
+    }
+  });

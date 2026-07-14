@@ -295,6 +295,43 @@ function LaporanPage() {
   const [checkerSigOffsetY, setCheckerSigOffsetY] = useState<number>(0);
 
   const [isUploadingSig, setIsUploadingSig] = useState(false);
+  const [makerSigBase64, setMakerSigBase64] = useState<string | null>(null);
+  const [checkerSigBase64, setCheckerSigBase64] = useState<string | null>(null);
+
+  // ponytail: proxy URL S3 menjadi base64 untuk bypass CORS di canvas PDF
+  useEffect(() => {
+    if (makerSigImg) {
+      if (makerSigImg.startsWith("data:")) {
+        setMakerSigBase64(makerSigImg);
+      } else {
+        import("@/lib/storage").then(({ getProxyImageBase64 }) => {
+          getProxyImageBase64({ data: makerSigImg }).then((res) => {
+            if (res.success) setMakerSigBase64(res.data);
+            else setMakerSigBase64(makerSigImg);
+          });
+        });
+      }
+    } else {
+      setMakerSigBase64(null);
+    }
+  }, [makerSigImg]);
+
+  useEffect(() => {
+    if (checkerSigImg) {
+      if (checkerSigImg.startsWith("data:")) {
+        setCheckerSigBase64(checkerSigImg);
+      } else {
+        import("@/lib/storage").then(({ getProxyImageBase64 }) => {
+          getProxyImageBase64({ data: checkerSigImg }).then((res) => {
+            if (res.success) setCheckerSigBase64(res.data);
+            else setCheckerSigBase64(checkerSigImg);
+          });
+        });
+      }
+    } else {
+      setCheckerSigBase64(null);
+    }
+  }, [checkerSigImg]);
 
   // ponytail: Membaca konfigurasi tanda tangan & kertas yang tersimpan di localStorage agar tetap persisten saat reload
   useEffect(() => {
@@ -1229,10 +1266,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {makerSigImg ? (
+                    {makerSigBase64 ? (
                       <img
-                        crossOrigin="anonymous"
-                        src={makerSigImg}
+                        src={makerSigBase64}
                         alt="Tanda Tangan Karyawan"
                         style={{
                           width: `${30 * (makerSigScale / 100)}mm`,
@@ -1254,10 +1290,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {checkerSigImg ? (
+                    {checkerSigBase64 ? (
                       <img
-                        crossOrigin="anonymous"
-                        src={checkerSigImg}
+                        src={checkerSigBase64}
                         alt="Tanda Tangan Atasan"
                         style={{
                           width: `${30 * (checkerSigScale / 100)}mm`,
@@ -1420,10 +1455,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {makerSigImg ? (
+                    {makerSigBase64 ? (
                       <img
-                        crossOrigin="anonymous"
-                        src={makerSigImg}
+                        src={makerSigBase64}
                         alt="Tanda Tangan Karyawan"
                         style={{
                           width: `${30 * (makerSigScale / 100)}mm`,
@@ -1445,10 +1479,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {checkerSigImg ? (
+                    {checkerSigBase64 ? (
                       <img
-                        crossOrigin="anonymous"
-                        src={checkerSigImg}
+                        src={checkerSigBase64}
                         alt="Tanda Tangan Atasan"
                         style={{
                           width: `${30 * (checkerSigScale / 100)}mm`,
