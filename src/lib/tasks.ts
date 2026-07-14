@@ -1,8 +1,23 @@
-import type { Database } from "@/integrations/supabase/types";
+// ponytail: Mengganti tipe Supabase Database dengan tipe string literal biasa untuk menyingkirkan Supabase (YAGNI)
+export type TaskStatus = "todo" | "in_progress" | "review" | "done";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
-export type TaskStatus = Database["public"]["Enums"]["task_status"];
-export type TaskPriority = Database["public"]["Enums"]["task_priority"];
-export type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
+export interface TaskRow {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string | null;
+  assignedTo?: string | null;
+  taskSource?: string | null;
+  outputDescription?: string | null;
+  createdBy?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+  startedAt?: string | null;
+}
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "Belum dikerjakan",
