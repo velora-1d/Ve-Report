@@ -287,11 +287,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         } ${
           active
             ? isCollapsed
-              ? "bg-gradient-to-tr from-primary/15 to-primary/5 text-primary font-semibold shadow-[0_2px_8px_-2px_rgba(37,99,235,0.15)] scale-105"
-              : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent text-primary font-semibold shadow-[inset_1.5px_0_0_0_rgba(37,99,235,0.3)]"
+              ? "bg-gradient-to-tr from-primary/15 to-primary/5 text-primary font-bold shadow-[0_2px_8px_-2px_rgba(37,99,235,0.15)] scale-105"
+              : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent text-primary font-bold shadow-[inset_1.5px_0_0_0_rgba(37,99,235,0.3)]"
             : isCollapsed
-              ? "text-foreground/75 hover:bg-primary/8 hover:text-primary hover:scale-105"
-              : "text-foreground/75 hover:bg-primary/5 hover:text-primary hover:translate-x-0.5"
+              ? "text-foreground/75 font-bold hover:bg-primary/8 hover:text-primary hover:scale-105"
+              : "text-foreground/75 font-bold hover:bg-primary/5 hover:text-primary hover:translate-x-0.5"
         }`}
       >
         <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-2.5 w-full"}>
@@ -300,7 +300,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
               active ? "text-primary drop-shadow-[0_0_6px_rgba(37,99,235,0.35)]" : "text-foreground/50 group-hover:text-primary"
             }`}
           />
-          {!isCollapsed && <span>{item.label}</span>}
+          {!isCollapsed && <span className="font-bold">{item.label}</span>}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
