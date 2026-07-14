@@ -1,3 +1,4 @@
+// ponytail: Menggunakan Server Functions dari tugas.tsx dengan Drizzle ORM
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -19,13 +20,13 @@ import {
 } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Clock, Bell } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ScheduleFormDialog, type ScheduleRow } from "./schedule-form-dialog";
+import { ScheduleFormDialog } from "./schedule-form-dialog";
+import { getSchedules } from "@/routes/_authenticated/tugas";
 
 type ViewMode = "day" | "week" | "month" | "year";
 
@@ -34,7 +35,7 @@ export function CalendarTab() {
   const [view, setView] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState(new Date());
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<ScheduleRow | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
 
   const range = useMemo(() => {
@@ -58,23 +59,19 @@ export function CalendarTab() {
 
   const { data: schedules } = useQuery({
     queryKey: ["schedules", range.start.toISOString(), range.end.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schedules")
-        .select("*")
-        .gte("start_time", range.start.toISOString())
-        .lt("start_time", range.end.toISOString())
-        .order("start_time");
-      if (error) throw error;
-      return data as ScheduleRow[];
-    },
+    queryFn: () => getSchedules({
+      data: {
+        start: range.start.toISOString(),
+        end: range.end.toISOString(),
+      }
+    }),
     enabled: !!user,
   });
 
   const byDate = useMemo(() => {
-    const map = new Map<string, ScheduleRow[]>();
+    const map = new Map<string, any[]>();
     (schedules ?? []).forEach((s) => {
-      const key = format(new Date(s.start_time), "yyyy-MM-dd");
+      const key = format(new Date(s.startTime), "yyyy-MM-dd");
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(s);
     });
@@ -93,7 +90,7 @@ export function CalendarTab() {
     setDefaultDate(date);
     setFormOpen(true);
   };
-  const openEdit = (s: ScheduleRow) => {
+  const openEdit = (s: any) => {
     setEditing(s);
     setDefaultDate(undefined);
     setFormOpen(true);
@@ -198,8 +195,8 @@ function ScheduleItem({
   onEdit,
   compact,
 }: {
-  s: ScheduleRow;
-  onEdit: (s: ScheduleRow) => void;
+  s: any;
+  onEdit: (s: any) => void;
   compact?: boolean;
 }) {
   return (
@@ -212,7 +209,7 @@ function ScheduleItem({
       )}
     >
       <span className="font-medium">
-        {format(new Date(s.start_time), "HH:mm")}
+        {format(new Date(s.startTime), "HH:mm")}
       </span>{" "}
       <span>{s.title}</span>
     </button>
@@ -225,11 +222,11 @@ function DayView({
   onEdit,
 }: {
   date: Date;
-  schedules: ScheduleRow[];
-  onEdit: (s: ScheduleRow) => void;
+  schedules: any[];
+  onEdit: (s: any) => void;
 }) {
   const items = schedules.filter((s) =>
-    isSameDay(new Date(s.start_time), date),
+    isSameDay(new Date(s.startTime), date),
   );
   return (
     <Card className="p-4 surface-card">
@@ -257,13 +254,13 @@ function DayView({
                 <div className="text-right text-sm text-muted-foreground shrink-0">
                   <div className="inline-flex items-center gap-1">
                     <Clock className="size-3.5" />
-                    {format(new Date(s.start_time), "HH:mm")} –{" "}
-                    {format(new Date(s.end_time), "HH:mm")}
+                    {format(new Date(s.startTime), "HH:mm")} –{" "}
+                    {format(new Date(s.endTime), "HH:mm")}
                   </div>
-                  {s.reminder_minutes_before ? (
+                  {s.reminderMinutesBefore ? (
                     <div className="inline-flex items-center gap-1 text-xs mt-1">
                       <Bell className="size-3" />
-                      {s.reminder_minutes_before} mnt
+                      {s.reminderMinutesBefore} mnt
                     </div>
                   ) : null}
                 </div>
@@ -283,8 +280,8 @@ function WeekView({
   onNew,
 }: {
   cursor: Date;
-  byDate: Map<string, ScheduleRow[]>;
-  onEdit: (s: ScheduleRow) => void;
+  byDate: Map<string, any[]>;
+  onEdit: (s: any) => void;
   onNew: (d: Date) => void;
 }) {
   const start = startOfWeek(cursor, { weekStartsOn: 1 });
@@ -327,8 +324,8 @@ function MonthView({
   onNew,
 }: {
   cursor: Date;
-  byDate: Map<string, ScheduleRow[]>;
-  onEdit: (s: ScheduleRow) => void;
+  byDate: Map<string, any[]>;
+  onEdit: (s: any) => void;
   onNew: (d: Date) => void;
 }) {
   const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
@@ -394,13 +391,13 @@ function YearView({
   onPickMonth,
 }: {
   cursor: Date;
-  schedules: ScheduleRow[];
+  schedules: any[];
   onPickMonth: (d: Date) => void;
 }) {
   const year = cursor.getFullYear();
   const monthly = Array.from({ length: 12 }, (_, m) => {
     const count = schedules.filter(
-      (s) => new Date(s.start_time).getMonth() === m,
+      (s) => new Date(s.startTime).getMonth() === m,
     ).length;
     return { month: m, count };
   });

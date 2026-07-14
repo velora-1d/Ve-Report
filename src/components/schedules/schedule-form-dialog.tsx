@@ -1,8 +1,7 @@
+// ponytail: Menggunakan Server Functions dari tugas.tsx dengan Drizzle ORM
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog,
   DialogContent,
@@ -22,13 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export type ScheduleRow = Database["public"]["Tables"]["schedules"]["Row"];
+import { getLinkableTasks, saveSchedule, deleteSchedule } from "@/routes/_authenticated/tugas";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  schedule: ScheduleRow | null;
+  schedule: any | null;
   defaultDate?: Date;
   currentUserId: string;
 }
@@ -61,10 +59,10 @@ export function ScheduleFormDialog({
     if (schedule) {
       setTitle(schedule.title);
       setDescription(schedule.description ?? "");
-      setStartTime(toLocalInput(schedule.start_time));
-      setEndTime(toLocalInput(schedule.end_time));
-      setReminder(String(schedule.reminder_minutes_before ?? 0));
-      setTaskId(schedule.task_id ?? "__none__");
+      setStartTime(toLocalInput(schedule.startTime));
+      setEndTime(toLocalInput(schedule.endTime));
+      setReminder(String(schedule.reminderMinutesBefore ?? 0));
+      setTaskId(schedule.taskId ?? "__none__");
     } else {
       const base = defaultDate ?? new Date();
       const start = new Date(base);
@@ -82,46 +80,29 @@ export function ScheduleFormDialog({
 
   const { data: tasks } = useQuery({
     queryKey: ["tasks", "linkable"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("id, title")
-        .neq("status", "done")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getLinkableTasks(),
     enabled: open,
   });
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       if (!title.trim()) throw new Error("Judul jadwal wajib diisi.");
       if (!startTime || !endTime)
         throw new Error("Waktu mulai dan selesai wajib diisi.");
       if (new Date(endTime) <= new Date(startTime))
         throw new Error("Waktu selesai harus setelah waktu mulai.");
-      const payload = {
-        title: title.trim(),
-        description: description.trim() || null,
-        start_time: new Date(startTime).toISOString(),
-        end_time: new Date(endTime).toISOString(),
-        reminder_minutes_before: Number(reminder) || null,
-        task_id: taskId === "__none__" ? null : taskId,
-      };
-      if (isEdit && schedule) {
-        const { error } = await supabase
-          .from("schedules")
-          .update(payload)
-          .eq("id", schedule.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("schedules")
-          .insert({ ...payload, user_id: currentUserId });
-        if (error) throw error;
-      }
+      
+      return saveSchedule({
+        data: {
+          id: schedule?.id,
+          title: title.trim(),
+          description: description.trim() || null,
+          startTime: new Date(startTime).toISOString(),
+          endTime: new Date(endTime).toISOString(),
+          reminderMinutesBefore: Number(reminder) || null,
+          taskId: taskId === "__none__" ? null : taskId,
+        }
+      });
     },
     onSuccess: () => {
       toast.success(isEdit ? "Jadwal diperbarui." : "Jadwal dibuat.");
@@ -131,14 +112,10 @@ export function ScheduleFormDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (!schedule) return;
-      const { error } = await supabase
-        .from("schedules")
-        .delete()
-        .eq("id", schedule.id);
-      if (error) throw error;
+  const deleteMut = useMutation({
+    mutationFn: () => {
+      if (!schedule) return Promise.resolve();
+      return deleteSchedule({ data: schedule.id });
     },
     onSuccess: () => {
       toast.success("Jadwal dihapus.");
@@ -241,8 +218,8 @@ export function ScheduleFormDialog({
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
+              onClick={() => deleteMut.mutate()}
+              disabled={deleteMut.isPending}
             >
               Hapus
             </Button>
