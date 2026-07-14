@@ -1,6 +1,8 @@
+// ponytail: Menggunakan createServerFn untuk memindahkan kueri database ke server-side dengan Drizzle ORM demi keamanan role, performa, dan type safety tanpa Supabase client-side SDK.
 import { useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 import { format, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
@@ -11,13 +13,84 @@ import {
   CalendarDays,
   AlertCircle,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { tasks as tasksTable, trackerLogs as logsTable, schedules as schedulesTable } from "@/db/schema";
+import { eq, gte, and, desc } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, PriorityBadge } from "@/components/tasks/status-badges";
 import { formatDuration, todayISO } from "@/lib/tracker";
+
+// ponytail: Fungsi server untuk mengambil data statistik dasbor terpadu
+const getDashboardData = createServerFn({ method: "GET" })
+  .validator((isTeamView: boolean) => isTeamView)
+  .handler(async ({ data: isTeamView }) => {
+    const session = await getSession();
+    if (!session || !session.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const userId = session.user.id;
+    const role = session.user.role || "staff";
+    const allowedTeamView = role === "developer" || role === "admin";
+    const actualTeamView = isTeamView && allowedTeamView;
+
+    // 1. Ambil data Tugas (Tasks)
+    let tasksQuery;
+    if (actualTeamView) {
+      tasksQuery = db.query.tasks.findMany({
+        orderBy: [desc(tasksTable.updatedAt)],
+      });
+    } else {
+      tasksQuery = db.query.tasks.findMany({
+        where: eq(tasksTable.assignedTo, userId),
+        orderBy: [desc(tasksTable.updatedAt)],
+      });
+    }
+
+    // 2. Ambil data Tracker Logs minggu ini
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - dow);
+    const weekStartISO = weekStart.toISOString().slice(0, 10);
+
+    const logsQuery = db.query.trackerLogs.findMany({
+      where: and(
+        eq(logsTable.userId, userId),
+        gte(logsTable.loggedDate, weekStartISO)
+      ),
+      columns: {
+        durationMinutes: true,
+        loggedDate: true,
+      }
+    });
+
+    // 3. Ambil Jadwal Terdekat hari ini ke depan
+    const schedulesQuery = db.query.schedules.findMany({
+      where: and(
+        eq(schedulesTable.userId, userId),
+        gte(schedulesTable.startTime, now)
+      ),
+      orderBy: [desc(schedulesTable.startTime)],
+      limit: 5,
+    });
+
+    const [tasks, logs, schedules] = await Promise.all([
+      tasksQuery,
+      logsQuery,
+      schedulesQuery,
+    ]);
+
+    return {
+      tasks,
+      logs,
+      schedules,
+    };
+  });
 
 export const Route = createFileRoute("/_authenticated/dasbor")({
   head: () => ({
@@ -41,45 +114,7 @@ function DasborPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-stats", user?.id, isTeamView],
     enabled: !!user?.id,
-    queryFn: async () => {
-      // Tasks: assigned to user (staff) or all (admin/dev)
-      let tasksQ = supabase
-        .from("tasks")
-        .select("id,title,status,priority,due_date,assigned_to,updated_at")
-        .order("updated_at", { ascending: false });
-      if (!isTeamView) tasksQ = tasksQ.eq("assigned_to", user!.id);
-      const { data: tasks, error: te } = await tasksQ;
-      if (te) throw te;
-
-      // Tracker: this week for current user
-      const now = new Date();
-      const dow = (now.getDay() + 6) % 7;
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - dow);
-      const weekStartISO = weekStart.toISOString().slice(0, 10);
-      const { data: logs, error: le } = await supabase
-        .from("tracker_logs")
-        .select("duration_minutes,logged_date")
-        .eq("user_id", user!.id)
-        .gte("logged_date", weekStartISO);
-      if (le) throw le;
-
-      // Upcoming schedules today+
-      const { data: schedules, error: se } = await supabase
-        .from("schedules")
-        .select("id,title,start_time,end_time")
-        .eq("user_id", user!.id)
-        .gte("start_time", new Date().toISOString())
-        .order("start_time", { ascending: true })
-        .limit(5);
-      if (se) throw se;
-
-      return {
-        tasks: tasks ?? [],
-        logs: logs ?? [],
-        schedules: schedules ?? [],
-      };
-    },
+    queryFn: () => getDashboardData({ data: isTeamView }),
   });
 
   const stats = useMemo(() => {
@@ -88,10 +123,10 @@ function DasborPage() {
     const todo = tasks.filter((t) => t.status === "todo").length;
     const inProgress = tasks.filter((t) => t.status === "in_progress").length;
     const doneToday = tasks.filter(
-      (t) => t.status === "done" && t.updated_at?.slice(0, 10) === today,
+      (t) => t.status === "done" && t.updatedAt && new Date(t.updatedAt).toISOString().slice(0, 10) === today,
     ).length;
     const weekMin = (data?.logs ?? []).reduce(
-      (s, l) => s + (l.duration_minutes ?? 0),
+      (s, l) => s + (l.durationMinutes ?? 0),
       0,
     );
     return { todo, inProgress, doneToday, weekMin };
@@ -100,10 +135,10 @@ function DasborPage() {
   const upcomingDeadlines = useMemo(() => {
     const now = new Date();
     return (data?.tasks ?? [])
-      .filter((t) => t.due_date && t.status !== "done")
+      .filter((t) => t.dueDate && t.status !== "done")
       .map((t) => ({
         ...t,
-        days: differenceInCalendarDays(new Date(t.due_date!), now),
+        days: differenceInCalendarDays(new Date(t.dueDate!), now),
       }))
       .filter((t) => t.days >= 0 && t.days <= 7)
       .sort((a, b) => a.days - b.days)
@@ -243,7 +278,7 @@ function DasborPage() {
                       {s.title}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {format(new Date(s.start_time), "EEE, d MMM • HH:mm", {
+                      {format(new Date(s.startTime), "EEE, d MMM • HH:mm", {
                         locale: idLocale,
                       })}
                     </div>
@@ -277,7 +312,7 @@ function DasborPage() {
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Diperbarui{" "}
-                      {format(new Date(t.updated_at), "d MMM, HH:mm", {
+                      {format(new Date(t.updatedAt), "d MMM, HH:mm", {
                         locale: idLocale,
                       })}
                     </div>
