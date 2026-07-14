@@ -259,6 +259,11 @@ function LaporanPage() {
             ? null
             : userId;
 
+      // ponytail: Memastikan laporan Log Book Harian & Meeting tidak dibuat secara global/tanpa filter user
+      if ((reportType === "meeting" || reportType === "harian") && !targetUser) {
+        throw new Error("Laporan Log Book harus difilter untuk satu pengguna tertentu (tidak bisa Semua Pengguna).");
+      }
+
       // ponytail: Mengambil semua data laporan dari Server Function sekaligus (YAGNI / optimasi database roundtrip)
       const reportData = await getReportData({
         data: {
@@ -367,9 +372,13 @@ function LaporanPage() {
                 onValueChange={(v) => {
                   const type = v as "standard" | "meeting" | "harian";
                   setReportType(type);
-                  if (type === "standard") setTitle("Laporan Kinerja");
-                  else if (type === "meeting") setTitle("Log Book Meeting");
-                  else if (type === "harian") setTitle("Log Book Harian");
+                  if (type === "standard") {
+                    setTitle("Laporan Kinerja");
+                  } else {
+                    if (type === "meeting") setTitle("Log Book Meeting");
+                    else if (type === "harian") setTitle("Log Book Harian");
+                    if (userId === "all") setUserId("me");
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -415,7 +424,9 @@ function LaporanPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="me">Saya sendiri</SelectItem>
-                    <SelectItem value="all">Semua pengguna</SelectItem>
+                    {reportType === "standard" && (
+                      <SelectItem value="all">Semua pengguna</SelectItem>
+                    )}
                     {(users ?? []).map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.name}
