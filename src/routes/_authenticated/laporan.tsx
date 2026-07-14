@@ -354,7 +354,7 @@ function LaporanPage() {
             }
           });
           if (res?.url) {
-            setter(res.url);
+            setter(reader.result as string);
             toast.success("Tanda tangan berhasil di-upload ke S3");
           }
         } catch (err: any) {
