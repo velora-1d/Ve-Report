@@ -115,7 +115,7 @@ export function TrackerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {editing ? "Ubah Log Pelacak" : "Catat Waktu"}
