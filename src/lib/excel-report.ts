@@ -1,32 +1,29 @@
+// ponytail: Mengganti query Supabase client-side di excel-report.ts dengan parameter data murni yang sudah di-fetch oleh Server Function
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface ExcelReportInput {
   reportType: "meeting" | "harian";
   periodStart: string; // ISO date YYYY-MM-DD
   periodEnd: string;
-  userId?: string | null;
   generatedByName: string;
   userPosition?: string | null;
 }
 
 export async function generateReportExcel(
   input: ExcelReportInput,
+  data: {
+    employeeName: string;
+    employeePosition: string;
+    tasks: any[];
+    logs: any[];
+  }
 ): Promise<Blob> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, position")
-    .eq("id", input.userId || "")
-    .single();
+  const employeeName = data.employeeName || input.generatedByName;
+  const employeePosition = data.employeePosition || "Staf";
 
-  const employeeName = profile?.name ?? input.generatedByName;
-  const employeePosition = profile?.position ?? input.userPosition ?? "Staf";
-
-  // ponytail: hapus variabel dateEnd yang tidak digunakan (YAGNI)
   const dateStart = new Date(input.periodStart);
-
   const monthName = format(dateStart, "MMMM", { locale: idLocale });
   const yearName = format(dateStart, "yyyy", { locale: idLocale });
 
@@ -34,21 +31,6 @@ export async function generateReportExcel(
 
   if (input.reportType === "meeting") {
     // === LOG BOOK MEETING ===
-    let tasksQ = supabase
-      .from("tasks")
-      .select(
-        "id, title, description, created_at, due_date, task_source, output_description",
-      )
-      .gte("created_at", input.periodStart)
-      .lte("created_at", input.periodEnd + "T23:59:59")
-      .order("created_at", { ascending: true });
-
-    if (input.userId) {
-      tasksQ = tasksQ.eq("assigned_to", input.userId);
-    }
-    const { data: tasks, error } = await tasksQ;
-    if (error) throw error;
-
     const rows: unknown[][] = [];
 
     // Rows 1-5: Header & Metadata
@@ -75,19 +57,19 @@ export async function generateReportExcel(
 
     // Row 10 onwards: Data
     const dataStartRow = 10;
-    if (tasks && tasks.length > 0) {
-      tasks.forEach((t) => {
-        const taskDate = new Date(t.created_at);
+    if (data.tasks && data.tasks.length > 0) {
+      data.tasks.forEach((t) => {
+        const taskDate = new Date(t.createdAt);
         const dayDateStr = format(taskDate, "EEEE, dd MMMM yyyy", {
           locale: idLocale,
         });
         const descStr = [t.title, t.description].filter(Boolean).join("\n");
-        const isAtasan = t.task_source === "atasan" ? "V" : "";
-        const isMeeting = t.task_source === "meeting" ? "V" : "";
-        const targetStr = t.due_date
-          ? format(new Date(t.due_date), "dd MMMM yyyy", { locale: idLocale })
+        const isAtasan = t.taskSource === "atasan" ? "V" : "";
+        const isMeeting = t.taskSource === "meeting" ? "V" : "";
+        const targetStr = t.dueDate
+          ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
           : "-";
-        const outputStr = t.output_description ?? "-";
+        const outputStr = t.outputDescription ?? "-";
 
         rows.push([
           dayDateStr,
@@ -117,7 +99,6 @@ export async function generateReportExcel(
     rows.push([]);
     rows.push([]);
 
-    const footerStartRow = rows.length + 1;
     rows.push([
       "Jonggol, " + format(new Date(), "dd MMMM yyyy", { locale: idLocale }),
     ]);
@@ -154,7 +135,7 @@ export async function generateReportExcel(
     ];
 
     // Data row merges (Uraian Tugas spans columns 1 to 3)
-    const endDataRowIdx = dataStartRow + (tasks?.length || 1) - 1;
+    const endDataRowIdx = dataStartRow + (data.tasks?.length || 1) - 1;
     for (let r = dataStartRow - 1; r <= endDataRowIdx; r++) {
       merges.push({ s: { r, c: 1 }, e: { r, c: 3 } });
     }
@@ -176,21 +157,6 @@ export async function generateReportExcel(
     XLSX.utils.book_append_sheet(wb, ws, "Log book meeting");
   } else {
     // === LOG BOOK HARIAN ===
-    let logsQ = supabase
-      .from("tracker_logs")
-      .select(
-        "id, logged_date, duration_minutes, note, start_time, end_time, is_validated, remarks, tasks(title, status)",
-      )
-      .gte("logged_date", input.periodStart)
-      .lte("logged_date", input.periodEnd)
-      .order("logged_date", { ascending: true });
-
-    if (input.userId) {
-      logsQ = logsQ.eq("user_id", input.userId);
-    }
-    const { data: logs, error } = await logsQ;
-    if (error) throw error;
-
     const rows: unknown[][] = [];
 
     // Headers
@@ -212,35 +178,24 @@ export async function generateReportExcel(
     ]);
     rows.push(["", "", "", "", "On Progres", "Selesai", "", ""]);
 
-    interface LogItem {
-      logged_date: string;
-      start_time: string | null;
-      end_time: string | null;
-      note: string | null;
-      is_validated: boolean | null;
-      remarks: string | null;
-      tasks: { title: string; status: string } | null;
-    }
-
     const dataStartRow = 9;
-    if (logs && logs.length > 0) {
-      logs.forEach((logItem) => {
-        const l = logItem as unknown as LogItem;
-        const logDate = new Date(l.logged_date);
+    if (data.logs && data.logs.length > 0) {
+      data.logs.forEach((l) => {
+        const logDate = new Date(l.loggedDate);
         const dayDateStr = format(logDate, "EEEE, dd MMMM yyyy", {
           locale: idLocale,
         });
-        const timeStr = `${l.start_time ?? "08:00"} - ${l.end_time ?? "17:00"}`;
-        const activityStr = [l.tasks?.title, l.note]
+        const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+        const activityStr = [l.task?.title, l.note]
           .filter(Boolean)
           .join(" - ");
 
-        const isDone = l.tasks?.status === "done";
+        const isDone = l.task?.status === "done";
         const isOnProgress = !isDone;
 
         const progressCheck = isOnProgress ? "V" : "";
         const doneCheck = isDone ? "V" : "";
-        const validatedStr = l.is_validated ? "Disetujui" : "Belum";
+        const validatedStr = l.isValidated ? "Disetujui" : "Belum";
         const remarksStr = l.remarks ?? "-";
 
         rows.push([
@@ -271,7 +226,6 @@ export async function generateReportExcel(
     rows.push([]);
     rows.push([]);
 
-    const footerStartRow = rows.length + 1;
     rows.push([
       "Jonggol, " + format(new Date(), "dd MMMM yyyy", { locale: idLocale }),
     ]);
@@ -307,7 +261,7 @@ export async function generateReportExcel(
     ];
 
     // Data row merges (Jam spans columns 1 to 2)
-    const endDataRowIdx = dataStartRow + (logs?.length || 1) - 1;
+    const endDataRowIdx = dataStartRow + (data.logs?.length || 1) - 1;
     for (let r = dataStartRow - 1; r <= endDataRowIdx; r++) {
       merges.push({ s: { r, c: 1 }, e: { r, c: 2 } });
     }

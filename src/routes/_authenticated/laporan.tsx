@@ -10,8 +10,14 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { reports as reportsTable, users as usersTable } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import {
+  reports as reportsTable,
+  users as usersTable,
+  appConfig as appConfigTable,
+  trackerLogs as trackerLogsTable,
+  tasks as tasksTable
+} from "@/db/schema";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
 import { generateReportPdf } from "@/lib/pdf-report";
@@ -96,6 +102,107 @@ const saveReportRecord = createServerFn({ method: "POST" })
     });
   });
 
+// ponytail: Fungsi server untuk mengambil semua data yang dibutuhkan laporan (tugas, log, config, position) sekaligus
+const getReportData = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      periodStart: z.string(),
+      periodEnd: z.string(),
+      userId: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    // Fetch config
+    const config = await db.query.appConfig.findMany({
+      orderBy: [desc(appConfigTable.updatedAt)],
+      limit: 1,
+    });
+    const cfg = config[0] || null;
+
+    // Fetch targeted employee position/name
+    let position = "Staf";
+    let name = session.user.name || "";
+    if (data.userId) {
+      const u = await db.query.users.findFirst({
+        where: eq(usersTable.id, data.userId),
+        columns: { position: true, name: true }
+      });
+      if (u?.position) position = u.position;
+      if (u?.name) name = u.name;
+    }
+
+    // Fetch tasks
+    let tasksQuery;
+    if (data.userId) {
+      tasksQuery = db.query.tasks.findMany({
+        where: and(
+          eq(tasksTable.assignedTo, data.userId),
+          gte(tasksTable.createdAt, new Date(data.periodStart + "T00:00:00")),
+          lte(tasksTable.createdAt, new Date(data.periodEnd + "T23:59:59"))
+        ),
+        orderBy: [desc(tasksTable.createdAt)]
+      });
+    } else {
+      tasksQuery = db.query.tasks.findMany({
+        where: and(
+          gte(tasksTable.createdAt, new Date(data.periodStart + "T00:00:00")),
+          lte(tasksTable.createdAt, new Date(data.periodEnd + "T23:59:59"))
+        ),
+        orderBy: [desc(tasksTable.createdAt)]
+      });
+    }
+
+    // Fetch logs
+    let logsQuery;
+    if (data.userId) {
+      logsQuery = db.query.trackerLogs.findMany({
+        where: and(
+          eq(trackerLogsTable.userId, data.userId),
+          gte(trackerLogsTable.loggedDate, data.periodStart),
+          lte(trackerLogsTable.loggedDate, data.periodEnd)
+        ),
+        with: {
+          task: {
+            columns: {
+              title: true,
+              status: true,
+            }
+          }
+        },
+        orderBy: [desc(trackerLogsTable.loggedDate)]
+      });
+    } else {
+      logsQuery = db.query.trackerLogs.findMany({
+        where: and(
+          gte(trackerLogsTable.loggedDate, data.periodStart),
+          lte(trackerLogsTable.loggedDate, data.periodEnd)
+        ),
+        with: {
+          task: {
+            columns: {
+              title: true,
+              status: true,
+            }
+          }
+        },
+        orderBy: [desc(trackerLogsTable.loggedDate)]
+      });
+    }
+
+    const [tasks, logs] = await Promise.all([tasksQuery, logsQuery]);
+
+    return {
+      cfg,
+      position,
+      name,
+      tasks,
+      logs,
+    };
+  });
+
 export const Route = createFileRoute("/_authenticated/laporan")({
   head: () => ({
     meta: [
@@ -152,6 +259,15 @@ function LaporanPage() {
             ? null
             : userId;
 
+      // ponytail: Mengambil semua data laporan dari Server Function sekaligus (YAGNI / optimasi database roundtrip)
+      const reportData = await getReportData({
+        data: {
+          periodStart: start,
+          periodEnd: end,
+          userId: targetUser,
+        }
+      });
+
       let blob: Blob;
       let extension = "";
 
@@ -159,24 +275,38 @@ function LaporanPage() {
         if (reportType === "standard") {
           throw new Error("Format Standard tidak mendukung ekspor Excel.");
         }
-        blob = await generateReportExcel({
-          reportType: reportType as "meeting" | "harian",
-          periodStart: start,
-          periodEnd: end,
-          userId: targetUser,
-          generatedByName: me.name,
-          userPosition: me.position,
-        });
+        blob = await generateReportExcel(
+          {
+            reportType: reportType as "meeting" | "harian",
+            periodStart: start,
+            periodEnd: end,
+            generatedByName: me.name,
+            userPosition: me.position,
+          },
+          {
+            employeeName: reportData.name,
+            employeePosition: reportData.position,
+            tasks: reportData.tasks,
+            logs: reportData.logs,
+          }
+        );
         extension = "xlsx";
       } else {
-        blob = await generateReportPdf({
-          title: title.trim(),
-          periodStart: start,
-          periodEnd: end,
-          userId: targetUser,
-          generatedByName: me.name,
-          reportType,
-        });
+        blob = await generateReportPdf(
+          {
+            title: title.trim(),
+            periodStart: start,
+            periodEnd: end,
+            generatedByName: me.name,
+            reportType,
+          },
+          {
+            cfg: reportData.cfg,
+            position: reportData.position,
+            tasks: reportData.tasks,
+            logs: reportData.logs,
+          }
+        );
         extension = "pdf";
       }
 

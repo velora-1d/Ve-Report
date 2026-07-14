@@ -1,9 +1,8 @@
+// ponytail: Mengganti query Supabase client-side di pdf-report.ts dengan parameter data murni yang sudah di-fetch oleh Server Function
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
-import { fetchAppConfig } from "@/lib/app-config";
 import { TASK_STATUS_LABEL, TASK_PRIORITY_LABEL } from "@/lib/tasks";
 import { formatDuration } from "@/lib/tracker";
 
@@ -11,88 +10,66 @@ export interface ReportInput {
   title: string;
   periodStart: string; // ISO date
   periodEnd: string;
-  userId?: string | null; // filter tugas per assigned user
+  userId?: string | null;
   generatedByName: string;
   reportType?: "standard" | "meeting" | "harian";
 }
 
-export async function generateReportPdf(input: ReportInput): Promise<Blob> {
-  const cfg = await fetchAppConfig();
+export async function generateReportPdf(
+  input: ReportInput,
+  data: {
+    cfg: any;
+    position: string;
+    tasks: any[];
+    logs: any[];
+  }
+): Promise<Blob> {
+  const cfg = data.cfg;
   const orientation =
-    cfg?.pdf_orientation === "landscape" ? "landscape" : "portrait";
-  const paper = (cfg?.pdf_paper_size ?? "A4").toLowerCase();
+    cfg?.pdfOrientation === "landscape" ? "landscape" : "portrait";
+  const paper = (cfg?.pdfPaperSize ?? "A4").toLowerCase();
   const marginMm = Math.max(
     5,
-    Math.min(50, parseInt(cfg?.pdf_margin ?? "20", 10) || 20),
+    Math.min(50, parseInt(cfg?.pdfMargin ?? "20", 10) || 20),
   );
 
-  // Fetch user profile info
-  let employeePosition = "Staf";
-  if (input.userId) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("position")
-      .eq("id", input.userId)
-      .single();
-    if (profile?.position) {
-      employeePosition = profile.position;
-    }
-  }
+  const employeePosition = data.position || "Staf";
 
   if (input.reportType === "meeting") {
     return generateMeetingPdf(
       input,
+      data.tasks,
       employeePosition,
       paper,
       orientation,
       marginMm,
-      cfg?.pdf_footer_text || "",
+      cfg?.pdfFooterText || "",
     );
   } else if (input.reportType === "harian") {
     return generateHarianPdf(
       input,
+      data.logs,
       employeePosition,
       paper,
       orientation,
       marginMm,
-      cfg?.pdf_footer_text || "",
+      cfg?.pdfFooterText || "",
     );
   }
 
   // --- STANDARD REPORT ---
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
 
-  // Fetch data
-  let tasksQ = supabase
-    .from("tasks")
-    .select(
-      "id,title,status,priority,due_date,assigned_to,completed_at,created_at",
-    )
-    .gte("created_at", input.periodStart)
-    .lte("created_at", input.periodEnd + "T23:59:59");
-  if (input.userId) tasksQ = tasksQ.eq("assigned_to", input.userId);
-  const { data: tasks, error: te } = await tasksQ;
-  if (te) throw te;
-
-  let logsQ = supabase
-    .from("tracker_logs")
-    .select("task_id,user_id,duration_minutes,logged_date,note")
-    .gte("logged_date", input.periodStart)
-    .lte("logged_date", input.periodEnd);
-  if (input.userId) logsQ = logsQ.eq("user_id", input.userId);
-  const { data: logs, error: le } = await logsQ;
-  if (le) throw le;
-
   // Header
   const pageW = doc.internal.pageSize.getWidth();
   const startY = marginMm;
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(cfg?.app_name ?? "Log Book", marginMm, startY);
+  doc.text("Log Book", marginMm, startY);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  if (cfg?.pdf_header_text) {
-    doc.text(cfg.pdf_header_text, pageW - marginMm, startY, { align: "right" });
+  if (cfg?.pdfHeaderText) {
+    doc.text(cfg.pdfHeaderText, pageW - marginMm, startY, { align: "right" });
   }
 
   doc.setFontSize(16);
@@ -112,12 +89,12 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
   doc.setTextColor(0);
 
   // Summary
-  const total = tasks?.length ?? 0;
-  const done = tasks?.filter((t) => t.status === "done").length ?? 0;
-  const inProg = tasks?.filter((t) => t.status === "in_progress").length ?? 0;
-  const todo = tasks?.filter((t) => t.status === "todo").length ?? 0;
-  const totalMin = (logs ?? []).reduce(
-    (s, l) => s + (l.duration_minutes ?? 0),
+  const total = data.tasks?.length ?? 0;
+  const done = data.tasks?.filter((t) => t.status === "done").length ?? 0;
+  const inProg = data.tasks?.filter((t) => t.status === "in_progress").length ?? 0;
+  const todo = data.tasks?.filter((t) => t.status === "todo").length ?? 0;
+  const totalMin = (data.logs ?? []).reduce(
+    (s, l) => s + (l.durationMinutes ?? 0),
     0,
   );
 
@@ -158,16 +135,16 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
   autoTable(doc, {
     startY: nextY + 3,
     head: [["#", "Judul", "Status", "Prioritas", "Deadline", "Selesai"]],
-    body: (tasks ?? []).map((t, i) => [
+    body: (data.tasks ?? []).map((t, i) => [
       String(i + 1),
       t.title,
-      TASK_STATUS_LABEL[t.status],
-      TASK_PRIORITY_LABEL[t.priority],
-      t.due_date
-        ? format(new Date(t.due_date), "d MMM yyyy", { locale: idLocale })
+      TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] || t.status,
+      TASK_PRIORITY_LABEL[t.priority as keyof typeof TASK_PRIORITY_LABEL] || t.priority,
+      t.dueDate
+        ? format(new Date(t.dueDate), "d MMM yyyy", { locale: idLocale })
         : "—",
-      t.completed_at
-        ? format(new Date(t.completed_at), "d MMM yyyy", { locale: idLocale })
+      t.completedAt
+        ? format(new Date(t.completedAt), "d MMM yyyy", { locale: idLocale })
         : "—",
     ]),
     theme: "striped",
@@ -187,9 +164,9 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
   autoTable(doc, {
     startY: y2 + 3,
     head: [["Tanggal", "Durasi", "Catatan"]],
-    body: (logs ?? []).map((l) => [
-      format(new Date(l.logged_date), "d MMM yyyy", { locale: idLocale }),
-      formatDuration(l.duration_minutes),
+    body: (data.logs ?? []).map((l) => [
+      format(new Date(l.loggedDate), "d MMM yyyy", { locale: idLocale }),
+      formatDuration(l.durationMinutes),
       l.note ?? "—",
     ]),
     theme: "striped",
@@ -200,7 +177,7 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
 
   // Footer on every page
   const pages = doc.getNumberOfPages();
-  const footerText = cfg?.pdf_footer_text ?? "";
+  const footerText = cfg?.pdfFooterText ?? "";
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
@@ -215,8 +192,9 @@ export async function generateReportPdf(input: ReportInput): Promise<Blob> {
   return doc.output("blob");
 }
 
-async function generateMeetingPdf(
+function generateMeetingPdf(
   input: ReportInput,
+  tasks: any[],
   position: string,
   paper: string,
   orientation: "portrait" | "landscape",
@@ -225,19 +203,6 @@ async function generateMeetingPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
-
-  // Fetch tasks
-  let tasksQ = supabase
-    .from("tasks")
-    .select(
-      "id, title, description, created_at, due_date, task_source, output_description",
-    )
-    .gte("created_at", input.periodStart)
-    .lte("created_at", input.periodEnd + "T23:59:59")
-    .order("created_at", { ascending: true });
-  if (input.userId) tasksQ = tasksQ.eq("assigned_to", input.userId);
-  const { data: tasks, error } = await tasksQ;
-  if (error) throw error;
 
   const dateStart = new Date(input.periodStart);
   const monthName = format(dateStart, "MMMM", { locale: idLocale });
@@ -281,15 +246,15 @@ async function generateMeetingPdf(
       ],
     ],
     body: (tasks ?? []).map((t) => {
-      const dayDateStr = format(new Date(t.created_at), "EEEE, dd MMMM yyyy", {
+      const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", {
         locale: idLocale,
       });
       const descStr = [t.title, t.description].filter(Boolean).join("\n");
-      const sourceStr = t.task_source === "meeting" ? "Meeting" : "Atasan";
-      const targetStr = t.due_date
-        ? format(new Date(t.due_date), "dd MMMM yyyy", { locale: idLocale })
+      const sourceStr = t.taskSource === "meeting" ? "Meeting" : "Atasan";
+      const targetStr = t.dueDate
+        ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
         : "—";
-      const outputStr = t.output_description ?? "—";
+      const outputStr = t.outputDescription ?? "—";
       return [dayDateStr, descStr, sourceStr, targetStr, outputStr];
     }),
     theme: "grid",
@@ -339,8 +304,9 @@ async function generateMeetingPdf(
   return doc.output("blob");
 }
 
-async function generateHarianPdf(
+function generateHarianPdf(
   input: ReportInput,
+  logs: any[],
   position: string,
   paper: string,
   orientation: "portrait" | "landscape",
@@ -349,19 +315,6 @@ async function generateHarianPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
-
-  // Fetch log harian
-  let logsQ = supabase
-    .from("tracker_logs")
-    .select(
-      "id, logged_date, duration_minutes, note, start_time, end_time, is_validated, remarks, tasks(title, status)",
-    )
-    .gte("logged_date", input.periodStart)
-    .lte("logged_date", input.periodEnd)
-    .order("logged_date", { ascending: true });
-  if (input.userId) logsQ = logsQ.eq("user_id", input.userId);
-  const { data: logs, error } = await logsQ;
-  if (error) throw error;
 
   const dateStart = new Date(input.periodStart);
   const monthName = format(dateStart, "MMMM", { locale: idLocale });
@@ -399,23 +352,14 @@ async function generateHarianPdf(
         "Keterangan",
       ],
     ],
-    body: (logs ?? []).map((logItem) => {
-      const l = logItem as unknown as {
-        logged_date: string;
-        start_time: string | null;
-        end_time: string | null;
-        note: string | null;
-        is_validated: boolean | null;
-        remarks: string | null;
-        tasks: { title: string; status: string } | null;
-      };
-      const dayDateStr = format(new Date(l.logged_date), "EEEE, dd MMMM yyyy", {
+    body: (logs ?? []).map((l) => {
+      const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", {
         locale: idLocale,
       });
-      const timeStr = `${l.start_time ?? "08:00"} - ${l.end_time ?? "17:00"}`;
-      const activityStr = [l.tasks?.title, l.note].filter(Boolean).join(" - ");
-      const statusStr = l.tasks?.status === "done" ? "Selesai" : "On Progres";
-      const validatedStr = l.is_validated ? "Disetujui" : "Belum";
+      const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+      const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
+      const statusStr = l.task?.status === "done" ? "Selesai" : "On Progres";
+      const validatedStr = l.isValidated ? "Disetujui" : "Belum";
       const remarksStr = l.remarks ?? "—";
       return [
         dayDateStr,
