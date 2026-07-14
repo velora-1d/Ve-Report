@@ -1,6 +1,6 @@
 // ponytail: S3 RustFS storage upload helper (YAGNI)
 import { createServerFn } from "@tanstack/react-start";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 export const uploadToRustFS = createServerFn({ method: "POST" })
   .validator((d: { base64Data: string; fileName: string; contentType: string }) => d)
@@ -63,5 +63,46 @@ export const uploadToRustFS = createServerFn({ method: "POST" })
     } catch (err: any) {
       console.error("[Upload] RustFS error:", err);
       throw new Error(err.message || "Upload ke RustFS gagal");
+    }
+  });
+
+export const testRustFSConnection = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      const endpoint = process.env.S3_ENDPOINT;
+      const accessKeyId = process.env.S3_ACCESS_KEY;
+      const secretAccessKey = process.env.S3_SECRET_KEY;
+      const bucket = process.env.S3_BUCKET || "chat";
+      const region = process.env.S3_REGION || "ap-southeast-1";
+      const pathStyle = process.env.S3_PATH_STYLE !== "false";
+
+      if (!endpoint || !accessKeyId || !secretAccessKey) {
+        throw new Error("Kredensial S3 RustFS belum dikonfigurasi di file env");
+      }
+
+      const s3 = new S3Client({
+        endpoint,
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+        forcePathStyle: pathStyle,
+      });
+
+      const command = new ListObjectsV2Command({
+        Bucket: bucket,
+        MaxKeys: 1,
+      });
+
+      await s3.send(command);
+
+      return {
+        success: true,
+        message: "Koneksi ke S3 RustFS berhasil! Bucket dan kredensial terhubung.",
+      };
+    } catch (err: any) {
+      console.error("[Test RustFS] failed:", err);
+      throw new Error(err.message || "Gagal menghubungi S3 RustFS storage");
     }
   });

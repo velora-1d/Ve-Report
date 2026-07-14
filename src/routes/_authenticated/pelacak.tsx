@@ -523,21 +523,27 @@ function PelacakPage() {
         open={!!deletingId}
         onOpenChange={(v) => !v && setDeletingId(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus log?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Log waktu ini akan dihapus permanen. Tindakan tidak dapat
-              dibatalkan.
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-650 scale-110">
+              <Trash2 className="w-6 h-6 animate-pulse text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Hapus Log Harian?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
+              Log waktu ini akan dihapus secara permanen dari sistem pelacakan harian Anda. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-800 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingId && deleteMutation.mutate(deletingId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="flex-1 rounded-xl bg-gradient-to-r from-red-650 to-red-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
             >
-              Hapus
+              Ya, Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

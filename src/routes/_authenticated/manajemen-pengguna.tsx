@@ -575,22 +575,29 @@ function ManajemenPage() {
 
       {/* AlertDialog Konfirmasi Hapus Pengguna */}
       <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Pengguna?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Menghapus pengguna juga akan menghapus data sesi dan kepemilikan yang terkait secara permanen.
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-650 scale-110">
+              <Trash2 className="w-6 h-6 animate-pulse text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Hapus Pengguna?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
+              Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua sesi serta data terkait secara permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-800 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (deletingId) deleteMutation.mutate(deletingId);
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="flex-1 rounded-xl bg-gradient-to-r from-red-650 to-red-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
             >
-              Hapus Permanen
+              Ya, Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

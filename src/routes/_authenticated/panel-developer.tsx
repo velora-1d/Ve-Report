@@ -47,7 +47,18 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAppConfig, saveAppConfig } from "@/lib/app-config";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Database, Cloud } from "lucide-react";
+import { testRustFSConnection } from "@/lib/storage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type LogLevel = "info" | "warning" | "error" | "critical";
 
@@ -155,6 +166,7 @@ export const Route = createFileRoute("/_authenticated/panel-developer")({
 
 function PanelDeveloperPage() {
   const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const {
     data: logs,
@@ -205,7 +217,10 @@ function PanelDeveloperPage() {
         ))}
       </div>
 
-      <TelegramConfigCard />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TelegramConfigCard />
+        <RustFsConfigCard />
+      </div>
 
       <RbacMatrixCard />
 
@@ -231,7 +246,7 @@ function PanelDeveloperPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => clearLogs.mutate()}
+              onClick={() => setShowClearConfirm(true)}
               disabled={clearLogs.isPending}
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" /> Bersihkan &gt; 30 hari
@@ -274,6 +289,36 @@ function PanelDeveloperPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-650 scale-110">
+              <Trash2 className="w-6 h-6 animate-pulse text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Bersihkan Log Sistem?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
+              Apakah Anda yakin ingin menghapus permanen semua log sistem yang berumur lebih dari 30 hari? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-800 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearLogs.mutate();
+                setShowClearConfirm(false);
+              }}
+              className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
+            >
+              Ya, Bersihkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -586,6 +631,52 @@ function RbacMatrixCard() {
           <Button onClick={() => save.mutate(permissions)} disabled={save.isPending}>
             {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Simpan Matrix Akses
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RustFsConfigCard() {
+  const [testing, setTesting] = useState(false);
+
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const res = await testRustFSConnection();
+      if (res?.success) {
+        toast.success(res.message);
+      }
+    } catch (e: any) {
+      toast.error("Gagal menghubungkan ke S3 RustFS", {
+        description: e.message || String(e),
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <Card className="surface-card border-0">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Cloud className="w-4 h-4 text-[#0077B6]" /> Uji Koneksi RustFS (S3)
+        </CardTitle>
+        <CardDescription>
+          Verifikasi konfigurasi penyimpanan S3 RustFS dari environment variables.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div><strong className="text-slate-800 dark:text-white">Provider:</strong> RustFS</div>
+          <div><strong className="text-slate-800 dark:text-white">Endpoint:</strong> https://s3.ve-lora.my.id</div>
+          <div><strong className="text-slate-800 dark:text-white">Bucket:</strong> chat</div>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={testConnection} disabled={testing} className="bg-gradient-to-r from-[#0077B6] to-[#0077B6]/90 hover:from-[#0077B6]/95 hover:to-[#0077B6]/85 text-white font-semibold rounded-xl text-xs py-2 shadow-sm">
+            {testing && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}
+            Uji Koneksi
           </Button>
         </div>
       </CardContent>
