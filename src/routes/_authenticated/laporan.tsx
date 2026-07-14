@@ -787,7 +787,7 @@ function LaporanPage() {
         </div>
 
         {/* Kolom Kanan: Pratinjau Kertas A4/F4 */}
-        <div className="flex-1 w-full min-w-0">
+        <div className="flex-1 w-full overflow-hidden">
           <ReportPreviewGrid
             reportType={reportType}
             data={previewData}
