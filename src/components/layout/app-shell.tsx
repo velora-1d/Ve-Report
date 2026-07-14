@@ -326,7 +326,7 @@ function AppSidebar() {
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-white via-[#FAFCFF] to-transparent dark:from-slate-900 dark:via-slate-900/50 dark:to-transparent border border-slate-100 dark:border-slate-800 shadow-[0_4px_12px_rgba(0,119,182,0.01)] backdrop-blur-md overflow-hidden w-full transition-all duration-300 hover:border-[#0077B6]/25 hover:shadow-[0_8px_24px_rgba(0,119,182,0.06)] hover:-translate-y-0.5">
             <div className="w-[36px] h-[48px] border border-[#0077B6]/20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all">
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img crossOrigin="anonymous" src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
                   <User className="w-3.5 h-3.5" />
@@ -363,7 +363,7 @@ function AppSidebar() {
           <div className="flex flex-col items-center gap-2.5 w-full">
             <div className="w-[36px] h-[48px] border border-[#0077B6]/20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all" title={user?.name}>
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img crossOrigin="anonymous" src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
                   <User className="w-3.5 h-3.5" />
