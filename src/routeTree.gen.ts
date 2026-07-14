@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedValidasiRouteImport } from './routes/_authenticated/validasi'
 import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/tugas'
 import { Route as AuthenticatedPengaturanRouteImport } from './routes/_authenticated/pengaturan'
 import { Route as AuthenticatedPelacakRouteImport } from './routes/_authenticated/pelacak'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedValidasiRoute = AuthenticatedValidasiRouteImport.update({
+  id: '/validasi',
+  path: '/validasi',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTugasRoute = AuthenticatedTugasRouteImport.update({
   id: '/tugas',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/pelacak': typeof AuthenticatedPelacakRoute
   '/pengaturan': typeof AuthenticatedPengaturanRoute
   '/tugas': typeof AuthenticatedTugasRoute
+  '/validasi': typeof AuthenticatedValidasiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/pelacak': typeof AuthenticatedPelacakRoute
   '/pengaturan': typeof AuthenticatedPengaturanRoute
   '/tugas': typeof AuthenticatedTugasRoute
+  '/validasi': typeof AuthenticatedValidasiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/pelacak': typeof AuthenticatedPelacakRoute
   '/_authenticated/pengaturan': typeof AuthenticatedPengaturanRoute
   '/_authenticated/tugas': typeof AuthenticatedTugasRoute
+  '/_authenticated/validasi': typeof AuthenticatedValidasiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/pelacak'
     | '/pengaturan'
     | '/tugas'
+    | '/validasi'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/pelacak'
     | '/pengaturan'
     | '/tugas'
+    | '/validasi'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pelacak'
     | '/_authenticated/pengaturan'
     | '/_authenticated/tugas'
+    | '/_authenticated/validasi'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -185,6 +197,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/validasi': {
+      id: '/_authenticated/validasi'
+      path: '/validasi'
+      fullPath: '/validasi'
+      preLoaderRoute: typeof AuthenticatedValidasiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tugas': {
       id: '/_authenticated/tugas'
@@ -253,6 +272,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPelacakRoute: typeof AuthenticatedPelacakRoute
   AuthenticatedPengaturanRoute: typeof AuthenticatedPengaturanRoute
   AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
+  AuthenticatedValidasiRoute: typeof AuthenticatedValidasiRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -263,6 +283,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPelacakRoute: AuthenticatedPelacakRoute,
   AuthenticatedPengaturanRoute: AuthenticatedPengaturanRoute,
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
+  AuthenticatedValidasiRoute: AuthenticatedValidasiRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

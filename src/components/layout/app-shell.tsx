@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   ShieldAlert,
+  CheckSquare,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -64,6 +65,12 @@ const MAIN_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
+  {
+    to: "/validasi",
+    label: "Validasi Log",
+    icon: CheckSquare,
+    requiresAdmin: true,
+  },
   {
     to: "/manajemen-pengguna",
     label: "Pengguna",
@@ -131,7 +138,7 @@ function AppSidebar() {
     const userRole = user?.role || "staff";
 
     if (!permissions || !permissions[userRole]) {
-      if (to === "/manajemen-pengguna") return userRole === "admin";
+      if (to === "/manajemen-pengguna" || to === "/validasi") return userRole === "admin";
       if (to === "/panel-developer") return false;
       return true;
     }
@@ -461,6 +468,7 @@ function titleFromPath(path: string, appName: string): string {
     "/pelacak": `${appName} Harian`,
     "/laporan": "Laporan",
     "/manajemen-pengguna": "Pengguna",
+    "/validasi": "Validasi Log",
     "/pengaturan": "Pengaturan",
     "/panel-developer": "Panel Developer",
   };
