@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAppConfig } from "@/lib/app-config";
@@ -12,7 +12,18 @@ import {
   Terminal,
   LogOut,
   Menu,
+  ShieldAlert,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -91,6 +102,21 @@ function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+
+  const handleConfirmSwitch = () => {
+    if (!selectedRole) return;
+    if (selectedRole === "developer") {
+      localStorage.removeItem("dev_impersonated_role");
+    } else {
+      localStorage.setItem("dev_impersonated_role", selectedRole);
+    }
+    toast.success(`Berhasil switch ke peran ${selectedRole}`);
+    setShowConfirm(false);
+    window.location.reload();
+  };
 
   const { data: config } = useQuery({
     queryKey: ["app-config"],
@@ -251,7 +277,34 @@ function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4"}>
+      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4 gap-4"}>
+        {user?.originalRole === "developer" && !isCollapsed && (
+          <div className="px-1 py-1 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+            <div className="text-[9px] uppercase font-extrabold tracking-widest text-[#0077B6] dark:text-slate-400 pl-1">
+              Dev Mode Switcher
+            </div>
+            <div className="flex gap-1 bg-slate-100/60 dark:bg-slate-900/60 p-0.5 rounded-xl border border-slate-200/50">
+              {(["developer", "admin", "staff"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => {
+                    if (user.role === r) return;
+                    setSelectedRole(r);
+                    setShowConfirm(true);
+                  }}
+                  className={`flex-1 text-[10px] font-extrabold py-1.5 rounded-lg transition-all duration-300 ${
+                    user.role === r
+                      ? "bg-white dark:bg-slate-800 text-[#0077B6] shadow-sm scale-105"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-800/40"
+                  }`}
+                >
+                  {r === "developer" ? "Dev" : r === "admin" ? "Admin" : "Staff"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!isCollapsed ? (
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-white via-[#FAFCFF] to-transparent dark:from-slate-900 dark:via-slate-900/50 dark:to-transparent border border-slate-100 dark:border-slate-800 shadow-[0_4px_12px_rgba(0,119,182,0.01)] backdrop-blur-md overflow-hidden w-full transition-all duration-300 hover:border-[#0077B6]/25 hover:shadow-[0_8px_24px_rgba(0,119,182,0.06)] hover:-translate-y-0.5">
             <div className="w-[32px] h-[40px] border border-[#0077B6]/20 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all">
@@ -308,6 +361,34 @@ function AppSidebar() {
           </div>
         )}
       </SidebarFooter>
+
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-[#0077B6]/10 flex items-center justify-center text-[#0077B6] scale-110">
+              <ShieldAlert className="w-6 h-6 animate-pulse" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Konfirmasi Switch Peran
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Apakah Anda yakin ingin meninjau workspace ini sebagai peran <strong className="text-slate-800 dark:text-slate-200 uppercase">{selectedRole === "staff" ? "staff / user biasa" : selectedRole}</strong>?
+              Tampilan menu, tombol aksi, dan izin CRUD akan otomatis menyesuaikan peran tersebut.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-800 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleConfirmSwitch()}
+              className="flex-1 rounded-xl bg-gradient-to-r from-[#0077B6] to-[#0077B6]/90 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
+            >
+              Ya, Switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }
@@ -338,7 +419,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-3 w-full"}>
           <Icon
             strokeWidth={3.0}
-            className={`w-4 h-4 transition-all duration-300 shrink-0 ${
+            className={`w-[18px] h-[18px] transition-all duration-300 shrink-0 ${
               active
                 ? "text-[#0077B6] scale-110 drop-shadow-[0_0_8px_rgba(0,119,182,0.35)]"
                 : "text-slate-900 dark:text-slate-50 hover:text-[#0077B6]"

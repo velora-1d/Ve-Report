@@ -11,24 +11,40 @@ export interface CurrentUser {
   position: string | null;
   bio: string | null;
   roles: AppRole[];
+  role: AppRole;
+  originalRole: AppRole;
 }
 
 export function useCurrentUser() {
   const { data, isPending, error } = authClient.useSession();
 
   const user = data?.user as any;
-  const currentUser: CurrentUser | null = user
-    ? {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.image ?? null,
-        phone: user.phone ?? null,
-        position: user.position ?? null,
-        bio: user.bio ?? null,
-        roles: [user.role as AppRole],
+  let currentUser: CurrentUser | null = null;
+
+  if (user) {
+    const originalRole = user.role as AppRole;
+    let activeRole = originalRole;
+
+    if (originalRole === "developer" && typeof window !== "undefined") {
+      const override = localStorage.getItem("dev_impersonated_role");
+      if (override) {
+        activeRole = override as AppRole;
       }
-    : null;
+    }
+
+    currentUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.image ?? null,
+      phone: user.phone ?? null,
+      position: user.position ?? null,
+      bio: user.bio ?? null,
+      roles: [activeRole],
+      role: activeRole,
+      originalRole: originalRole,
+    };
+  }
 
   return {
     data: currentUser,

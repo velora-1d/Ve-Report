@@ -9,7 +9,14 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth", search: { redirect: location.href } });
     }
 
-    const role = session.user.role || "staff";
+    let role = session.user.role || "staff";
+    const originalRole = role;
+    if (originalRole === "developer" && typeof window !== "undefined") {
+      const override = localStorage.getItem("dev_impersonated_role");
+      if (override) {
+        role = override;
+      }
+    }
     if (role !== "developer") {
       const { getAppConfig } = await import("@/lib/app-config");
       const config = await getAppConfig();
