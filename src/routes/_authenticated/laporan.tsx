@@ -1167,7 +1167,7 @@ function ReportPreviewGrid({
               </div>
 
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <table className="w-full text-left text-xs border-collapse border border-slate-200" style={{ tableLayout: "fixed" }}>
                 <thead>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
                     <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
@@ -1355,7 +1355,7 @@ function ReportPreviewGrid({
               </div>
 
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <table className="w-full text-left text-xs border-collapse border border-slate-200" style={{ tableLayout: "fixed" }}>
                 <thead>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
                     <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
