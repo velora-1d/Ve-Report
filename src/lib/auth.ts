@@ -29,6 +29,7 @@ function getTrustedOrigins(): string[] {
 export const auth = betterAuth({
   baseURL: getBaseURL(),
   basePath: "/api/auth",
+  trustHost: true,
   trustedOrigins: getTrustedOrigins(),
   database: drizzleAdapter(db, {
     provider: "mysql",
