@@ -838,7 +838,6 @@ function LaporanPage() {
               )}
 
               <div className="flex flex-col gap-2 pt-2">
-                {(reportType === "meeting" || reportType === "harian") && (
                   <Button
                     type="button"
                     variant="outline"
@@ -868,7 +867,6 @@ function LaporanPage() {
                     <Save className="w-3.5 h-3.5" />
                     Simpan Konfigurasi & Ttd
                   </Button>
-                )}
                 <Button
                   onClick={() => generate.mutate("pdf")}
                   disabled={generate.isPending || !hasPermission("laporan", "create")}
