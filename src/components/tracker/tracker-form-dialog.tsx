@@ -1,6 +1,5 @@
-// ponytail: Mengganti query Supabase client-side pada form dialog pelacak dengan Server Functions Drizzle ORM
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { todayISO } from "@/lib/tracker";
-import { getAssignableTasks, saveTrackerLog } from "@/routes/_authenticated/pelacak";
+import { saveTrackerLog } from "@/routes/_authenticated/pelacak";
 
 interface Props {
   open: boolean;
@@ -49,24 +48,6 @@ export function TrackerFormDialog({
   const [endTime, setEndTime] = useState<string>("17:00");
   const [status, setStatus] = useState<string>("progress"); // 'progress' | 'done'
   const [remarks, setRemarks] = useState<string>("—");
-  const [taskId, setTaskId] = useState<string>("__none__");
-
-  const { data: tasksList } = useQuery({
-    queryKey: ["assignable-tasks", user?.id],
-    queryFn: () => getAssignableTasks(),
-    enabled: open && !!user,
-    staleTime: 60_000,
-  });
-
-  const handleTaskChange = (val: string) => {
-    setTaskId(val);
-    if (val !== "__none__" && !note.trim()) {
-      const selected = tasksList?.find((t) => t.id === val);
-      if (selected) {
-        setNote(selected.title);
-      }
-    }
-  };
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +61,6 @@ export function TrackerFormDialog({
       setEndTime(editing.endTime ?? "17:00");
       setStatus(editing.status ?? "progress");
       setRemarks(editing.remarks ?? "—");
-      setTaskId(editing.taskId ?? "__none__");
     } else {
       setDate(todayISO());
       setHours("0");
@@ -90,9 +70,8 @@ export function TrackerFormDialog({
       setEndTime("17:00");
       setStatus("progress");
       setRemarks("—");
-      setTaskId(defaultTaskId ?? "__none__");
     }
-  }, [open, editing, defaultTaskId]);
+  }, [open, editing]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -106,7 +85,7 @@ export function TrackerFormDialog({
       await saveTrackerLog({
         data: {
           id: editing?.id,
-          taskId: taskId === "__none__" ? null : taskId,
+          taskId: null,
           loggedDate: date,
           durationMinutes: totalMin,
           note: note.trim() || null,
@@ -140,22 +119,6 @@ export function TrackerFormDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Hubungkan ke Tugas / Meeting (Opsional)</Label>
-            <Select value={taskId} onValueChange={handleTaskChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih tugas/meeting jika ada" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Aktivitas Manual (Tanpa Link Tugas)</SelectItem>
-                {tasksList?.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.title} ({t.status})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="space-y-2">
             <Label>Status Kegiatan</Label>
             <Select value={status} onValueChange={setStatus}>
