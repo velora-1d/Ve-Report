@@ -70,103 +70,103 @@
 :root {
   --radius: 0.75rem; /* 12px */
 
-  /* Ember Studio Colors */
-  --background: #FAFAF9;
-  --foreground: #1C1917;
-  --card: #F5F5F4;
-  --card-foreground: #1C1917;
-  --popover: #F5F5F4;
-  --popover-foreground: #1C1917;
+  /* Ve-Report Professional Design System Palette */
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
   
-  --surface: #F5F5F4;
-  --surface-raised: #E7E5E4;
-  --surface-sunken: #FAFAF9;
+  --surface: #FFFFFF;
+  --surface-raised: #F1F5FD;
+  --surface-sunken: #F8FAFC;
 
-  --primary: #C2410C;
-  --primary-foreground: #FAFAF9;
-  --primary-hover: #9A3412;
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #1D4ED8;
 
-  --secondary: #E7E5E4;
-  --secondary-foreground: #1C1917;
+  --secondary: #3B82F6;
+  --secondary-foreground: #FFFFFF;
 
-  --muted: #FAFAF9;
-  --muted-foreground: #000000;
+  --muted: #F8FAFC;
+  --muted-foreground: #000000; /* pitch black! */
 
-  --accent: #F59E0B;
-  --accent-foreground: #1C1917;
+  --accent: #059669;
+  --accent-foreground: #FFFFFF;
 
   --destructive: #DC2626;
-  --destructive-foreground: #FAFAF9;
+  --destructive-foreground: #FFFFFF;
 
   --success: #16A34A;
-  --success-foreground: #FAFAF9;
+  --success-foreground: #FFFFFF;
   --warning: #D97706;
-  --warning-foreground: #1C1917;
-  --info: #F59E0B;
-  --info-foreground: #1C1917;
+  --warning-foreground: #FFFFFF;
+  --info: #2563EB;
+  --info-foreground: #FFFFFF;
 
-  --border: #D6D3D1;
-  --input: #D6D3D1;
-  --ring: #C2410C;
+  --border: #E4ECFC;
+  --input: #E4ECFC;
+  --ring: #2563EB;
 
-  --sidebar: #FAFAF9;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #C2410C;
-  --sidebar-primary-foreground: #FAFAF9;
-  --sidebar-accent: #E7E5E4;
-  --sidebar-accent-foreground: #1C1917;
-  --sidebar-border: #D6D3D1;
-  --sidebar-ring: #C2410C;
+  --sidebar: #F8FAFC;
+  --sidebar-foreground: #000000; /* pitch black! */
+  --sidebar-primary: #2563EB;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E4ECFC;
+  --sidebar-accent-foreground: #0F172A;
+  --sidebar-border: #E4ECFC;
+  --sidebar-ring: #2563EB;
 }
 
 .dark {
-  /* Intentional Dark Mode warm chocolate/charcoal palette */
-  --background: #12100E;
-  --foreground: #FAFAF9;
-  --card: #1C1917;
-  --card-foreground: #FAFAF9;
-  --popover: #1C1917;
-  --popover-foreground: #FAFAF9;
+  /* Intentional Dark Mode Palette matching the professional blue theme */
+  --background: #0B0F19;
+  --foreground: #F8FAFC;
+  --card: #1E293B;
+  --card-foreground: #F8FAFC;
+  --popover: #1E293B;
+  --popover-foreground: #F8FAFC;
 
-  --surface: #1C1917;
-  --surface-raised: #2A2522;
-  --surface-sunken: #0C0A09;
+  --surface: #1E293B;
+  --surface-raised: #334155;
+  --surface-sunken: #0B0F19;
 
-  --primary: #C2410C;
-  --primary-foreground: #FAFAF9;
-  --primary-hover: #EA580C;
+  --primary: #3B82F6;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #2563EB;
 
-  --secondary: #2A2522;
-  --secondary-foreground: #FAFAF9;
+  --secondary: #334155;
+  --secondary-foreground: #F8FAFC;
 
-  --muted: #12100E;
-  --muted-foreground: #A8A29E;
+  --muted: #0B0F19;
+  --muted-foreground: #94A3B8;
 
-  --accent: #F59E0B;
-  --accent-foreground: #1C1917;
+  --accent: #10B981;
+  --accent-foreground: #0B0F19;
 
   --destructive: #EF4444;
-  --destructive-foreground: #FAFAF9;
+  --destructive-foreground: #FFFFFF;
 
-  --success: #22C55E;
-  --success-foreground: #12100E;
-  --warning: #EAB308;
-  --warning-foreground: #12100E;
-  --info: #F59E0B;
-  --info-foreground: #12100E;
+  --success: #10B981;
+  --success-foreground: #0B0F19;
+  --warning: #F59E0B;
+  --warning-foreground: #0B0F19;
+  --info: #3B82F6;
+  --info-foreground: #0B0F19;
 
-  --border: #443E3A;
-  --input: #443E3A;
-  --ring: #C2410C;
+  --border: #1E293B;
+  --input: #1E293B;
+  --ring: #3B82F6;
 
-  --sidebar: #12100E;
-  --sidebar-foreground: #A8A29E;
-  --sidebar-primary: #C2410C;
-  --sidebar-primary-foreground: #FAFAF9;
-  --sidebar-accent: #2A2522;
-  --sidebar-accent-foreground: #FAFAF9;
-  --sidebar-border: #443E3A;
-  --sidebar-ring: #C2410C;
+  --sidebar: #0B0F19;
+  --sidebar-foreground: #94A3B8;
+  --sidebar-primary: #3B82F6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #3B82F6;
 }
 
 @layer base {
