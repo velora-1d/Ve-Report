@@ -168,6 +168,11 @@ function PanelDeveloperPage() {
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+
   const {
     data: logs,
     isLoading: logsLoading,
@@ -228,7 +233,7 @@ function PanelDeveloperPage() {
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base">Log Sistem</CardTitle>
-            <CardDescription>200 log terbaru.</CardDescription>
+            <CardDescription>{config?.logLimit ?? 200} log terbaru.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Select value={levelFilter} onValueChange={setLevelFilter}>
