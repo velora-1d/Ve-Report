@@ -399,7 +399,7 @@ function LaporanPage() {
 
       <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
         {/* Kolom Kiri: Form & Riwayat */}
-        <div className="w-full lg:w-[450px] space-y-6 shrink-0">
+        <div className="w-full lg:w-[450px] space-y-6 shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Card className="surface-card border-0">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -778,15 +778,15 @@ function ReportPreviewGrid({
               <table className="w-full text-left text-xs border-collapse border border-slate-400">
                 <thead>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Uraian Tugas</th>
-                    <th colSpan={2} className="p-2 border border-slate-400 text-center">Pemberi Tugas</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Target Selesai</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Out Put</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[40%]">Uraian Tugas</th>
+                    <th colSpan={2} className="p-2 border border-slate-400 text-center w-[20%]">Pemberi Tugas</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[12%]">Target Selesai</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[13%]">Out Put</th>
                   </tr>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th className="p-1 border border-slate-400 text-center">Atasan</th>
-                    <th className="p-1 border border-slate-400 text-center">Meeting</th>
+                    <th className="p-1 border border-slate-400 text-center w-[10%]">Atasan</th>
+                    <th className="p-1 border border-slate-400 text-center w-[10%]">Meeting</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -903,16 +903,16 @@ function ReportPreviewGrid({
               <table className="w-full text-left text-xs border-collapse border border-slate-400">
                 <thead>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Jam</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Implementasi Kegiatan</th>
-                    <th colSpan={2} className="p-2 border-slate-400 text-center">Status</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Validasi Atasan</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Keterangan</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Jam</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[35%]">Implementasi Kegiatan</th>
+                    <th colSpan={2} className="p-2 border-slate-400 text-center w-[20%]">Status</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Validasi Atasan</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Keterangan</th>
                   </tr>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th className="p-1 border border-slate-400 text-center">On Progres</th>
-                    <th className="p-1 border border-slate-400 text-center">Selesai</th>
+                    <th className="p-1 border border-slate-400 text-center w-[10%]">On Progres</th>
+                    <th className="p-1 border border-slate-400 text-center w-[10%]">Selesai</th>
                   </tr>
                 </thead>
                 <tbody>
