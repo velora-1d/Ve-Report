@@ -613,7 +613,7 @@ function LaporanPage() {
                             <input
                               type="range"
                               min="20"
-                              max="200"
+                              max="500"
                               value={makerSigScale}
                               onChange={(e) => setMakerSigScale(Number(e.target.value))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
@@ -700,7 +700,7 @@ function LaporanPage() {
                             <input
                               type="range"
                               min="20"
-                              max="200"
+                              max="500"
                               value={checkerSigScale}
                               onChange={(e) => setCheckerSigScale(Number(e.target.value))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
