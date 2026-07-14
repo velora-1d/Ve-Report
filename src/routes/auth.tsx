@@ -99,7 +99,7 @@ function AuthPage() {
         <div className="absolute top-[-10%] right-[-10%] w-[80%] h-[80%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse duration-8000"></div>
 
         {/* Content Wrapper aligned centrally with larger max-width */}
-        <div className="relative flex flex-col justify-between h-full z-10 max-w-md ml-[20%] mr-auto w-full">
+        <div className="relative flex flex-col justify-between h-full z-10 max-w-lg ml-[20%] mr-auto w-full">
           {/* Brand Header (30% larger) */}
           <div className="flex items-center gap-4.5">
             <div className="w-13 h-13 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
