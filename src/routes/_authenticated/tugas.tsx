@@ -1,7 +1,125 @@
+// ponytail: Mengganti query Supabase client-side untuk tugas dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskListTab } from "@/components/tasks/task-list-tab";
 import { CalendarTab } from "@/components/schedules/calendar-tab";
+import { z } from "zod";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { tasks as tasksTable, users as usersTable } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
+
+// ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee)
+export const getTasksList = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  return db.query.tasks.findMany({
+    with: {
+      assignee: {
+        columns: {
+          id: true,
+          name: true,
+        }
+      }
+    },
+    orderBy: [desc(tasksTable.createdAt)],
+  });
+});
+
+// ponytail: Fungsi server untuk mengambil daftar pengguna aktif yang dapat ditugaskan
+export const getAssignableUsers = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  return db.query.users.findMany({
+    where: eq(usersTable.isActive, true),
+    columns: {
+      id: true,
+      name: true,
+      email: true,
+    },
+    orderBy: [desc(usersTable.name)],
+  });
+});
+
+// ponytail: Fungsi server untuk menyimpan/memperbarui tugas
+export const saveTask = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string().optional(),
+      title: z.string(),
+      description: z.string().nullable().optional(),
+      status: z.string(),
+      priority: z.string(),
+      dueDate: z.string().nullable().optional(),
+      assignedTo: z.string().nullable().optional(),
+      taskSource: z.string().optional(),
+      outputDescription: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    const payload = {
+      title: data.title,
+      description: data.description || null,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      assignedTo: data.assignedTo === "__none__" || !data.assignedTo ? null : data.assignedTo,
+      taskSource: data.taskSource || "atasan",
+      outputDescription: data.outputDescription || null,
+      updatedAt: new Date(),
+    };
+
+    if (data.id) {
+      await db.update(tasksTable).set(payload).where(eq(tasksTable.id, data.id));
+    } else {
+      await db.insert(tasksTable).values({
+        ...payload,
+        createdBy: session.user.id,
+      });
+    }
+  });
+
+// ponytail: Fungsi server untuk menghapus tugas
+export const deleteTask = createServerFn({ method: "POST" })
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    await db.delete(tasksTable).where(eq(tasksTable.id, id));
+  });
+
+// ponytail: Fungsi server untuk memperbarui status pengerjaan tugas secara instan
+export const updateTaskStatus = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string(),
+      status: z.string(),
+      startedAt: z.string().nullable().optional(),
+      completedAt: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    await db.update(tasksTable)
+      .set({
+        status: data.status,
+        startedAt: data.startedAt ? new Date(data.startedAt) : undefined,
+        completedAt: data.completedAt ? new Date(data.completedAt) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(tasksTable.id, data.id));
+  });
 
 export const Route = createFileRoute("/_authenticated/tugas")({
   head: () => ({

@@ -1,7 +1,7 @@
+// ponytail: Menggunakan Server Functions dari tugas.tsx dengan Drizzle ORM
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -27,14 +27,14 @@ import {
   TASK_STATUSES,
   TASK_STATUS_LABEL,
   type TaskPriority,
-  type TaskRow,
   type TaskStatus,
 } from "@/lib/tasks";
+import { getAssignableUsers, saveTask } from "@/routes/_authenticated/tugas";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  task: TaskRow | null;
+  task: any | null;
   currentUserId: string;
 }
 
@@ -62,53 +62,34 @@ export function TaskFormDialog({
     setDescription(task?.description ?? "");
     setStatus(task?.status ?? "todo");
     setPriority(task?.priority ?? "medium");
-    setDueDate(task?.due_date ? task.due_date.slice(0, 10) : "");
-    setAssignedTo(task?.assigned_to ?? "__none__");
-    setTaskSource(task?.task_source ?? "atasan");
-    setOutputDescription(task?.output_description ?? "");
+    setDueDate(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
+    setAssignedTo(task?.assignedTo ?? "__none__");
+    setTaskSource(task?.taskSource ?? "atasan");
+    setOutputDescription(task?.outputDescription ?? "");
   }, [open, task]);
 
   const { data: users } = useQuery({
     queryKey: ["assignable-users"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, email, is_active")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getAssignableUsers(),
     enabled: open,
     staleTime: 60_000,
   });
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      if (!title.trim()) throw new Error("Judul tugas wajib diisi.");
-      const payload = {
-        title: title.trim(),
-        description: description.trim() || null,
-        status,
-        priority,
-        due_date: dueDate ? new Date(dueDate).toISOString() : null,
-        assigned_to: assignedTo === "__none__" ? null : assignedTo,
-        task_source: taskSource,
-        output_description: outputDescription.trim() || null,
-      };
-      if (isEdit && task) {
-        const { error } = await supabase
-          .from("tasks")
-          .update(payload)
-          .eq("id", task.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("tasks")
-          .insert({ ...payload, created_by: currentUserId });
-        if (error) throw error;
-      }
-    },
+    mutationFn: () =>
+      saveTask({
+        data: {
+          id: task?.id,
+          title: title.trim(),
+          description: description.trim() || null,
+          status,
+          priority,
+          dueDate: dueDate || null,
+          assignedTo: assignedTo === "__none__" ? null : assignedTo,
+          taskSource,
+          outputDescription: outputDescription.trim() || null,
+        }
+      }),
     onSuccess: () => {
       toast.success(isEdit ? "Tugas diperbarui." : "Tugas dibuat.");
       qc.invalidateQueries({ queryKey: ["tasks"] });

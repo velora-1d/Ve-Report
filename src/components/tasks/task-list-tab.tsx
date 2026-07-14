@@ -1,10 +1,11 @@
+// ponytail: Menggunakan Server Functions dari tugas.tsx dengan Drizzle ORM
+// ponytail: Memanfaatkan join native Drizzle dengan relations `assignee` untuk menyingkirkan query profiles-map (YAGNI)
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,11 @@ import {
   TASK_STATUS_LABEL,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABEL,
-  type TaskRow,
   type TaskStatus,
 } from "@/lib/tasks";
 import { StatusBadge, PriorityBadge } from "./status-badges";
 import { TaskFormDialog } from "./task-form-dialog";
+import { getTasksList, updateTaskStatus, deleteTask } from "@/routes/_authenticated/tugas";
 
 export function TaskListTab() {
   const { data: user } = useCurrentUser();
@@ -56,31 +57,13 @@ export function TaskListTab() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<TaskRow | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", "list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as TaskRow[];
-    },
+    queryFn: () => getTasksList(),
     enabled: !!user,
-  });
-
-  const { data: profileMap } = useQuery({
-    queryKey: ["profiles-map"],
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, name");
-      const map: Record<string, string> = {};
-      (data ?? []).forEach((p) => (map[p.id] = p.name));
-      return map;
-    },
-    staleTime: 60_000,
   });
 
   const filtered = useMemo(() => {
@@ -96,17 +79,17 @@ export function TaskListTab() {
   }, [tasks, statusFilter, priorityFilter, search]);
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
-      const patch: {
-        status: TaskStatus;
-        started_at?: string;
-        completed_at?: string | null;
-      } = { status };
-      if (status === "in_progress") patch.started_at = new Date().toISOString();
-      if (status === "done") patch.completed_at = new Date().toISOString();
-      else if (status !== "in_progress") patch.completed_at = null;
-      const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-      if (error) throw error;
+    mutationFn: (v: { id: string; status: TaskStatus }) => {
+      const startedAt = v.status === "in_progress" ? new Date().toISOString() : null;
+      const completedAt = v.status === "done" ? new Date().toISOString() : null;
+      return updateTaskStatus({
+        data: {
+          id: v.id,
+          status: v.status,
+          startedAt,
+          completedAt,
+        }
+      });
     },
     onSuccess: () => {
       toast.success("Status diperbarui.");
@@ -116,10 +99,7 @@ export function TaskListTab() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => deleteTask({ data: id }),
     onSuccess: () => {
       toast.success("Tugas dihapus.");
       qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -239,8 +219,8 @@ export function TaskListTab() {
                     <PriorityBadge priority={t.priority} />
                   </TableCell>
                   <TableCell className="text-sm">
-                    {t.assigned_to ? (
-                      (profileMap?.[t.assigned_to] ?? "—")
+                    {t.assignee ? (
+                      t.assignee.name
                     ) : (
                       <span className="text-muted-foreground">
                         Belum ditugaskan
@@ -248,10 +228,10 @@ export function TaskListTab() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {t.due_date ? (
+                    {t.dueDate ? (
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays className="size-3.5 text-muted-foreground" />
-                        {format(new Date(t.due_date), "d MMM yyyy", {
+                        {format(new Date(t.dueDate), "d MMM yyyy", {
                           locale: idLocale,
                         })}
                       </span>
