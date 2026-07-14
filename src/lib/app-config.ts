@@ -1,31 +1,48 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+// ponytail: Mengganti query Supabase client-side untuk app_config dengan Server Functions Drizzle ORM
+import { createServerFn } from "@tanstack/react-start";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { appConfig as configTable } from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
+import { z } from "zod";
 
-export type AppConfig = Database["public"]["Tables"]["app_config"]["Row"];
+export const getAppConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const configs = await db.query.appConfig.findMany({
+    orderBy: [desc(configTable.updatedAt)],
+    limit: 1,
+  });
+  return configs[0] || null;
+});
 
-export async function fetchAppConfig(): Promise<AppConfig | null> {
-  const { data, error } = await supabase
-    .from("app_config")
-    .select("*")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
+export const saveAppConfig = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string().optional(),
+      logoUrl: z.string().nullable().optional(),
+      pdfPaperSize: z.string().optional(),
+      pdfOrientation: z.string().optional(),
+      pdfHeaderText: z.string().nullable().optional(),
+      pdfFooterText: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
-export async function upsertAppConfig(
-  patch: Partial<Database["public"]["Tables"]["app_config"]["Update"]>,
-  existingId?: string,
-) {
-  if (existingId) {
-    const { error } = await supabase
-      .from("app_config")
-      .update(patch)
-      .eq("id", existingId);
-    if (error) throw error;
-    return;
-  }
-  const { error } = await supabase.from("app_config").insert(patch as never);
-  if (error) throw error;
-}
+    const payload = {
+      logoUrl: data.logoUrl || null,
+      pdfPaperSize: data.pdfPaperSize || "A4",
+      pdfOrientation: data.pdfOrientation || "portrait",
+      pdfHeaderText: data.pdfHeaderText || null,
+      pdfFooterText: data.pdfFooterText || null,
+      updatedAt: new Date(),
+    };
+
+    if (data.id) {
+      await db.update(configTable).set(payload).where(eq(configTable.id, data.id));
+    } else {
+      await db.insert(configTable).values(payload);
+    }
+  });

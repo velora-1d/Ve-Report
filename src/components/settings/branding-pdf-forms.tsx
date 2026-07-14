@@ -1,3 +1,4 @@
+// ponytail: Menggunakan Server Functions dari app-config.ts dengan penamaan camelCase sesuai schema Drizzle
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,31 +21,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fetchAppConfig, upsertAppConfig } from "@/lib/app-config";
+import { getAppConfig, saveAppConfig } from "@/lib/app-config";
 
 export function BrandingForm() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
-    queryFn: fetchAppConfig,
+    queryFn: () => getAppConfig(),
   });
-  const [appName, setAppName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
     if (data) {
-      setAppName(data.app_name ?? "");
-      setLogoUrl(data.logo_url ?? "");
+      setLogoUrl(data.logoUrl ?? "");
     }
   }, [data]);
 
   const save = useMutation({
-    mutationFn: async () => {
-      await upsertAppConfig(
-        { app_name: appName || null, logo_url: logoUrl || null },
-        data?.id,
-      );
-    },
+    mutationFn: () =>
+      saveAppConfig({
+        data: {
+          id: data?.id,
+          logoUrl: logoUrl || null,
+        },
+      }),
     onSuccess: () => {
       toast.success("Branding disimpan");
       qc.invalidateQueries({ queryKey: ["app-config"] });
@@ -66,14 +66,13 @@ export function BrandingForm() {
       <CardHeader>
         <CardTitle>Branding & Logo</CardTitle>
         <CardDescription>
-          Nama aplikasi dan URL logo yang tampil di sidebar, halaman login, dan
-          header PDF.
+          Nama aplikasi "Log Book" bersifat permanen. Di sini Anda dapat memperbarui URL logo yang tampil di header laporan PDF dan menu.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Nama Aplikasi</Label>
-          <Input value={appName} onChange={(e) => setAppName(e.target.value)} />
+          <Input value="Log Book" disabled />
         </div>
         <div className="space-y-2">
           <Label>URL Logo</Label>
@@ -109,37 +108,33 @@ export function PdfConfigForm() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
-    queryFn: fetchAppConfig,
+    queryFn: () => getAppConfig(),
   });
   const [paper, setPaper] = useState("A4");
   const [orientation, setOrientation] = useState("portrait");
-  const [margin, setMargin] = useState("20");
   const [header, setHeader] = useState("");
   const [footer, setFooter] = useState("");
 
   useEffect(() => {
     if (data) {
-      setPaper(data.pdf_paper_size ?? "A4");
-      setOrientation(data.pdf_orientation ?? "portrait");
-      setMargin(data.pdf_margin ?? "20");
-      setHeader(data.pdf_header_text ?? "");
-      setFooter(data.pdf_footer_text ?? "");
+      setPaper(data.pdfPaperSize ?? "A4");
+      setOrientation(data.pdfOrientation ?? "portrait");
+      setHeader(data.pdfHeaderText ?? "");
+      setFooter(data.pdfFooterText ?? "");
     }
   }, [data]);
 
   const save = useMutation({
-    mutationFn: async () => {
-      await upsertAppConfig(
-        {
-          pdf_paper_size: paper,
-          pdf_orientation: orientation,
-          pdf_margin: margin,
-          pdf_header_text: header || null,
-          pdf_footer_text: footer || null,
+    mutationFn: () =>
+      saveAppConfig({
+        data: {
+          id: data?.id,
+          pdfPaperSize: paper,
+          pdfOrientation: orientation,
+          pdfHeaderText: header || null,
+          pdfFooterText: footer || null,
         },
-        data?.id,
-      );
-    },
+      }),
     onSuccess: () => {
       toast.success("Konfigurasi PDF disimpan");
       qc.invalidateQueries({ queryKey: ["app-config"] });
@@ -161,11 +156,11 @@ export function PdfConfigForm() {
       <CardHeader>
         <CardTitle>Konfigurasi PDF</CardTitle>
         <CardDescription>
-          Default ukuran, orientasi, margin, header dan footer laporan.
+          Default ukuran, orientasi, header dan footer laporan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Ukuran Kertas</Label>
             <Select value={paper} onValueChange={setPaper}>
@@ -190,16 +185,6 @@ export function PdfConfigForm() {
                 <SelectItem value="landscape">Landscape</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Margin (mm)</Label>
-            <Input
-              type="number"
-              min={5}
-              max={50}
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-            />
           </div>
         </div>
         <div className="space-y-2">

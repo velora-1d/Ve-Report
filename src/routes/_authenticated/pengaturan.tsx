@@ -1,6 +1,10 @@
+// ponytail: Mengganti query Supabase client-side untuk memperbarui profil dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   Card,
   CardContent,
@@ -19,10 +23,37 @@ import {
   PdfConfigForm,
 } from "@/components/settings/branding-pdf-forms";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { users as usersTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
 import { Loader2 } from "lucide-react";
+
+// ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
+const updateProfile = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      name: z.string(),
+      phone: z.string().optional(),
+      position: z.string().optional(),
+      bio: z.string().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    await db.update(usersTable)
+      .set({
+        name: data.name,
+        phone: data.phone || null,
+        position: data.position || null,
+        bio: data.bio || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, session.user.id));
+  });
 
 export const Route = createFileRoute("/_authenticated/pengaturan")({
   head: () => ({
@@ -91,7 +122,6 @@ function PengaturanPage() {
 function ProfileForm() {
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
-  const [saving, setSaving] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [position, setPosition] = useState(user?.position ?? "");
@@ -105,20 +135,20 @@ function ProfileForm() {
     .map((s) => s[0]?.toUpperCase() ?? "")
     .join("");
 
-  const handleSave = async (e: React.FormEvent) => {
+  const save = useMutation({
+    mutationFn: () => updateProfile({ data: { name, phone, position, bio } }),
+    onSuccess: () => {
+      toast.success("Profil berhasil diperbarui");
+      qc.invalidateQueries({ queryKey: ["current-user"] });
+    },
+    onError: (e: Error) => {
+      toast.error("Gagal menyimpan profil", { description: e.message });
+    },
+  });
+
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ name, phone, position, bio })
-      .eq("id", user.id);
-    setSaving(false);
-    if (error) {
-      toast.error("Gagal menyimpan profil", { description: error.message });
-      return;
-    }
-    toast.success("Profil berhasil diperbarui");
-    qc.invalidateQueries({ queryKey: ["current-user"] });
+    save.mutate();
   };
 
   return (
@@ -191,8 +221,8 @@ function ProfileForm() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Simpan Perubahan
             </Button>
           </div>
