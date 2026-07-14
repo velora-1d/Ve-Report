@@ -100,7 +100,7 @@ function AuthPage() {
         <div className="absolute top-[-10%] right-[-10%] w-[80%] h-[80%] bg-primary-soft/10 rounded-full blur-[100px]"></div>
 
         {/* Content Wrapper aligned to the right side of the panel (toward the center line) */}
-        <div className="relative flex flex-col justify-between h-full z-10 max-w-sm ml-auto w-full">
+        <div className="relative flex flex-col justify-between h-full z-10 max-w-md mx-auto w-full">
           {/* Brand Header */}
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
@@ -173,7 +173,7 @@ function AuthPage() {
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-sky-500/5 rounded-full blur-3xl -z-10"></div>
 
         {/* Content Wrapper aligned to the left side of the panel (toward the center line) */}
-        <div className="w-full max-w-sm mr-auto ml-0 md:ml-12 space-y-8 animate-fade-in-up">
+        <div className="w-full max-w-sm mx-auto space-y-8 animate-fade-in-up">
           {/* Logo & Header for Mobile */}
           <div className="flex flex-col items-center mb-2 md:hidden">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 shadow-soft">
