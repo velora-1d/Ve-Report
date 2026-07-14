@@ -56,6 +56,7 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
         columns: {
           id: true,
           title: true,
+          status: true,
         }
       }
     },
@@ -228,10 +229,10 @@ function PelacakPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
-            Pelacak Waktu
+            Log Book Harian
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Catat berapa lama Anda mengerjakan setiap tugas.
+            Catat aktivitas kegiatan harian dan log pengerjaan tugas.
           </p>
         </div>
         <Button
@@ -240,7 +241,7 @@ function PelacakPage() {
             setFormOpen(true);
           }}
         >
-          <Plus className="w-4 h-4 mr-1" /> Catat Waktu
+          <Plus className="w-4 h-4 mr-1" /> Tambah Log Harian
         </Button>
       </div>
 
@@ -279,66 +280,85 @@ function PelacakPage() {
               </div>
             ) : (logs ?? []).length === 0 ? (
               <div className="text-sm text-muted-foreground py-8 text-center">
-                Belum ada log. Klik <b>Catat Waktu</b> untuk mulai.
+                Belum ada log. Klik <b>Tambah Log Harian</b> untuk mulai.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Tugas</TableHead>
-                      <TableHead>Durasi</TableHead>
-                      <TableHead>Catatan</TableHead>
+                      <TableHead>Hari / Tanggal</TableHead>
+                      <TableHead>Jam</TableHead>
+                      <TableHead>Implementasi Kegiatan</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Validasi</TableHead>
+                      <TableHead>Keterangan</TableHead>
                       <TableHead className="w-24 text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(logs ?? []).map((l) => (
-                      <TableRow key={l.id}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {l.loggedDate ? format(new Date(l.loggedDate), "d MMM yyyy", {
-                            locale: idLocale,
-                          }) : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {l.task?.title ?? (
-                            <span className="text-muted-foreground italic">
-                              (dihapus)
+                    {(logs ?? []).map((l) => {
+                      const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+                      const activityStr = [l.task?.title, l.note]
+                        .filter(Boolean)
+                        .join(" - ");
+                      const isDone = l.task?.status === "done";
+                      const statusStr = isDone ? "Selesai" : "On Progres";
+                      const validatedStr = l.isValidated ? "Disetujui" : "Belum";
+                      const remarksStr = l.remarks ?? "—";
+
+                      return (
+                        <TableRow key={l.id}>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {l.loggedDate ? format(new Date(l.loggedDate), "EEEE, d MMM yyyy", {
+                              locale: idLocale,
+                            }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">
+                            {timeStr}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-800 font-medium">
+                            {activityStr || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-sky-50 text-sky-700 border border-sky-200'}`}>
+                              {statusStr}
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          {formatDuration(l.durationMinutes)}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                          {l.note ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setEditing(l);
-                                setFormOpen(true);
-                              }}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeletingId(l.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500'}`}>
+                              {validatedStr}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {remarksStr}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setEditing(l);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeletingId(l.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
