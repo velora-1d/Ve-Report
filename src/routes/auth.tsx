@@ -94,7 +94,7 @@ function AuthPage() {
   return (
     <div className="min-h-screen flex bg-surface-sunken font-sans antialiased overflow-hidden">
       {/* LEFT SIDE: Brand Showcase & Interactive Mockups (Visible on md+) */}
-      <div className="hidden md:flex md:w-[52%] relative flex-col justify-between p-16 overflow-hidden bg-gradient-to-tr from-slate-950 via-primary/95 to-primary text-white select-none">
+      <div className="hidden md:flex md:w-[52%] relative flex-col justify-between py-16 pr-16 pl-[30%] overflow-hidden bg-gradient-to-tr from-slate-950 via-primary/95 to-primary text-white select-none">
         {/* Subtle high-end mesh grid background */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:20px_20px] opacity-70"></div>
         
