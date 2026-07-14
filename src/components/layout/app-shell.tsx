@@ -26,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -116,23 +117,28 @@ function AppSidebar() {
     navigate({ to: "/auth", replace: true });
   };
 
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
   return (
-    <Sidebar className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <Link to="/dasbor" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-soft-sm">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-soft-sm shrink-0">
             <FileText className="w-5 h-5 text-primary" />
           </div>
-          <div>
-            <div className="font-semibold tracking-tight">Log Book</div>
-            <div className="text-xs text-muted-foreground">Manajemen Tim</div>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <div className="font-semibold tracking-tight">Log Book</div>
+              <div className="text-xs text-muted-foreground">Manajemen Tim</div>
+            </div>
+          )}
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Utama</SidebarGroupLabel>
+          {!isCollapsed && <SidebarGroupLabel>Utama</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {MAIN_NAV.map((item) => (
@@ -144,7 +150,7 @@ function AppSidebar() {
 
         {canAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administrasi</SidebarGroupLabel>
+            {!isCollapsed && <SidebarGroupLabel>Administrasi</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {ADMIN_NAV.map((item) => (
@@ -160,7 +166,7 @@ function AppSidebar() {
         )}
 
         <SidebarGroup>
-          <SidebarGroupLabel>Pengaturan</SidebarGroupLabel>
+          {!isCollapsed && <SidebarGroupLabel>Pengaturan</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {SETTINGS_NAV.map((item) => (
@@ -180,7 +186,7 @@ function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3">
-        <div className="flex items-center gap-3 p-2 rounded-xl surface-panel">
+        <div className="flex items-center gap-3 p-2 rounded-xl surface-panel overflow-hidden">
           <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -188,32 +194,47 @@ function AppSidebar() {
               <span className="text-primary text-[10px] font-bold">{initials}</span>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">
-              {user?.name ?? "…"}
-            </div>
-            <div className="flex items-center gap-1.5">
-              {roles.map((r) => (
-                <Badge
-                  key={r}
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4"
-                >
-                  {ROLE_LABEL[r]}
-                </Badge>
-              ))}
-            </div>
-          </div>
+          {!isCollapsed && (
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">
+                  {user?.name ?? "…"}
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  {roles.map((r) => (
+                    <Badge
+                      key={r}
+                      variant="secondary"
+                      className="text-[10px] px-1.5 py-0 h-4"
+                    >
+                      {ROLE_LABEL[r]}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                title="Keluar"
+                className="shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+        </div>
+        {isCollapsed && (
           <Button
             variant="ghost"
             size="icon"
             onClick={handleSignOut}
             title="Keluar"
-            className="shrink-0"
+            className="w-full mt-2 hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="w-4 h-4" />
           </Button>
-        </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
@@ -222,6 +243,8 @@ function AppSidebar() {
 // ponytail: Modifikasi NavLink sidebar agar lebih estetik sesuai dengan design token (terracotta left bar & primary tint background)
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   return (
     <SidebarMenuItem className="relative">
       {active && (
@@ -242,7 +265,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
               active ? "text-primary" : "text-foreground/60"
             }`}
           />
-          <span>{item.label}</span>
+          {!isCollapsed && <span>{item.label}</span>}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
