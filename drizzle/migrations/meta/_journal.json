@@ -15,6 +15,13 @@
       "when": 1784006013232,
       "tag": "0001_mute_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784006899510,
+      "tag": "0002_nasty_blue_blade",
+      "breakpoints": true
     }
   ]
 }

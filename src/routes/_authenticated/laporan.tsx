@@ -925,9 +925,9 @@ function ReportPreviewGrid({
           </span>
         </div>
 
-        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-start lg:justify-center">
+        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div 
-            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0"
+            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto"
             style={{ 
               padding: `${marginMm}mm`,
               width: orientation === "landscape" 
@@ -1092,9 +1092,9 @@ function ReportPreviewGrid({
           </span>
         </div>
 
-        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-start lg:justify-center">
+        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div 
-            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0"
+            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto"
             style={{ 
               padding: `${marginMm}mm`,
               width: orientation === "landscape" 
