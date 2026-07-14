@@ -992,11 +992,11 @@ function LaporanPage() {
             orientation={orientation}
             makerName={makerName}
             checkerName={checkerName}
-            makerSigImg={makerSigImg}
+            makerSigImg={makerSigBase64}
             makerSigScale={makerSigScale}
             makerSigOffsetX={makerSigOffsetX}
             makerSigOffsetY={makerSigOffsetY}
-            checkerSigImg={checkerSigImg}
+            checkerSigImg={checkerSigBase64}
             checkerSigScale={checkerSigScale}
             checkerSigOffsetX={checkerSigOffsetX}
             checkerSigOffsetY={checkerSigOffsetY}
@@ -1266,9 +1266,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {makerSigBase64 ? (
+                    {makerSigImg ? (
                       <img
-                        src={makerSigBase64}
+                        src={makerSigImg}
                         alt="Tanda Tangan Karyawan"
                         style={{
                           width: `${30 * (makerSigScale / 100)}mm`,
@@ -1290,9 +1290,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {checkerSigBase64 ? (
+                    {checkerSigImg ? (
                       <img
-                        src={checkerSigBase64}
+                        src={checkerSigImg}
                         alt="Tanda Tangan Atasan"
                         style={{
                           width: `${30 * (checkerSigScale / 100)}mm`,
@@ -1455,9 +1455,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {makerSigBase64 ? (
+                    {makerSigImg ? (
                       <img
-                        src={makerSigBase64}
+                        src={makerSigImg}
                         alt="Tanda Tangan Karyawan"
                         style={{
                           width: `${30 * (makerSigScale / 100)}mm`,
@@ -1479,9 +1479,9 @@ function ReportPreviewGrid({
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
-                    {checkerSigBase64 ? (
+                    {checkerSigImg ? (
                       <img
-                        src={checkerSigBase64}
+                        src={checkerSigImg}
                         alt="Tanda Tangan Atasan"
                         style={{
                           width: `${30 * (checkerSigScale / 100)}mm`,
