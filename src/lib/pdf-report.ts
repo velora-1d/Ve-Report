@@ -24,6 +24,18 @@ export interface ReportInput {
   checkerSigOffsetY?: number;
 }
 
+function drawAestheticCheckmark(doc: jsPDF, cellData: any, colorRgb: [number, number, number] = [59, 130, 246]) {
+  if (cellData.cell.text[0] === "✓") {
+    cellData.cell.text = [""];
+    const x = cellData.cell.x + cellData.cell.width / 2;
+    const y = cellData.cell.y + cellData.cell.height / 2;
+    doc.setDrawColor(colorRgb[0], colorRgb[1], colorRgb[2]);
+    doc.setLineWidth(0.5);
+    doc.line(x - 1.8, y - 0.2, x - 0.3, y + 1.3);
+    doc.line(x - 0.3, y + 1.3, x + 2.0, y - 1.5);
+  }
+}
+
 export async function generateReportPdf(
   input: ReportInput,
   data: {
@@ -292,6 +304,11 @@ function generateMeetingPdf(
       6: { cellWidth: 30 },
     },
     margin: { left: marginMm, right: marginMm },
+    didDrawCell: (cellData) => {
+      if (cellData.row.section === "body" && (cellData.column.index === 3 || cellData.column.index === 4)) {
+        drawAestheticCheckmark(doc, cellData, [59, 130, 246]);
+      }
+    },
   });
 
   // Footer and Signatures on the last page
@@ -483,6 +500,17 @@ function generateHarianPdf(
       7: { cellWidth: 25 },
     },
     margin: { left: marginMm, right: marginMm },
+    didDrawCell: (cellData) => {
+      if (cellData.row.section === "body" && (cellData.column.index === 4 || cellData.column.index === 5 || cellData.column.index === 6)) {
+        let color: [number, number, number] = [59, 130, 246];
+        if (cellData.column.index === 4) {
+          color = [245, 158, 11];
+        } else if (cellData.column.index === 5) {
+          color = [16, 185, 129];
+        }
+        drawAestheticCheckmark(doc, cellData, color);
+      }
+    },
   });
 
   // Footer and Signatures on the last page
