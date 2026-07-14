@@ -40,7 +40,6 @@ Aplikasi logbook harian tim untuk menyusun laporan, kalender jadwal, dan pelacak
 
 #### Catatan Khusus
 - Auth menggunakan Better Auth dengan endpoint `/api/auth/$`.
-- Middleware Supabase masih ada di `src/integrations/supabase/` meskipun saat ini tidak digunakan secara global.
 - `.env` WAJIB memisahkan `DATABASE_URL` dan `BETTER_AUTH_URL` di baris terpisah.
 - `BETTER_AUTH_URL` harus di-set ke origin production saat deploy.
 
