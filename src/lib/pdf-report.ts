@@ -29,9 +29,11 @@ export async function generateReportPdf(
   const orientation =
     cfg?.pdfOrientation === "landscape" ? "landscape" : "portrait";
   const paper = (cfg?.pdfPaperSize ?? "A4").toLowerCase();
+  const isLogbook = input.reportType === "meeting" || input.reportType === "harian";
+  const defaultMargin = isLogbook ? 10 : 20;
   const marginMm = Math.max(
     5,
-    Math.min(50, parseInt(cfg?.pdfMargin ?? "20", 10) || 20),
+    Math.min(50, parseInt(cfg?.pdfMargin ?? String(defaultMargin), 10) || defaultMargin),
   );
 
   const employeePosition = data.position || "Staf";
@@ -240,6 +242,7 @@ function generateMeetingPdf(
     startY: metadataY + 24,
     head: [
       [
+        { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Uraian Tugas", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Pemberi Tugas", colSpan: 2, styles: { halign: "center" } },
@@ -251,7 +254,7 @@ function generateMeetingPdf(
         { content: "Meeting", styles: { halign: "center" } },
       ]
     ],
-    body: (tasks ?? []).map((t) => {
+    body: (tasks ?? []).map((t, index) => {
       const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", {
         locale: idLocale,
       });
@@ -266,18 +269,19 @@ function generateMeetingPdf(
         ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
         : "—";
       const outputStr = t.outputDescription ?? "—";
-      return [dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
+      return [String(index + 1), dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
     }),
     theme: "grid",
     headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
     bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
     columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 20, halign: "center" },
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 35 },
+      2: { cellWidth: "auto" },
       3: { cellWidth: 20, halign: "center" },
-      4: { cellWidth: 30, halign: "center" },
-      5: { cellWidth: 30 },
+      4: { cellWidth: 20, halign: "center" },
+      5: { cellWidth: 30, halign: "center" },
+      6: { cellWidth: 30 },
     },
     margin: { left: marginMm, right: marginMm },
   });
@@ -393,6 +397,7 @@ function generateHarianPdf(
     startY: metadataY + 20,
     head: [
       [
+        { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Jam", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
         { content: "Implementasi Kegiatan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
@@ -405,7 +410,7 @@ function generateHarianPdf(
         { content: "Selesai", styles: { halign: "center" } },
       ]
     ],
-    body: (logs ?? []).map((l) => {
+    body: (logs ?? []).map((l, index) => {
       const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", {
         locale: idLocale,
       });
@@ -419,6 +424,7 @@ function generateHarianPdf(
       const validatedStr = l.isValidated ? "✓" : "";
       const remarksStr = l.remarks ?? "—";
       return [
+        String(index + 1),
         dayDateStr,
         timeStr,
         activityStr,
@@ -427,26 +433,19 @@ function generateHarianPdf(
         validatedStr,
         remarksStr,
       ];
-    }).map((row) => [
-      row[0],
-      row[1],
-      row[2],
-      row[3],
-      row[4] === undefined ? "" : row[4], // make sure no undefined value is passed
-      row[5],
-      row[6],
-    ]),
+    }),
     theme: "grid",
     headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
     bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
     columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: 25, halign: "center" },
-      2: { cellWidth: "auto" },
-      3: { cellWidth: 20, halign: "center" },
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 25, halign: "center" },
+      3: { cellWidth: "auto" },
       4: { cellWidth: 20, halign: "center" },
       5: { cellWidth: 20, halign: "center" },
-      6: { cellWidth: 25 },
+      6: { cellWidth: 20, halign: "center" },
+      7: { cellWidth: 25 },
     },
     margin: { left: marginMm, right: marginMm },
   });

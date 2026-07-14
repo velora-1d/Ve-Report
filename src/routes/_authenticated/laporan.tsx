@@ -675,7 +675,9 @@ function ReportPreviewGrid({
     );
   }
 
-  const marginMm = Math.max(5, Math.min(50, parseInt(data.cfg?.pdfMargin ?? "20", 10) || 20));
+  const isLogbook = reportType === "meeting" || reportType === "harian";
+  const defaultMargin = isLogbook ? 10 : 20;
+  const marginMm = Math.max(5, Math.min(50, parseInt(data.cfg?.pdfMargin ?? String(defaultMargin), 10) || defaultMargin));
 
   const formatSigText = (name: string | null | undefined, fallback: string) => {
     if (!name) return fallback;
@@ -778,8 +780,9 @@ function ReportPreviewGrid({
               <table className="w-full text-left text-xs border-collapse border border-slate-400">
                 <thead>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[5%]">No</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[40%]">Uraian Tugas</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[35%]">Uraian Tugas</th>
                     <th colSpan={2} className="p-2 border border-slate-400 text-center w-[20%]">Pemberi Tugas</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[12%]">Target Selesai</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[13%]">Out Put</th>
@@ -792,21 +795,22 @@ function ReportPreviewGrid({
                 <tbody>
                   {tasks.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                      <td colSpan={7} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
                         Tidak ada data tugas meeting pada periode ini.
                       </td>
                     </tr>
                   ) : (
-                    tasks.map((t: any) => {
+                    tasks.map((t: any, index: number) => {
                       const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", { locale: idLocale });
                       const descStr = [t.title, t.description].filter(Boolean).join(" - ");
                       const sourceLower = (t.taskSource ?? "").toLowerCase();
                       const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
                       const targetStr = t.dueDate ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale }) : "—";
                       const outputStr = t.outputDescription ?? "—";
-
+ 
                       return (
                         <tr key={t.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
+                          <td className="p-2 border border-slate-400 text-center font-medium">{index + 1}</td>
                           <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
                           <td className="p-2 border-slate-400 whitespace-pre-line">{descStr}</td>
                           <td className="p-2 border-slate-400 text-center text-success font-bold text-sm">{!isMeeting ? "✓" : ""}</td>
@@ -908,9 +912,10 @@ function ReportPreviewGrid({
               <table className="w-full text-left text-xs border-collapse border border-slate-400">
                 <thead>
                   <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[5%]">No</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Jam</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[35%]">Implementasi Kegiatan</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[30%]">Implementasi Kegiatan</th>
                     <th colSpan={2} className="p-2 border-slate-400 text-center w-[20%]">Status</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Validasi Atasan</th>
                     <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Keterangan</th>
@@ -923,21 +928,22 @@ function ReportPreviewGrid({
                 <tbody>
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                      <td colSpan={8} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
                         Tidak ada data log harian pada periode ini.
                       </td>
                     </tr>
                   ) : (
-                    logs.map((l: any) => {
+                    logs.map((l: any, index: number) => {
                       const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", { locale: idLocale });
                       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
                       const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
                       const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
                       const validatedStr = l.isValidated ? "✓" : "";
                       const remarksStr = l.remarks ?? "—";
-
+ 
                       return (
                         <tr key={l.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
+                          <td className="p-2 border border-slate-400 text-center font-medium">{index + 1}</td>
                           <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
                           <td className="p-2 border border-slate-400 text-center">{timeStr}</td>
                           <td className="p-2 border border-slate-400 whitespace-pre-line">{activityStr}</td>
