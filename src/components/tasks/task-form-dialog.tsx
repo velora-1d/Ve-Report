@@ -51,6 +51,7 @@ export function TaskFormDialog({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [startedAt, setStartedAt] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [taskSource, setTaskSource] = useState<string>("");
   const [outputDescription, setOutputDescription] = useState("");
@@ -61,6 +62,7 @@ export function TaskFormDialog({
     setDescription(task?.description ?? "");
     setStatus(task?.status ?? "todo");
     setPriority(task?.priority ?? "medium");
+    setStartedAt(task?.startedAt ? new Date(task.startedAt).toISOString().slice(0, 10) : "");
     setDueDate(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
     setTaskSource(task?.taskSource ?? "");
     setOutputDescription(task?.outputDescription ?? "");
@@ -75,6 +77,7 @@ export function TaskFormDialog({
           description: description.trim() || null,
           status,
           priority,
+          startedAt: startedAt || null,
           dueDate: dueDate || null,
           assignedTo: currentUserId,
           taskSource: taskSource.trim() || null,
@@ -165,6 +168,15 @@ export function TaskFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
+              <Label htmlFor="startedAt">Target Mulai</Label>
+              <Input
+                id="startedAt"
+                type="date"
+                value={startedAt}
+                onChange={(e) => setStartedAt(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="due">Target Selesai</Label>
               <Input
                 id="due"
@@ -173,6 +185,9 @@ export function TaskFormDialog({
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="taskSource">Pemberi Tugas</Label>
               <Input
@@ -183,16 +198,15 @@ export function TaskFormDialog({
                 maxLength={20}
               />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="output">Out Put (Hasil Kerja)</Label>
-            <Input
-              id="output"
-              value={outputDescription}
-              onChange={(e) => setOutputDescription(e.target.value)}
-              placeholder="Contoh: Dokumen PDF Laporan"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="output">Out Put (Hasil Kerja)</Label>
+              <Input
+                id="output"
+                value={outputDescription}
+                onChange={(e) => setOutputDescription(e.target.value)}
+                placeholder="Contoh: Dokumen PDF Laporan"
+              />
+            </div>
           </div>
         </div>
 

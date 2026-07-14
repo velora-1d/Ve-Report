@@ -53,7 +53,7 @@ export const getAssignableUsers = createServerFn({ method: "GET" }).handler(asyn
   });
 });
 
-// ponytail: Fungsi server untuk menyimpan/memperbarui tugas
+// ponytail: Menambahkan field startedAt (Target Mulai) pada server function saveTask
 export const saveTask = createServerFn({ method: "POST" })
   .validator(
     z.object({
@@ -62,6 +62,7 @@ export const saveTask = createServerFn({ method: "POST" })
       description: z.string().nullable().optional(),
       status: z.string(),
       priority: z.string(),
+      startedAt: z.string().nullable().optional(),
       dueDate: z.string().nullable().optional(),
       assignedTo: z.string().nullable().optional(),
       taskSource: z.string().optional(),
@@ -78,6 +79,7 @@ export const saveTask = createServerFn({ method: "POST" })
       description: data.description || null,
       status: data.status,
       priority: data.priority,
+      startedAt: data.startedAt ? new Date(data.startedAt) : null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       assignedTo: role === "staff"
         ? session.user.id
