@@ -20,7 +20,7 @@ import { getSession } from "@/lib/session";
 import { getAppConfig } from "@/lib/app-config";
 import { db } from "@/db";
 import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable } from "@/db/schema";
-import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
+import { eq, desc, and, gte, inArray, or, aliasedTable } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { usePermission } from "@/hooks/use-permission";
@@ -64,6 +64,8 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
   });
   const limitVal = configs[0]?.logLimit ?? 200;
 
+  const validatorsTable = aliasedTable(usersTable, "validators");
+
   const rawLogs = await db
     .select({
       id: logsTable.id,
@@ -87,11 +89,18 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
       user: {
         id: usersTable.id,
         name: usersTable.name,
+        position: usersTable.position,
+      },
+      validator: {
+        id: validatorsTable.id,
+        name: validatorsTable.name,
+        position: validatorsTable.position,
       },
     })
     .from(logsTable)
     .leftJoin(tasksTable, eq(logsTable.taskId, tasksTable.id))
     .leftJoin(usersTable, eq(logsTable.userId, usersTable.id))
+    .leftJoin(validatorsTable, eq(logsTable.validatedBy, validatorsTable.id))
     .where(whereClause)
     .orderBy(desc(logsTable.loggedDate), desc(logsTable.createdAt))
     .limit(limitVal);
@@ -100,6 +109,7 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
     ...l,
     task: l.task?.id ? l.task : null,
     user: l.user?.id ? l.user : null,
+    validator: l.validator?.id ? l.validator : null,
   }));
 
   return logs;

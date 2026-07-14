@@ -286,7 +286,14 @@ function ValidasiPage() {
                           }) : "—"}
                         </TableCell>
                         <TableCell className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {l.user?.name ?? "—"}
+                          <div>{l.user?.name ?? "—"}</div>
+                          {l.user?.position && (
+                            <div className="mt-1">
+                              <span className="text-[10px] font-normal text-muted-foreground px-1.5 py-0.5 rounded bg-muted/65">
+                                {l.user.position}
+                              </span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm font-medium">
                           {timeStr}
@@ -313,6 +320,11 @@ function ValidasiPage() {
                           >
                             {validatedStr}
                           </Button>
+                          {l.isValidated && l.validator && (
+                            <div className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
+                              Oleh: {l.validator.name} {l.validator.position ? `(${l.validator.position})` : ""}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {remarksStr}
