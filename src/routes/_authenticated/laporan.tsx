@@ -160,41 +160,73 @@ const getReportData = createServerFn({ method: "POST" })
     // Fetch logs
     let logsQuery;
     if (data.userId) {
-      logsQuery = db.query.trackerLogs.findMany({
-        where: and(
-          eq(trackerLogsTable.userId, data.userId),
-          gte(trackerLogsTable.loggedDate, data.periodStart),
-          lte(trackerLogsTable.loggedDate, data.periodEnd)
-        ),
-        with: {
+      logsQuery = db
+        .select({
+          id: trackerLogsTable.id,
+          taskId: trackerLogsTable.taskId,
+          userId: trackerLogsTable.userId,
+          note: trackerLogsTable.note,
+          durationMinutes: trackerLogsTable.durationMinutes,
+          loggedDate: trackerLogsTable.loggedDate,
+          createdAt: trackerLogsTable.createdAt,
+          startTime: trackerLogsTable.startTime,
+          endTime: trackerLogsTable.endTime,
+          status: trackerLogsTable.status,
+          isValidated: trackerLogsTable.isValidated,
+          validatedBy: trackerLogsTable.validatedBy,
+          remarks: trackerLogsTable.remarks,
           task: {
-            columns: {
-              title: true,
-              status: true,
-            }
-          }
-        },
-        orderBy: [desc(trackerLogsTable.loggedDate)]
-      });
+            title: tasksTable.title,
+            status: tasksTable.status,
+          },
+        })
+        .from(trackerLogsTable)
+        .leftJoin(tasksTable, eq(trackerLogsTable.taskId, tasksTable.id))
+        .where(
+          and(
+            eq(trackerLogsTable.userId, data.userId),
+            gte(trackerLogsTable.loggedDate, data.periodStart),
+            lte(trackerLogsTable.loggedDate, data.periodEnd)
+          )
+        )
+        .orderBy(desc(trackerLogsTable.loggedDate));
     } else {
-      logsQuery = db.query.trackerLogs.findMany({
-        where: and(
-          gte(trackerLogsTable.loggedDate, data.periodStart),
-          lte(trackerLogsTable.loggedDate, data.periodEnd)
-        ),
-        with: {
+      logsQuery = db
+        .select({
+          id: trackerLogsTable.id,
+          taskId: trackerLogsTable.taskId,
+          userId: trackerLogsTable.userId,
+          note: trackerLogsTable.note,
+          durationMinutes: trackerLogsTable.durationMinutes,
+          loggedDate: trackerLogsTable.loggedDate,
+          createdAt: trackerLogsTable.createdAt,
+          startTime: trackerLogsTable.startTime,
+          endTime: trackerLogsTable.endTime,
+          status: trackerLogsTable.status,
+          isValidated: trackerLogsTable.isValidated,
+          validatedBy: trackerLogsTable.validatedBy,
+          remarks: trackerLogsTable.remarks,
           task: {
-            columns: {
-              title: true,
-              status: true,
-            }
-          }
-        },
-        orderBy: [desc(trackerLogsTable.loggedDate)]
-      });
+            title: tasksTable.title,
+            status: tasksTable.status,
+          },
+        })
+        .from(trackerLogsTable)
+        .leftJoin(tasksTable, eq(trackerLogsTable.taskId, tasksTable.id))
+        .where(
+          and(
+            gte(trackerLogsTable.loggedDate, data.periodStart),
+            lte(trackerLogsTable.loggedDate, data.periodEnd)
+          )
+        )
+        .orderBy(desc(trackerLogsTable.loggedDate));
     }
 
-    const [tasks, logs] = await Promise.all([tasksQuery, logsQuery]);
+    const [tasks, rawLogs] = await Promise.all([tasksQuery, logsQuery]);
+    const logs = rawLogs.map((l: any) => ({
+      ...l,
+      task: l.task?.title ? l.task : null,
+    }));
 
     return {
       cfg,

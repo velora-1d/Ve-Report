@@ -25,18 +25,38 @@ export const getTasksList = createServerFn({ method: "GET" }).handler(async () =
       )
     : undefined;
 
-  return db.query.tasks.findMany({
-    where: whereClause,
-    with: {
+  const rawTasks = await db
+    .select({
+      id: tasksTable.id,
+      title: tasksTable.title,
+      description: tasksTable.description,
+      status: tasksTable.status,
+      priority: tasksTable.priority,
+      assignedTo: tasksTable.assignedTo,
+      createdBy: tasksTable.createdBy,
+      dueDate: tasksTable.dueDate,
+      startedAt: tasksTable.startedAt,
+      completedAt: tasksTable.completedAt,
+      createdAt: tasksTable.createdAt,
+      updatedAt: tasksTable.updatedAt,
+      taskSource: tasksTable.taskSource,
+      outputDescription: tasksTable.outputDescription,
       assignee: {
-        columns: {
-          id: true,
-          name: true,
-        }
-      }
-    },
-    orderBy: [desc(tasksTable.createdAt)],
-  });
+        id: usersTable.id,
+        name: usersTable.name,
+      },
+    })
+    .from(tasksTable)
+    .leftJoin(usersTable, eq(tasksTable.assignedTo, usersTable.id))
+    .where(whereClause)
+    .orderBy(desc(tasksTable.createdAt));
+
+  const tasks = rawTasks.map((t) => ({
+    ...t,
+    assignee: t.assignee?.id ? t.assignee : null,
+  }));
+
+  return tasks;
 });
 
 // ponytail: Fungsi server untuk mengambil daftar pengguna aktif yang dapat ditugaskan

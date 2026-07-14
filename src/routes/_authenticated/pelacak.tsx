@@ -19,7 +19,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { getAppConfig } from "@/lib/app-config";
 import { db } from "@/db";
-import { trackerLogs as logsTable, tasks as tasksTable } from "@/db/schema";
+import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable } from "@/db/schema";
 import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
@@ -63,26 +63,43 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
   });
   const limitVal = configs[0]?.logLimit ?? 200;
 
-  const logs = await db.query.trackerLogs.findMany({
-    where: whereClause,
-    with: {
+  const rawLogs = await db
+    .select({
+      id: logsTable.id,
+      taskId: logsTable.taskId,
+      userId: logsTable.userId,
+      note: logsTable.note,
+      durationMinutes: logsTable.durationMinutes,
+      loggedDate: logsTable.loggedDate,
+      createdAt: logsTable.createdAt,
+      startTime: logsTable.startTime,
+      endTime: logsTable.endTime,
+      status: logsTable.status,
+      isValidated: logsTable.isValidated,
+      validatedBy: logsTable.validatedBy,
+      remarks: logsTable.remarks,
       task: {
-        columns: {
-          id: true,
-          title: true,
-          status: true,
-        }
+        id: tasksTable.id,
+        title: tasksTable.title,
+        status: tasksTable.status,
       },
       user: {
-        columns: {
-          id: true,
-          name: true,
-        }
-      }
-    },
-    orderBy: [desc(logsTable.loggedDate), desc(logsTable.createdAt)],
-    limit: limitVal,
-  });
+        id: usersTable.id,
+        name: usersTable.name,
+      },
+    })
+    .from(logsTable)
+    .leftJoin(tasksTable, eq(logsTable.taskId, tasksTable.id))
+    .leftJoin(usersTable, eq(logsTable.userId, usersTable.id))
+    .where(whereClause)
+    .orderBy(desc(logsTable.loggedDate), desc(logsTable.createdAt))
+    .limit(limitVal);
+
+  const logs = rawLogs.map((l) => ({
+    ...l,
+    task: l.task?.id ? l.task : null,
+    user: l.user?.id ? l.user : null,
+  }));
 
   return logs;
 });
