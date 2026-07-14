@@ -140,8 +140,12 @@ export function CalendarTab() {
                 <TabsTrigger value="year">Tahunan</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button onClick={() => openNew()}>
-              <Plus className="size-4" /> Jadwal
+            <Button
+              onClick={() => openNew()}
+              className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 border border-primary/20"
+            >
+              <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
+              <span>Jadwal</span>
             </Button>
           </div>
         </div>
