@@ -1,3 +1,4 @@
+// ponytail: Menyederhanakan form dialog harian agar menggunakan penamaan Judul Tugas, Deskripsi/Keterangan, dan Status
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,8 +28,8 @@ import { saveTrackerLog } from "@/routes/_authenticated/pelacak";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing?: any | null;
-  defaultTaskId?: string | null;
+  editing: any | null;
+  defaultTaskId?: string;
 }
 
 export function TrackerFormDialog({
@@ -76,7 +77,7 @@ export function TrackerFormDialog({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Belum masuk");
-      if (!note.trim()) throw new Error("Implementasi Kegiatan tidak boleh kosong");
+      if (!note.trim()) throw new Error("Judul Tugas tidak boleh kosong");
       const totalMin =
         (parseInt(hours || "0", 10) || 0) * 60 +
         (parseInt(minutes || "0", 10) || 0);
@@ -115,12 +116,12 @@ export function TrackerFormDialog({
             {editing ? "Ubah Log Harian" : "Tambah Log Harian"}
           </DialogTitle>
           <DialogDescription>
-            Catat detail implementasi kegiatan harian Anda.
+            Catat detail implementasi kegiatan harian Anda secara manual.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Status Kegiatan</Label>
+            <Label>Status</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger>
                 <SelectValue />
@@ -162,10 +163,11 @@ export function TrackerFormDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Implementasi Kegiatan (Catatan)</Label>
+            <Label htmlFor="note">Judul Tugas / Kegiatan</Label>
             <Textarea
+              id="note"
               rows={3}
-              placeholder="Apa yang dikerjakan?"
+              placeholder="Contoh: Pembuatan laporan bulanan"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -193,10 +195,10 @@ export function TrackerFormDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="remarks">Keterangan</Label>
+            <Label htmlFor="remarks">Deskripsi / Keterangan</Label>
             <Input
               id="remarks"
-              placeholder="Contoh: Hambatan server down"
+              placeholder="Contoh: Hambatan server down atau keterangan tambahan"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
             />
