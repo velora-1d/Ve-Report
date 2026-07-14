@@ -275,7 +275,7 @@ function generateMeetingPdf(
       ]
     ],
     body: (tasks ?? []).map((t, index) => {
-      const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", {
+      const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", {
         locale: idLocale,
       });
       const descStr = [t.title, t.description].filter(Boolean).join("\n");
@@ -423,30 +423,37 @@ function generateHarianPdf(
     align: "center",
   });
 
-  // 2. Metadata Info Box
+  // 2. Metadata Info Box (2 rows)
   const metadataY = marginMm + 15;
   const boxW = pageW - (marginMm * 2);
-  doc.rect(marginMm, metadataY - 3, boxW, 18);
+  doc.rect(marginMm, metadataY - 3, boxW, 13);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
+  // Row 1: Nama & Divisi
   doc.text("Nama", marginMm + 3, metadataY + 2);
-  doc.text("Divisi", marginMm + 3, metadataY + 7);
-  doc.text("Bulan", marginMm + 3, metadataY + 12);
-  
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${input.generatedByName}`, marginMm + 35, metadataY + 2);
-  doc.text(`: ${position}`, marginMm + 35, metadataY + 7);
-  doc.text(`: ${monthName}`, marginMm + 35, metadataY + 12);
-  
+  doc.text(`: ${input.generatedByName}`, marginMm + 20, metadataY + 2);
+
   doc.setFont("helvetica", "bold");
-  doc.text("Tahun", marginMm + 100, metadataY + 12);
+  doc.text("Divisi", marginMm + 100, metadataY + 2);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 12);
+  doc.text(`: ${position}`, marginMm + 115, metadataY + 2);
+
+  // Row 2: Bulan & Tahun
+  doc.setFont("helvetica", "bold");
+  doc.text("Bulan", marginMm + 3, metadataY + 7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${monthName}`, marginMm + 20, metadataY + 7);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Tahun", marginMm + 100, metadataY + 7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 7);
 
   // Table
   autoTable(doc, {
-    startY: metadataY + 20,
+    startY: metadataY + 15,
     head: [
       [
         { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
@@ -463,7 +470,7 @@ function generateHarianPdf(
       ]
     ],
     body: (logs ?? []).map((l, index) => {
-      const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", {
+      const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", {
         locale: idLocale,
       });
       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
