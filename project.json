@@ -1,0 +1,42 @@
+{
+  "name": "ve-report",
+  "description": "Aplikasi logbook harian tim untuk menyusun laporan, kalender jadwal, dan pelacak progres.",
+  "version": "1.0.0",
+  "lastUpdated": "[REDACTED-DATE_TIME]",
+
+  "stack": {
+    "frontend": "tanstack-start",
+    "backend": "tanstack-start",
+    "database": "mysql",
+    "orm": "drizzle",
+    "auth": "better-auth",
+    "realtime": null,
+    "mobile": null
+  },
+
+  "mode": "fullstack",
+  "platform": ["web"],
+  "multiTenant": false,
+  "tenantStrategy": null,
+
+  "scale": "small",
+  "team": "solo",
+
+  "hosting": {
+    "development": "local",
+    "staging": null,
+    "production": "dokploy-private-server"
+  },
+
+  "infraBudget": "self-hosted",
+
+  "activeRules": [
+    "tanstack-start",
+    "drizzle-orm",
+    "better-auth",
+    "tailwind-v4",
+    "docker-dokploy"
+  ],
+
+  "notes": "Better-auth memerlukan env BETTER_AUTH_URL yang terpisah dari DATABASE_URL. Endpoint auth berada di /api/auth/$."
+}
