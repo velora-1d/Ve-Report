@@ -114,7 +114,7 @@ export function TaskListTab() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-2 flex-1">
             <Input
-              placeholder="Cari judul tugas..."
+              placeholder="Cari uraian tugas..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="md:max-w-xs"
@@ -153,7 +153,7 @@ export function TaskListTab() {
                 setFormOpen(true);
               }}
             >
-              <Plus className="size-4" /> Tugas Baru
+              <Plus className="size-4" /> Tambah Log Meeting
             </Button>
           )}
         </div>
@@ -168,64 +168,41 @@ export function TaskListTab() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">
-            Tidak ada tugas yang cocok dengan filter Anda.
+            Tidak ada log meeting yang cocok dengan filter Anda.
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Judul</TableHead>
+                <TableHead>Hari / Tanggal</TableHead>
+                <TableHead>Uraian Tugas</TableHead>
+                <TableHead>Sumber</TableHead>
+                <TableHead>Target Selesai</TableHead>
+                <TableHead>Out Put</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Prioritas</TableHead>
-                <TableHead>Penanggung jawab</TableHead>
-                <TableHead>Tenggat</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((t) => (
                 <TableRow key={t.id}>
+                  <TableCell className="text-sm">
+                    {format(new Date(t.createdAt), "EEEE, d MMM yyyy", {
+                      locale: idLocale,
+                    })}
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{t.title}</div>
                     {t.description && (
-                      <div className="text-xs text-muted-foreground line-clamp-1">
+                      <div className="text-xs text-muted-foreground line-clamp-2">
                         {t.description}
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={t.status}
-                      onValueChange={(v) =>
-                        statusMutation.mutate({
-                          id: t.id,
-                          status: v as TaskStatus,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                        <StatusBadge status={t.status as any} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASK_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {TASK_STATUS_LABEL[s]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <PriorityBadge priority={t.priority as any} />
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {t.assignee ? (
-                      t.assignee.name
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Belum ditugaskan
-                      </span>
-                    )}
+                    <span className="text-sm font-semibold capitalize text-slate-800">
+                      {t.taskSource === "atasan" ? "Penugasan Atasan" : "Hasil Meeting"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-sm">
                     {t.dueDate ? (
@@ -239,8 +216,37 @@ export function TaskListTab() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {canManage && (
+                  <TableCell className="text-sm">
+                    {t.outputDescription ? (
+                      <span className="font-medium text-slate-800">{t.outputDescription}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={t.status}
+                      onValueChange={(v) =>
+                        statusMutation.mutate({
+                          id: t.id,
+                          status: v as TaskStatus,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-32 border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                        <StatusBadge status={t.status as any} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TASK_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {TASK_STATUS_LABEL[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           size="icon"
@@ -260,8 +266,8 @@ export function TaskListTab() {
                           <Trash2 className="size-4 text-destructive" />
                         </Button>
                       </div>
-                    )}
-                  </TableCell>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
