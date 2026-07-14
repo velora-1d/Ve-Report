@@ -238,6 +238,25 @@ function LaporanPage() {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
   const [makerName, setMakerName] = useState("");
   const [checkerName, setCheckerName] = useState("");
+  const [makerSigImg, setMakerSigImg] = useState<string | null>(null);
+  const [makerSigScale, setMakerSigScale] = useState<number>(100);
+  const [makerSigOffsetX, setMakerSigOffsetX] = useState<number>(0);
+  const [makerSigOffsetY, setMakerSigOffsetY] = useState<number>(0);
+  const [checkerSigImg, setCheckerSigImg] = useState<string | null>(null);
+  const [checkerSigScale, setCheckerSigScale] = useState<number>(100);
+  const [checkerSigOffsetX, setCheckerSigOffsetX] = useState<number>(0);
+  const [checkerSigOffsetY, setCheckerSigOffsetY] = useState<number>(0);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const { data: users } = useQuery({
     queryKey: ["users-simple"],
@@ -344,6 +363,14 @@ function LaporanPage() {
             generatedByName: makerName || me.name,
             reportType,
             checkerName: checkerName || null,
+            makerSigImg,
+            makerSigScale,
+            makerSigOffsetX,
+            makerSigOffsetY,
+            checkerSigImg,
+            checkerSigScale,
+            checkerSigOffsetX,
+            checkerSigOffsetY,
           },
           {
             cfg: {
@@ -518,27 +545,165 @@ function LaporanPage() {
                 </div>
               )}
 
-              {/* ponytail: Form nama tanda tangan custom */}
+              {/* ponytail: Form nama tanda tangan custom & upload gambar ttd */}
               {(reportType === "meeting" || reportType === "harian") && (
-                <div className="space-y-3 border-t pt-4">
+                <div className="space-y-4 border-t pt-4">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tanda Tangan Laporan</h4>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Nama Yang Membuat</Label>
+                  
+                  {/* Yang Membuat */}
+                  <div className="space-y-2 border-b pb-3">
+                    <Label className="text-xs font-medium">Yang Membuat (Pembuat)</Label>
                     <Input
                       value={makerName}
                       onChange={(e) => setMakerName(e.target.value)}
                       placeholder="Nama Karyawan..."
                       className="h-9 text-xs"
                     />
+                    
+                    <div className="space-y-1.5 mt-2 bg-muted/30 p-2 rounded-lg border border-border/50">
+                      <Label className="text-[11px] text-muted-foreground block font-medium">Upload Tanda Tangan (PNG/JPG)</Label>
+                      {makerSigImg ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-success font-semibold">Ttd Terunggah</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMakerSigImg(null);
+                                setMakerSigScale(100);
+                                setMakerSigOffsetX(0);
+                                setMakerSigOffsetY(0);
+                              }}
+                              className="text-[10px] text-destructive hover:underline font-medium"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
+                              <span>Ukuran: {makerSigScale}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="20"
+                              max="200"
+                              value={makerSigScale}
+                              onChange={(e) => setMakerSigScale(Number(e.target.value))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground font-semibold">
+                            <div className="space-y-1">
+                              <span>Geser X: {makerSigOffsetX}mm</span>
+                              <input
+                                type="range"
+                                min="-30"
+                                max="30"
+                                value={makerSigOffsetX}
+                                onChange={(e) => setMakerSigOffsetX(Number(e.target.value))}
+                                className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span>Geser Y: {makerSigOffsetY}mm</span>
+                              <input
+                                type="range"
+                                min="-30"
+                                max="30"
+                                value={makerSigOffsetY}
+                                onChange={(e) => setMakerSigOffsetY(Number(e.target.value))}
+                                className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, setMakerSigImg)}
+                          className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Nama Yang Mengetahui (Atasan)</Label>
+
+                  {/* Yang Mengetahui */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Yang Mengetahui (Atasan)</Label>
                     <Input
                       value={checkerName}
                       onChange={(e) => setCheckerName(e.target.value)}
                       placeholder="Kosongkan untuk titik-titik"
                       className="h-9 text-xs"
                     />
+                    
+                    <div className="space-y-1.5 mt-2 bg-muted/30 p-2 rounded-lg border border-border/50">
+                      <Label className="text-[11px] text-muted-foreground block font-medium">Upload Tanda Tangan (PNG/JPG)</Label>
+                      {checkerSigImg ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-success font-semibold">Ttd Terunggah</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCheckerSigImg(null);
+                                setCheckerSigScale(100);
+                                setCheckerSigOffsetX(0);
+                                setCheckerSigOffsetY(0);
+                              }}
+                              className="text-[10px] text-destructive hover:underline font-medium"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
+                              <span>Ukuran: {checkerSigScale}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="20"
+                              max="200"
+                              value={checkerSigScale}
+                              onChange={(e) => setCheckerSigScale(Number(e.target.value))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground font-semibold">
+                            <div className="space-y-1">
+                              <span>Geser X: {checkerSigOffsetX}mm</span>
+                              <input
+                                type="range"
+                                min="-30"
+                                max="30"
+                                value={checkerSigOffsetX}
+                                onChange={(e) => setCheckerSigOffsetX(Number(e.target.value))}
+                                className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span>Geser Y: {checkerSigOffsetY}mm</span>
+                              <input
+                                type="range"
+                                min="-30"
+                                max="30"
+                                value={checkerSigOffsetY}
+                                onChange={(e) => setCheckerSigOffsetY(Number(e.target.value))}
+                                className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, setCheckerSigImg)}
+                          className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -631,6 +796,14 @@ function LaporanPage() {
             orientation={orientation}
             makerName={makerName}
             checkerName={checkerName}
+            makerSigImg={makerSigImg}
+            makerSigScale={makerSigScale}
+            makerSigOffsetX={makerSigOffsetX}
+            makerSigOffsetY={makerSigOffsetY}
+            checkerSigImg={checkerSigImg}
+            checkerSigScale={checkerSigScale}
+            checkerSigOffsetX={checkerSigOffsetX}
+            checkerSigOffsetY={checkerSigOffsetY}
           />
         </div>
       </div>
@@ -647,6 +820,14 @@ function ReportPreviewGrid({
   orientation,
   makerName,
   checkerName,
+  makerSigImg,
+  makerSigScale,
+  makerSigOffsetX,
+  makerSigOffsetY,
+  checkerSigImg,
+  checkerSigScale,
+  checkerSigOffsetX,
+  checkerSigOffsetY,
 }: {
   reportType: "standard" | "meeting" | "harian";
   data: any;
@@ -655,6 +836,14 @@ function ReportPreviewGrid({
   orientation: "portrait" | "landscape";
   makerName: string;
   checkerName: string;
+  makerSigImg: string | null;
+  makerSigScale: number;
+  makerSigOffsetX: number;
+  makerSigOffsetY: number;
+  checkerSigImg: string | null;
+  checkerSigScale: number;
+  checkerSigOffsetX: number;
+  checkerSigOffsetY: number;
 }) {
   if (isLoading) {
     return (
@@ -828,20 +1017,52 @@ function ReportPreviewGrid({
             {/* Signature Block */}
             <div className="mt-12 text-xs text-black space-y-4">
               <div className="grid grid-cols-2 gap-8 text-center">
-                <div className="space-y-4">
+                <div className="space-y-4 relative flex flex-col items-center">
                   <div>
                     <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
                     <div className="mt-1">Yang Membuat</div>
                   </div>
-                  <div className="h-12" />
+                  <div className="h-12 w-full relative flex items-center justify-center">
+                    {makerSigImg ? (
+                      <img
+                        src={makerSigImg}
+                        alt="Tanda Tangan Karyawan"
+                        style={{
+                          width: `${30 * (makerSigScale / 100)}mm`,
+                          height: `${15 * (makerSigScale / 100)}mm`,
+                          objectFit: "contain",
+                          transform: `translate(${makerSigOffsetX}mm, ${makerSigOffsetY}mm)`,
+                        }}
+                        className="transition-all duration-100 select-none pointer-events-none"
+                      />
+                    ) : (
+                      <div className="h-12" />
+                    )}
+                  </div>
                   <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4 relative flex flex-col items-center">
                   <div>
                     <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
-                  <div className="h-12" />
+                  <div className="h-12 w-full relative flex items-center justify-center">
+                    {checkerSigImg ? (
+                      <img
+                        src={checkerSigImg}
+                        alt="Tanda Tangan Atasan"
+                        style={{
+                          width: `${30 * (checkerSigScale / 100)}mm`,
+                          height: `${15 * (checkerSigScale / 100)}mm`,
+                          objectFit: "contain",
+                          transform: `translate(${checkerSigOffsetX}mm, ${checkerSigOffsetY}mm)`,
+                        }}
+                        className="transition-all duration-100 select-none pointer-events-none"
+                      />
+                    ) : (
+                      <div className="h-12" />
+                    )}
+                  </div>
                   <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>
@@ -962,20 +1183,52 @@ function ReportPreviewGrid({
             {/* Signature Block */}
             <div className="mt-12 text-xs text-black space-y-4">
               <div className="grid grid-cols-2 gap-8 text-center">
-                <div className="space-y-4">
+                <div className="space-y-4 relative flex flex-col items-center">
                   <div>
                     <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
                     <div className="mt-1">Yang Membuat</div>
                   </div>
-                  <div className="h-12" />
+                  <div className="h-12 w-full relative flex items-center justify-center">
+                    {makerSigImg ? (
+                      <img
+                        src={makerSigImg}
+                        alt="Tanda Tangan Karyawan"
+                        style={{
+                          width: `${30 * (makerSigScale / 100)}mm`,
+                          height: `${15 * (makerSigScale / 100)}mm`,
+                          objectFit: "contain",
+                          transform: `translate(${makerSigOffsetX}mm, ${makerSigOffsetY}mm)`,
+                        }}
+                        className="transition-all duration-100 select-none pointer-events-none"
+                      />
+                    ) : (
+                      <div className="h-12" />
+                    )}
+                  </div>
                   <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4 relative flex flex-col items-center">
                   <div>
                     <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
-                  <div className="h-12" />
+                  <div className="h-12 w-full relative flex items-center justify-center">
+                    {checkerSigImg ? (
+                      <img
+                        src={checkerSigImg}
+                        alt="Tanda Tangan Atasan"
+                        style={{
+                          width: `${30 * (checkerSigScale / 100)}mm`,
+                          height: `${15 * (checkerSigScale / 100)}mm`,
+                          objectFit: "contain",
+                          transform: `translate(${checkerSigOffsetX}mm, ${checkerSigOffsetY}mm)`,
+                        }}
+                        className="transition-all duration-100 select-none pointer-events-none"
+                      />
+                    ) : (
+                      <div className="h-12" />
+                    )}
+                  </div>
                   <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>

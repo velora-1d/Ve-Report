@@ -14,6 +14,14 @@ export interface ReportInput {
   generatedByName: string;
   reportType?: "standard" | "meeting" | "harian";
   checkerName?: string | null;
+  makerSigImg?: string | null;
+  makerSigScale?: number;
+  makerSigOffsetX?: number;
+  makerSigOffsetY?: number;
+  checkerSigImg?: string | null;
+  checkerSigScale?: number;
+  checkerSigOffsetX?: number;
+  checkerSigOffsetY?: number;
 }
 
 export async function generateReportPdf(
@@ -332,6 +340,33 @@ function generateMeetingPdf(
   doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
   doc.setFont("helvetica", "normal");
 
+  // Draw signature images if provided
+  if (input.makerSigImg) {
+    try {
+      const scale = input.makerSigScale ?? 100;
+      const imgW = 30 * (scale / 100);
+      const imgH = 15 * (scale / 100);
+      const imgX = sigLeftX - imgW / 2 + (input.makerSigOffsetX ?? 0);
+      const imgY = sigY + 17 - imgH / 2 + (input.makerSigOffsetY ?? 0);
+      doc.addImage(input.makerSigImg, "PNG", imgX, imgY, imgW, imgH);
+    } catch (e) {
+      console.error("Error drawing maker signature in PDF:", e);
+    }
+  }
+
+  if (input.checkerSigImg) {
+    try {
+      const scale = input.checkerSigScale ?? 100;
+      const imgW = 30 * (scale / 100);
+      const imgH = 15 * (scale / 100);
+      const imgX = sigRightX - imgW / 2 + (input.checkerSigOffsetX ?? 0);
+      const imgY = sigY + 17 - imgH / 2 + (input.checkerSigOffsetY ?? 0);
+      doc.addImage(input.checkerSigImg, "PNG", imgX, imgY, imgW, imgH);
+    } catch (e) {
+      console.error("Error drawing checker signature in PDF:", e);
+    }
+  }
+
   // Global page numbers
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
@@ -495,6 +530,33 @@ function generateHarianPdf(
   }
   doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
   doc.setFont("helvetica", "normal");
+
+  // Draw signature images if provided
+  if (input.makerSigImg) {
+    try {
+      const scale = input.makerSigScale ?? 100;
+      const imgW = 30 * (scale / 100);
+      const imgH = 15 * (scale / 100);
+      const imgX = sigLeftX - imgW / 2 + (input.makerSigOffsetX ?? 0);
+      const imgY = sigY + 17 - imgH / 2 + (input.makerSigOffsetY ?? 0);
+      doc.addImage(input.makerSigImg, "PNG", imgX, imgY, imgW, imgH);
+    } catch (e) {
+      console.error("Error drawing maker signature in PDF:", e);
+    }
+  }
+
+  if (input.checkerSigImg) {
+    try {
+      const scale = input.checkerSigScale ?? 100;
+      const imgW = 30 * (scale / 100);
+      const imgH = 15 * (scale / 100);
+      const imgX = sigRightX - imgW / 2 + (input.checkerSigOffsetX ?? 0);
+      const imgY = sigY + 17 - imgH / 2 + (input.checkerSigOffsetY ?? 0);
+      doc.addImage(input.checkerSigImg, "PNG", imgX, imgY, imgW, imgH);
+    } catch (e) {
+      console.error("Error drawing checker signature in PDF:", e);
+    }
+  }
 
   // Global page numbers
   const pages = doc.getNumberOfPages();
