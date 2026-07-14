@@ -1,11 +1,18 @@
+// ponytail: Mengganti kueri Supabase client-side dengan TanStack Start Server Functions dan Drizzle ORM.
+// ponytail: Menggunakan tabel user tunggal untuk memegang role dan status aktif secara langsung (YAGNI, membuang relasi perantara yang tidak diperlukan).
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Search, Shield, ShieldOff, UserCog } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { users as usersTable } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,17 +36,64 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABEL, type AppRole } from "@/lib/roles";
 
+// ponytail: Fungsi server untuk mengambil daftar pengguna
+const getUsersMgmt = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+  const role = session.user.role || "staff";
+  if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+  const allUsers = await db.query.users.findMany({
+    orderBy: [desc(usersTable.createdAt)],
+  });
+
+  // Admin tidak boleh melihat atau mengelola developer
+  if (role === "admin") {
+    return allUsers.filter((u) => u.role !== "developer");
+  }
+  return allUsers;
+});
+
+// ponytail: Fungsi server untuk mengubah status aktif pengguna
+const toggleUserActive = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string(), active: z.boolean() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+    if (session.user.id === data.id) throw new Error("Cannot change own status");
+
+    await db.update(usersTable)
+      .set({ isActive: data.active })
+      .where(eq(usersTable.id, data.id));
+  });
+
+// ponytail: Fungsi server untuk mengubah peran (role) pengguna
+const changeUserRole = createServerFn({ method: "POST" })
+  .validator(z.object({ userId: z.string(), newRole: z.string() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+    if (session.user.id === data.userId) throw new Error("Cannot change own role");
+
+    if (data.newRole === "developer" && role !== "developer") {
+      throw new Error("Only developers can assign developer role");
+    }
+
+    await db.update(usersTable)
+      .set({ role: data.newRole })
+      .where(eq(usersTable.id, data.userId));
+  });
+
 export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
-  ssr: false,
   beforeLoad: async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) throw redirect({ to: "/auth" });
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userData.user.id);
-    const has = (r: string) => roles?.some((x) => x.role === r);
-    if (!has("admin") && !has("developer")) {
+    const session = await getSession();
+    if (!session || !session.user) throw redirect({ to: "/auth" });
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") {
       throw redirect({ to: "/dasbor" });
     }
   },
@@ -56,16 +110,6 @@ export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
   component: ManajemenPage,
 });
 
-interface UserRow {
-  id: string;
-  name: string;
-  email: string;
-  position: string | null;
-  is_active: boolean;
-  created_at: string;
-  roles: AppRole[];
-}
-
 function ManajemenPage() {
   const { data: me } = useCurrentUser();
   const qc = useQueryClient();
@@ -73,29 +117,7 @@ function ManajemenPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["users-mgmt"],
-    queryFn: async (): Promise<UserRow[]> => {
-      const [{ data: profiles, error: pe }, { data: rolesData, error: re }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("id,name,email,position,is_active,created_at")
-            .order("created_at", { ascending: false }),
-          supabase.from("user_roles").select("user_id,role"),
-        ]);
-      if (pe) throw pe;
-      if (re) throw re;
-      const roleMap = new Map<string, AppRole[]>();
-      for (const r of rolesData ?? []) {
-        const arr = roleMap.get(r.user_id) ?? [];
-        arr.push(r.role as AppRole);
-        roleMap.set(r.user_id, arr);
-      }
-      // RLS already hides developer profiles for admin; developer sees all.
-      return (profiles ?? []).map((p) => ({
-        ...p,
-        roles: roleMap.get(p.id) ?? [],
-      }));
-    },
+    queryFn: () => getUsersMgmt(),
   });
 
   const filtered = useMemo(() => {
@@ -111,13 +133,7 @@ function ManajemenPage() {
   }, [data, search]);
 
   const toggleActive = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_active: active })
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (v: { id: string; active: boolean }) => toggleUserActive({ data: v }),
     onSuccess: (_r, v) => {
       toast.success(v.active ? "Akun diaktifkan" : "Akun dinonaktifkan");
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
@@ -126,34 +142,7 @@ function ManajemenPage() {
   });
 
   const changeRole = useMutation({
-    mutationFn: async ({
-      userId,
-      newRole,
-      currentRoles,
-    }: {
-      userId: string;
-      newRole: AppRole;
-      currentRoles: AppRole[];
-    }) => {
-      // Remove non-dev roles the user currently has (dev role never touched from UI)
-      const toRemove = currentRoles.filter(
-        (r) => r !== "developer" && r !== newRole,
-      );
-      if (toRemove.length) {
-        const { error } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userId)
-          .in("role", toRemove);
-        if (error) throw error;
-      }
-      if (!currentRoles.includes(newRole)) {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({ user_id: userId, role: newRole });
-        if (error) throw error;
-      }
-    },
+    mutationFn: (v: { userId: string; newRole: AppRole }) => changeUserRole({ data: v }),
     onSuccess: () => {
       toast.success("Peran diperbarui");
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
@@ -219,8 +208,8 @@ function ManajemenPage() {
                 <TableBody>
                   {filtered.map((u) => {
                     const isMe = me?.id === u.id;
-                    const isDev = u.roles.includes("developer");
-                    const currentEditable: AppRole = u.roles.includes("admin")
+                    const isDev = u.role === "developer";
+                    const currentEditable: AppRole = u.role === "admin"
                       ? "admin"
                       : "staff";
                     return (
@@ -242,7 +231,6 @@ function ManajemenPage() {
                                 changeRole.mutate({
                                   userId: u.id,
                                   newRole: v as AppRole,
-                                  currentRoles: u.roles,
                                 })
                               }
                               disabled={isMe}
@@ -259,18 +247,18 @@ function ManajemenPage() {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={u.is_active ? "default" : "secondary"}
+                            variant={u.isActive ? "default" : "secondary"}
                             className={
-                              u.is_active ? "bg-success/15 text-success" : ""
+                              u.isActive ? "bg-success/15 text-success" : ""
                             }
                           >
-                            {u.is_active ? "Aktif" : "Nonaktif"}
+                            {u.isActive ? "Aktif" : "Nonaktif"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(new Date(u.created_at), "d MMM yyyy", {
+                          {u.createdAt ? format(new Date(u.createdAt), "d MMM yyyy", {
                             locale: idLocale,
-                          })}
+                          }) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {!isDev && !isMe && (
@@ -280,11 +268,11 @@ function ManajemenPage() {
                               onClick={() =>
                                 toggleActive.mutate({
                                   id: u.id,
-                                  active: !u.is_active,
+                                  active: !u.isActive,
                                 })
                               }
                             >
-                              {u.is_active ? (
+                              {u.isActive ? (
                                 <>
                                   <ShieldOff className="w-3.5 h-3.5 mr-1" />{" "}
                                   Nonaktifkan

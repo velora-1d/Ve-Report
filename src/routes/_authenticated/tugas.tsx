@@ -1,4 +1,4 @@
-// ponytail: Mengganti query Supabase client-side untuk tugas dengan Server Functions Drizzle ORM
+// ponytail: Mengganti query Supabase client-side untuk tugas dan jadwal dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,8 +7,8 @@ import { CalendarTab } from "@/components/schedules/calendar-tab";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { tasks as tasksTable, users as usersTable } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { tasks as tasksTable, users as usersTable, schedules as schedulesTable } from "@/db/schema";
+import { eq, desc, and, gte, lt, ne, inArray } from "drizzle-orm";
 
 // ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee)
 export const getTasksList = createServerFn({ method: "GET" }).handler(async () => {
@@ -119,6 +119,84 @@ export const updateTaskStatus = createServerFn({ method: "POST" })
         updatedAt: new Date(),
       })
       .where(eq(tasksTable.id, data.id));
+  });
+
+// ponytail: Fungsi server untuk mengambil daftar jadwal (schedules) dalam range waktu tertentu
+export const getSchedules = createServerFn({ method: "GET" })
+  .validator(z.object({ start: z.string(), end: z.string() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    return db.query.schedules.findMany({
+      where: and(
+        eq(schedulesTable.userId, session.user.id),
+        gte(schedulesTable.startTime, new Date(data.start)),
+        lt(schedulesTable.startTime, new Date(data.end))
+      ),
+      orderBy: [desc(schedulesTable.startTime)],
+    });
+  });
+
+// ponytail: Fungsi server untuk mengambil daftar tugas aktif untuk dihubungkan ke jadwal
+export const getLinkableTasks = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  return db.query.tasks.findMany({
+    where: ne(tasksTable.status, "done"),
+    columns: {
+      id: true,
+      title: true,
+    },
+    orderBy: [desc(tasksTable.createdAt)],
+    limit: 50,
+  });
+});
+
+// ponytail: Fungsi server untuk menyimpan/memperbarui jadwal (schedule)
+export const saveSchedule = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string().optional(),
+      title: z.string(),
+      description: z.string().nullable().optional(),
+      taskId: z.string().nullable().optional(),
+      startTime: z.string(),
+      endTime: z.string(),
+      reminderMinutesBefore: z.number().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    const payload = {
+      title: data.title,
+      description: data.description || null,
+      taskId: data.taskId === "__none__" || !data.taskId ? null : data.taskId,
+      userId: session.user.id,
+      startTime: new Date(data.startTime),
+      endTime: new Date(data.endTime),
+      reminderMinutesBefore: data.reminderMinutesBefore ?? 30,
+    };
+
+    if (data.id) {
+      await db.update(schedulesTable).set(payload).where(eq(schedulesTable.id, data.id));
+    } else {
+      await db.insert(schedulesTable).values(payload);
+    }
+  });
+
+// ponytail: Fungsi server untuk menghapus jadwal (schedule)
+export const deleteSchedule = createServerFn({ method: "POST" })
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    await db.delete(schedulesTable)
+      .where(and(eq(schedulesTable.id, id), eq(schedulesTable.userId, session.user.id)));
   });
 
 export const Route = createFileRoute("/_authenticated/tugas")({
