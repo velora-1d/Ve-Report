@@ -539,6 +539,7 @@ function RbacMatrixCard() {
     { key: "pengaturan", label: "Pengaturan" },
     { key: "branding", label: "Branding & Logo" },
     { key: "pdf", label: "Konfigurasi PDF" },
+    { key: "panel-developer", label: "Panel Developer" },
   ];
 
   const MODULES = [
@@ -582,7 +583,8 @@ function RbacMatrixCard() {
                 >
                   <Checkbox
                     id={`${role}-menu-${menu.key}`}
-                    checked={isChecked}
+                    checked={menu.key === "panel-developer" ? false : isChecked}
+                    disabled={menu.key === "panel-developer"}
                     onCheckedChange={() => toggleMenu(role, menu.key)}
                   />
                   <span className="font-medium text-foreground/80">{menu.label}</span>
