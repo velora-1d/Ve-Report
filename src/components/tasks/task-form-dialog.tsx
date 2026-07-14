@@ -112,17 +112,17 @@ export function TaskFormDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="title">Judul</Label>
+            <Label htmlFor="title">Judul / Uraian Tugas</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Contoh: Susun laporan mingguan"
+              placeholder="Contoh: Susun laporan bulanan"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="desc">Deskripsi</Label>
+            <Label htmlFor="desc">Detail Uraian Tugas (Opsional)</Label>
             <Textarea
               id="desc"
               value={description}
@@ -173,7 +173,7 @@ export function TaskFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="due">Tenggat</Label>
+              <Label htmlFor="due">Target Selesai</Label>
               <Input
                 id="due"
                 type="date"
@@ -201,7 +201,7 @@ export function TaskFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Pemberi Tugas / Sumber</Label>
+              <Label>Sumber Tugas (Atasan / Rapat)</Label>
               <Select value={taskSource} onValueChange={setTaskSource}>
                 <SelectTrigger>
                   <SelectValue />
@@ -213,7 +213,7 @@ export function TaskFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="output">Deskripsi Output</Label>
+              <Label htmlFor="output">Out Put (Hasil Kerja)</Label>
               <Input
                 id="output"
                 value={outputDescription}

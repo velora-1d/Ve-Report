@@ -218,17 +218,17 @@ function TugasPage() {
     <div className="w-full space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          Tugas & Jadwal
+          Log Book Meeting
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Daftar tugas dan jadwal kalender dalam satu tempat.
+          Daftar penugasan dari atasan dan hasil meeting harian.
         </p>
       </div>
 
       <Tabs defaultValue="daftar">
-        <TabsList>
-          <TabsTrigger value="daftar">Daftar Tugas</TabsTrigger>
-          <TabsTrigger value="kalender">Kalender</TabsTrigger>
+        <TabsList className="bg-slate-100 p-1 rounded-xl">
+          <TabsTrigger value="daftar" className="rounded-lg">Tabel Log Meeting</TabsTrigger>
+          <TabsTrigger value="kalender" className="rounded-lg">Kalender Rapat</TabsTrigger>
         </TabsList>
         <TabsContent value="daftar" className="mt-4">
           <TaskListTab />

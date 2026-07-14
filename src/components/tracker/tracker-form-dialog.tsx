@@ -126,7 +126,7 @@ export function TrackerFormDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Tugas</Label>
+            <Label>Pilih Tugas / Log Rapat</Label>
             <Select value={taskId} onValueChange={setTaskId}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih tugas aktif" />
@@ -146,7 +146,7 @@ export function TrackerFormDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Tanggal</Label>
+            <Label>Hari / Tanggal</Label>
             <Input
               type="date"
               value={date}
@@ -176,7 +176,7 @@ export function TrackerFormDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Catatan (opsional)</Label>
+            <Label>Implementasi Kegiatan (Catatan)</Label>
             <Textarea
               rows={3}
               placeholder="Apa yang dikerjakan?"
@@ -207,7 +207,7 @@ export function TrackerFormDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="remarks">Keterangan / Hambatan (opsional)</Label>
+            <Label htmlFor="remarks">Keterangan</Label>
             <Input
               id="remarks"
               placeholder="Contoh: Hambatan server down"
