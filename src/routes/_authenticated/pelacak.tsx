@@ -12,6 +12,7 @@ import {
   Clock,
   ListChecks,
   TrendingUp,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -184,6 +185,33 @@ export const validateTrackerLog = createServerFn({ method: "POST" })
       .where(eq(logsTable.id, data.id));
   });
 
+// ponytail: Fungsi server untuk memvalidasi log harian staff secara masal oleh admin/developer
+export const bulkValidateTrackerLogs = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      ids: z.array(z.string()),
+      isValidated: z.boolean(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    if (data.ids.length === 0) return { success: true, count: 0 };
+
+    await db.update(logsTable)
+      .set({
+        isValidated: data.isValidated,
+        validatedBy: data.isValidated ? session.user.id : null,
+      })
+      .where(inArray(logsTable.id, data.ids));
+
+    return { success: true, count: data.ids.length };
+  });
+
 export const Route = createFileRoute("/_authenticated/pelacak")({
   head: () => ({
     meta: [
@@ -210,6 +238,10 @@ function PelacakPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"my-logs" | "validate-staff">("my-logs");
+  const [filterStaffId, setFilterStaffId] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "validated">("all");
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ["tracker-logs", user?.id],
@@ -272,6 +304,62 @@ function PelacakPage() {
     onError: (e: Error) =>
       toast.error("Gagal memvalidasi", { description: e.message }),
   });
+
+  const bulkValidateMutation = useMutation({
+    mutationFn: (v: { ids: string[]; isValidated: boolean }) =>
+      bulkValidateTrackerLogs({ data: v }),
+    onSuccess: (res) => {
+      toast.success(`${res.count} log harian berhasil divalidasi`);
+      qc.invalidateQueries({ queryKey: ["tracker-logs"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (e: Error) =>
+      toast.error("Gagal memvalidasi masal", { description: e.message }),
+  });
+
+  const isAdminOrDevUser = useMemo(() => isAdminOrDev(user?.roles ?? []), [user?.roles]);
+
+  const myLogs = useMemo(() => {
+    if (!logs) return [];
+    if (!isAdminOrDevUser) return logs;
+    return logs.filter((l) => l.userId === user?.id);
+  }, [logs, isAdminOrDevUser, user?.id]);
+
+  const staffLogs = useMemo(() => {
+    if (!logs || !isAdminOrDevUser) return [];
+    return logs.filter((l) => l.userId !== user?.id);
+  }, [logs, isAdminOrDevUser, user?.id]);
+
+  const staffList = useMemo(() => {
+    const listMap = new Map<string, string>();
+    for (const l of staffLogs) {
+      if (l.user?.id) {
+        listMap.set(l.user.id, l.user.name || "Staf Tanpa Nama");
+      }
+    }
+    return Array.from(listMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [staffLogs]);
+
+  const filteredStaffLogs = useMemo(() => {
+    return staffLogs.filter((l) => {
+      const matchStaff = filterStaffId === "all" || l.userId === filterStaffId;
+      const matchStatus =
+        filterStatus === "all"
+          ? true
+          : filterStatus === "pending"
+            ? !l.isValidated
+            : l.isValidated;
+      return matchStaff && matchStatus;
+    });
+  }, [staffLogs, filterStaffId, filterStatus]);
+
+  const displayedLogs = useMemo(() => {
+    return activeTab === "my-logs" ? myLogs : filteredStaffLogs;
+  }, [activeTab, myLogs, filteredStaffLogs]);
+
+  const pendingCount = useMemo(() => {
+    return filteredStaffLogs.filter((l) => !l.isValidated).length;
+  }, [filteredStaffLogs]);
 
   const stats = [
     {
@@ -348,15 +436,88 @@ function PelacakPage() {
             <CardTitle className="text-base">Riwayat Log</CardTitle>
           </CardHeader>
           <CardContent>
+            {isAdminOrDevUser && (
+              <div className="flex bg-slate-100 p-1 rounded-xl mb-4 w-full max-w-xs border border-slate-200/50">
+                <button
+                  onClick={() => setActiveTab("my-logs")}
+                  className={`flex-1 py-1.5 px-4 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    activeTab === "my-logs"
+                      ? "bg-white text-slate-800 shadow-sm font-bold"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Log Saya
+                </button>
+                <button
+                  onClick={() => setActiveTab("validate-staff")}
+                  className={`flex-1 py-1.5 px-4 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    activeTab === "validate-staff"
+                      ? "bg-white text-slate-800 shadow-sm font-bold"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Validasi Log Staff
+                </button>
+              </div>
+            )}
+
+            {activeTab === "validate-staff" && (
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter Staff</span>
+                    <select
+                      value={filterStaffId}
+                      onChange={(e) => setFilterStaffId(e.target.value)}
+                      className="bg-white border border-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    >
+                      <option value="all">Semua Staff</option>
+                      {staffList.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Validasi</span>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                      className="bg-white border border-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent min-w-[120px]"
+                    >
+                      <option value="all">Semua Status</option>
+                      <option value="pending">Belum Validasi</option>
+                      <option value="validated">Tervalidasi</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end">
+                  {pendingCount > 0 && (
+                    <Button
+                      onClick={() => setBulkConfirmOpen(true)}
+                      disabled={bulkValidateMutation.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-1.5 px-3 rounded-lg flex items-center gap-1 shadow-sm transition-all border-0 animate-pulse"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Setujui Semua ({pendingCount})
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-9 w-full" />
                 <Skeleton className="h-9 w-full" />
                 <Skeleton className="h-9 w-full" />
               </div>
-            ) : (logs ?? []).length === 0 ? (
+            ) : displayedLogs.length === 0 ? (
               <div className="text-sm text-muted-foreground py-8 text-center">
-                Belum ada log. Klik <b>Tambah Log Harian</b> untuk mulai.
+                {activeTab === "my-logs" 
+                  ? <span>Belum ada log. Klik <b>Tambah Log Harian</b> untuk mulai.</span>
+                  : <span>Tidak ada log staff yang sesuai dengan filter.</span>}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -364,7 +525,7 @@ function PelacakPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Hari / Tanggal</TableHead>
-                      {showStaffName && <TableHead>Nama Staff</TableHead>}
+                      {activeTab === "validate-staff" && <TableHead>Nama Staff</TableHead>}
                       <TableHead>Jam</TableHead>
                       <TableHead>Implementasi Kegiatan</TableHead>
                       <TableHead>Status</TableHead>
@@ -374,7 +535,7 @@ function PelacakPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(logs ?? []).map((l) => {
+                    {displayedLogs.map((l) => {
                       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
                       const activityStr = l.note || l.task?.title || "—";
                       const isDone = l.status === "done";
@@ -386,11 +547,11 @@ function PelacakPage() {
                       return (
                         <TableRow key={l.id}>
                           <TableCell className="whitespace-nowrap text-sm">
-                            {l.loggedDate ? format(new Date(l.loggedDate), "EEEE, d MMM yyyy", {
+                            {l.loggedDate ? format(new Date(l.loggedDate), "EEE, d MMM yyyy", {
                               locale: idLocale,
                             }) : "—"}
                           </TableCell>
-                          {showStaffName && (
+                          {activeTab === "validate-staff" && (
                             <TableCell className="text-sm font-semibold text-slate-700">
                               {l.user?.name ?? "—"}
                             </TableCell>
@@ -412,7 +573,7 @@ function PelacakPage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-sm">
-                            {isAdminOrDev(user?.roles ?? []) ? (
+                            {isAdminOrDevUser ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -544,6 +705,40 @@ function PelacakPage() {
               className="flex-1 rounded-xl bg-gradient-to-r from-red-650 to-red-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
             >
               Ya, Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkConfirmOpen}
+        onOpenChange={setBulkConfirmOpen}
+      >
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 scale-110">
+              <Check className="w-6 h-6 animate-pulse text-emerald-600" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Setujui Masal Log Harian?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
+              Apakah Anda yakin ingin menyetujui sekaligus <b>{pendingCount} log harian</b> terpilih yang belum divalidasi?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-800 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const pendingIds = filteredStaffLogs.filter(l => !l.isValidated).map(l => l.id);
+                bulkValidateMutation.mutate({ ids: pendingIds, isValidated: true });
+                setBulkConfirmOpen(false);
+              }}
+              className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
+            >
+              Ya, Setujui
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
