@@ -93,83 +93,87 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex bg-surface-sunken font-sans antialiased overflow-hidden">
-      {/* LEFT SIDE: Brand Showcase & Content (30% width on desktop) */}
-      <div className="hidden md:flex md:w-[30%] relative flex-col justify-between p-10 overflow-hidden bg-gradient-to-br from-slate-950 via-primary/95 to-primary text-white select-none">
+      {/* LEFT SIDE: Brand Showcase & Content (50% width on desktop) */}
+      <div className="hidden md:flex md:w-1/2 relative flex-col justify-between p-16 overflow-hidden bg-gradient-to-br from-slate-950 via-primary/95 to-primary text-white select-none">
         {/* Subtle mesh background */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:20px_20px] opacity-70"></div>
         <div className="absolute top-[-10%] right-[-10%] w-[80%] h-[80%] bg-primary-soft/10 rounded-full blur-[100px]"></div>
 
-        {/* Brand Header */}
-        <div className="relative flex items-center gap-3.5 z-10">
-          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
-            <FileText className="w-5.5 h-5.5 text-white" />
-          </div>
-          <span className="font-extrabold text-base tracking-tight uppercase">Log Book</span>
-        </div>
-
-        {/* Hero Message */}
-        <div className="relative my-auto z-10 space-y-6">
-          <div className="space-y-3">
-            <h1 className="text-3xl font-black tracking-tight leading-tight text-white">
-              Sederhana.<br />Teratur. Tenang.
-            </h1>
-            <p className="text-xs text-white/70 leading-relaxed font-medium">
-              Aplikasi logbook harian tim untuk menyusun laporan, kalender jadwal, dan pelacak progres tanpa beban kerja tambahan.
-            </p>
+        {/* Content Wrapper aligned to the right side of the panel (toward the center line) */}
+        <div className="relative flex flex-col justify-between h-full z-10 max-w-sm ml-auto w-full">
+          {/* Brand Header */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
+              <FileText className="w-5.5 h-5.5 text-white" />
+            </div>
+            <span className="font-extrabold text-base tracking-tight uppercase">Log Book</span>
           </div>
 
-          <div className="space-y-4 pt-2">
-            <div className="flex gap-3 items-center">
-              <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              </div>
-              <span className="text-xs font-semibold text-white">Rencana Tugas Terpadu</span>
+          {/* Hero Message */}
+          <div className="space-y-6 my-auto py-10">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-black tracking-tight leading-tight text-white">
+                Sederhana.<br />Teratur. Tenang.
+              </h1>
+              <p className="text-sm text-white/70 leading-relaxed font-medium">
+                Aplikasi logbook harian tim untuk menyusun laporan, kalender jadwal, dan pelacak progres tanpa beban kerja tambahan.
+              </p>
             </div>
-            <div className="flex gap-3 items-center">
-              <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
-                <Clock className="w-3.5 h-3.5 text-sky-300" />
-              </div>
-              <span className="text-xs font-semibold text-white">Pelacakan Waktu Harian</span>
-            </div>
-            <div className="flex gap-3 items-center">
-              <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-              </div>
-              <span className="text-xs font-semibold text-white">Ekspor Laporan Cepat</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Live Preview Card */}
-        <div className="relative mt-auto w-full rounded-2xl border border-white/10 bg-white/5 p-4.5 backdrop-blur-2xl shadow-xl z-10">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Aktivitas Tim</span>
-            <span className="flex h-1.5 w-1.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            <div className="flex gap-2.5 items-center">
-              <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center border border-white/15">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="space-y-4 pt-2">
+              <div className="flex gap-3 items-center">
+                <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <span className="text-sm font-semibold text-white">Rencana Tugas Terpadu</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[11px] font-semibold text-white truncate">Laporan berhasil terbit</div>
-                <div className="text-[9px] text-white/45">Baru saja</div>
+              <div className="flex gap-3 items-center">
+                <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
+                  <Clock className="w-3.5 h-3.5 text-sky-300" />
+                </div>
+                <span className="text-sm font-semibold text-white">Pelacakan Waktu Harian</span>
+              </div>
+              <div className="flex gap-3 items-center">
+                <div className="w-5 h-5 rounded-md bg-white/10 border border-white/25 flex items-center justify-center backdrop-blur-md">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+                </div>
+                <span className="text-sm font-semibold text-white">Ekspor Laporan Cepat</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Preview Card */}
+          <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-4.5 backdrop-blur-2xl shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Aktivitas Tim</span>
+              <span className="flex h-1.5 w-1.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              <div className="flex gap-2.5 items-center">
+                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center border border-white/15">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-white truncate">Laporan berhasil terbit</div>
+                  <div className="text-[9px] text-white/45">Baru saja</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT SIDE: Auth Form (70% width on desktop) */}
-      <div className="w-full md:w-[70%] flex flex-col justify-center px-8 py-12 lg:px-24 bg-gradient-to-tr from-white via-surface to-slate-50/50 relative">
+      {/* RIGHT SIDE: Auth Form (50% width on desktop) */}
+      <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12 lg:px-16 bg-gradient-to-tr from-white via-surface to-slate-50/50 relative">
         {/* Glow Effects */}
         <div className="absolute top-0 left-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl -z-10"></div>
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-sky-500/5 rounded-full blur-3xl -z-10"></div>
 
-        <div className="w-full max-w-sm mx-auto space-y-8 animate-fade-in-up">
+        {/* Content Wrapper aligned to the left side of the panel (toward the center line) */}
+        <div className="w-full max-w-sm mr-auto ml-0 md:ml-12 space-y-8 animate-fade-in-up">
           {/* Logo & Header for Mobile */}
           <div className="flex flex-col items-center mb-2 md:hidden">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 shadow-soft">
