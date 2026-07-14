@@ -4,9 +4,29 @@ import { db } from "../db";
 import * as schema from "../db/schema";
 import crypto from "crypto";
 
+function getBaseURL(): string {
+  const url = process.env.BETTER_AUTH_URL;
+  if (!url) {
+    throw new Error(
+      "[Better Auth] BETTER_AUTH_URL belum di-set di environment. " +
+        "Tambahkan ke .env dan production environment sebelum deploy.",
+    );
+  }
+  return url.replace(/\/$/, "");
+}
+
+function getTrustedOrigins(): string[] {
+  const origins = process.env.BETTER_AUTH_TRUSTED_ORIGINS;
+  if (origins) {
+    return origins.split(",").map((o) => o.trim());
+  }
+  return [getBaseURL()];
+}
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || "[REDACTED-URL]",
+  baseURL: getBaseURL(),
   basePath: "/api/auth",
+  trustedOrigins: getTrustedOrigins(),
   database: drizzleAdapter(db, {
     provider: "mysql",
     schema: {

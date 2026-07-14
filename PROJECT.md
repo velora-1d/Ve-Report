@@ -35,6 +35,7 @@ Aplikasi logbook harian tim untuk menyusun laporan, kalender jadwal, dan pelacak
 #### Hosting & Infra
 - Development: local (vite dev)
 - Production: private server dengan Dokploy + Docker
+- Production URL: [REDACTED-URL]
 - Container: Node.js 22 Alpine, Nitro node-server preset, port 8080
 
 #### Catatan Khusus
