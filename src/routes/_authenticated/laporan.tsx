@@ -1031,59 +1031,60 @@ function ReportPreviewGrid({
 
             <div className="relative z-10 flex flex-col justify-between h-full">
               {/* Title */}
-              <div className="text-center mb-6">
-                <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK MEETING</h2>
+              <div className="text-center mb-6 flex flex-col items-center">
+                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK MEETING</h2>
+                <div className="w-16 h-0.5 bg-[#0077B6] mt-1.5 rounded-full"></div>
               </div>
 
               {/* Metadata Info Box (2 rows) */}
-              <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
+              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Nama</div>
-                    <div className="truncate">: {employeeName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Nama</div>
+                    <div className="truncate font-semibold text-slate-800">: {employeeName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Divisi</div>
-                    <div className="truncate">: {employeePosition}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Divisi</div>
+                    <div className="truncate font-semibold text-slate-800">: {employeePosition}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Bulan</div>
-                    <div className="truncate">: {monthName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Bulan</div>
+                    <div className="truncate font-semibold text-slate-800">: {monthName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Tahun</div>
-                    <div className="truncate">: {yearName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Tahun</div>
+                    <div className="truncate font-semibold text-slate-800">: {yearName}</div>
                   </div>
                 </div>
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-black uppercase">
-                PENUGASAN ATASAN/HASIL MEETING/.......
+              <div className="font-bold text-xs mb-3 text-slate-700 uppercase tracking-wide">
+                A. DAFTAR PENUGASAN / HASIL MEETING
               </div>
 
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-400">
+              <table className="w-full text-left text-xs border-collapse border border-slate-200">
                 <thead>
-                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[5%]">No</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[35%]">Uraian Tugas</th>
-                    <th colSpan={2} className="p-2 border border-slate-400 text-center w-[20%]">Pemberi Tugas</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[12%]">Target Selesai</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[13%]">Out Put</th>
+                  <tr className="bg-[#0077B6] border-b border-slate-200">
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[35%] font-bold text-white">Uraian Tugas</th>
+                    <th colSpan={2} className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white">Pemberi Tugas</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[12%] font-bold text-white">Target Selesai</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[13%] font-bold text-white">Out Put</th>
                   </tr>
-                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th className="p-1 border border-slate-400 text-center w-[10%]">Atasan</th>
-                    <th className="p-1 border border-slate-400 text-center w-[10%]">Meeting</th>
+                  <tr className="bg-[#0077B6] border-b border-slate-200">
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Atasan</th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Meeting</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tasks.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                      <td colSpan={7} className="p-4 border border-slate-200 text-center text-muted-foreground bg-white">
                         Tidak ada data tugas meeting pada periode ini.
                       </td>
                     </tr>
@@ -1097,14 +1098,14 @@ function ReportPreviewGrid({
                       const outputStr = t.outputDescription ?? "—";
  
                       return (
-                        <tr key={t.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
-                          <td className="p-2 border border-slate-400 text-center font-medium">{index + 1}</td>
-                          <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
-                          <td className="p-2 border-slate-400 whitespace-pre-line">{descStr}</td>
-                          <td className="p-2 border-slate-400 text-center text-success font-bold text-sm">{!isMeeting ? "✓" : ""}</td>
-                          <td className="p-2 border-slate-400 text-center text-success font-bold text-sm">{isMeeting ? "✓" : ""}</td>
-                          <td className="p-2 border-slate-400 text-center">{targetStr}</td>
-                          <td className="p-2 border-slate-400">{outputStr}</td>
+                        <tr key={t.id} className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black">
+                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">{index + 1}</td>
+                          <td className="p-2 border border-slate-200 font-medium text-slate-700">{dayDateStr}</td>
+                          <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">{descStr}</td>
+                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{!isMeeting ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{isMeeting ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-200 text-center text-slate-700">{targetStr}</td>
+                          <td className="p-2 border border-slate-200 text-slate-700">{outputStr}</td>
                         </tr>
                       );
                     })
@@ -1211,55 +1212,61 @@ function ReportPreviewGrid({
 
             <div className="relative z-10 flex flex-col justify-between h-full">
               {/* Title */}
-              <div className="text-center mb-6">
-                <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK KEGIATAN HARIAN</h2>
+              <div className="text-center mb-6 flex flex-col items-center">
+                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK KEGIATAN HARIAN</h2>
+                <div className="w-16 h-0.5 bg-[#0077B6] mt-1.5 rounded-full"></div>
               </div>
 
               {/* Metadata Info Box (2 rows) */}
-              <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
+              <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Nama</div>
-                    <div className="truncate">: {employeeName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Nama</div>
+                    <div className="truncate font-semibold text-slate-800">: {employeeName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Divisi</div>
-                    <div className="truncate">: {employeePosition}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Divisi</div>
+                    <div className="truncate font-semibold text-slate-800">: {employeePosition}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Bulan</div>
-                    <div className="truncate">: {monthName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Bulan</div>
+                    <div className="truncate font-semibold text-slate-800">: {monthName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0">Tahun</div>
-                    <div className="truncate">: {yearName}</div>
+                    <div className="w-16 font-bold shrink-0 text-slate-500">Tahun</div>
+                    <div className="truncate font-semibold text-slate-800">: {yearName}</div>
                   </div>
                 </div>
               </div>
 
+              {/* Subheading */}
+              <div className="font-bold text-xs mb-3 text-slate-700 uppercase tracking-wide">
+                A. DAFTAR KEGIATAN HARIAN
+              </div>
+
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-400">
+              <table className="w-full text-left text-xs border-collapse border border-slate-200">
                 <thead>
-                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[5%]">No</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[15%]">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Jam</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[30%]">Implementasi Kegiatan</th>
-                    <th colSpan={2} className="p-2 border-slate-400 text-center w-[20%]">Status</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Validasi Atasan</th>
-                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle w-[10%]">Keterangan</th>
+                  <tr className="bg-[#0077B6] border-b border-slate-200">
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Jam</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[30%] font-bold text-white">Implementasi Kegiatan</th>
+                    <th colSpan={2} className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white">Status</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Validasi Atasan</th>
+                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Keterangan</th>
                   </tr>
-                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
-                    <th className="p-1 border border-slate-400 text-center w-[10%]">On Progres</th>
-                    <th className="p-1 border border-slate-400 text-center w-[10%]">Selesai</th>
+                  <tr className="bg-[#0077B6] border-b border-slate-200">
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">On Progres</th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Selesai</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                      <td colSpan={8} className="p-4 border border-slate-200 text-center text-muted-foreground bg-white">
                         Tidak ada data log harian pada periode ini.
                       </td>
                     </tr>
@@ -1273,15 +1280,15 @@ function ReportPreviewGrid({
                       const remarksStr = l.remarks ?? "—";
  
                       return (
-                        <tr key={l.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
-                          <td className="p-2 border border-slate-400 text-center font-medium">{index + 1}</td>
-                          <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
-                          <td className="p-2 border border-slate-400 text-center">{timeStr}</td>
-                          <td className="p-2 border border-slate-400 whitespace-pre-line">{activityStr}</td>
-                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{!isDone ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{isDone ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{validatedStr}</td>
-                          <td className="p-2 border border-slate-400">{remarksStr}</td>
+                        <tr key={l.id} className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black">
+                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">{index + 1}</td>
+                          <td className="p-2 border border-slate-200 font-medium text-slate-700">{dayDateStr}</td>
+                          <td className="p-2 border border-slate-200 text-center text-slate-700">{timeStr}</td>
+                          <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">{activityStr}</td>
+                          <td className="p-2 border border-slate-200 text-center text-amber-500 font-bold text-sm">{!isDone ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-200 text-center text-emerald-500 font-bold text-sm">{isDone ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{validatedStr}</td>
+                          <td className="p-2 border border-slate-200 text-slate-700">{remarksStr}</td>
                         </tr>
                       );
                     })

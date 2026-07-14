@@ -44,7 +44,7 @@ async function addWatermarkToAllPages(doc: jsPDF, watermarkUrl: string) {
       const y = (pageH - h) / 2;
 
       doc.saveGraphicsState();
-      const gState = new (doc as any).GState({ opacity: 0.07 });
+      const gState = new (doc as any).GState({ opacity: 0.12 });
       doc.setGState(gState);
       doc.addImage(base64Png, "PNG", x, y, w, h);
       doc.restoreGraphicsState();
@@ -284,19 +284,38 @@ async function generateMeetingPdf(
   // 1. Title
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 119, 182); // Brand color #0077B6
   doc.text("LOG BOOK MEETING", pageW / 2, marginMm + 5, { align: "center" });
 
+  // Decorative underline below title
+  doc.setDrawColor(0, 119, 182);
+  doc.setLineWidth(0.5);
+  doc.line(pageW / 2 - 20, marginMm + 7, pageW / 2 + 20, marginMm + 7);
+  doc.setTextColor(0, 0, 0); // reset color
+
   // 2. Metadata Info Box (2 rows)
-  const metadataY = marginMm + 15;
+  const metadataY = marginMm + 16;
   const boxW = pageW - (marginMm * 2);
-  doc.rect(marginMm, metadataY - 3, boxW, 13);
   
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
+  // Draw card background
+  doc.setFillColor(248, 250, 252); // Slate 50
+  doc.rect(marginMm, metadataY - 3, boxW, 14, "F");
+
+  // Draw blue accent bar on the left
+  doc.setFillColor(0, 119, 182);
+  doc.rect(marginMm, metadataY - 3, 2.5, 14, "F");
+
+  // Draw card border
+  doc.setDrawColor(226, 232, 240); // Slate 200
+  doc.setLineWidth(0.15);
+  doc.rect(marginMm, metadataY - 3, boxW, 14, "D");
+  
+  doc.setFontSize(9.5);
   // Row 1: Nama & Divisi
-  doc.text("Nama", marginMm + 3, metadataY + 2);
+  doc.setFont("helvetica", "bold");
+  doc.text("Nama", marginMm + 6, metadataY + 2);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${input.generatedByName}`, marginMm + 20, metadataY + 2);
+  doc.text(`: ${input.generatedByName}`, marginMm + 22, metadataY + 2);
 
   doc.setFont("helvetica", "bold");
   doc.text("Divisi", marginMm + 100, metadataY + 2);
@@ -305,22 +324,25 @@ async function generateMeetingPdf(
 
   // Row 2: Bulan & Tahun
   doc.setFont("helvetica", "bold");
-  doc.text("Bulan", marginMm + 3, metadataY + 7);
+  doc.text("Bulan", marginMm + 6, metadataY + 8);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${monthName}`, marginMm + 20, metadataY + 7);
+  doc.text(`: ${monthName}`, marginMm + 22, metadataY + 8);
 
   doc.setFont("helvetica", "bold");
-  doc.text("Tahun", marginMm + 100, metadataY + 7);
+  doc.text("Tahun", marginMm + 100, metadataY + 8);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 7);
+  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 8);
 
   // Subheading
   doc.setFont("helvetica", "bold");
-  doc.text("PENUGASAN ATASAN/HASIL MEETING/.......", marginMm, metadataY + 18);
+  doc.setFontSize(10);
+  doc.setTextColor(51, 65, 85); // Slate 700
+  doc.text("A. DAFTAR PENUGASAN / HASIL MEETING", marginMm, metadataY + 20);
+  doc.setTextColor(0, 0, 0); // reset color
 
   // Table
   autoTable(doc, {
-    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 22 : marginMm + 22,
+    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
     head: [
       [
         { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
@@ -335,26 +357,51 @@ async function generateMeetingPdf(
         { content: "Meeting", styles: { halign: "center" } },
       ]
     ],
-    body: (tasks ?? []).map((t, index) => {
-      const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", {
-        locale: idLocale,
-      });
-      const descStr = [t.title, t.description].filter(Boolean).join("\n");
-      
-      const sourceLower = (t.taskSource ?? "").toLowerCase();
-      const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
-      const atasanCheck = !isMeeting ? "✓" : "";
-      const meetingCheck = isMeeting ? "✓" : "";
+    body: (tasks ?? []).length === 0
+      ? Array.from({ length: 5 }).map((_, index) => [
+          String(index + 1), // No
+          "", // Hari / Tanggal
+          "", // Uraian Tugas
+          "", // Atasan
+          "", // Meeting
+          "", // Target Selesai
+          ""  // Out Put
+        ])
+      : (tasks ?? []).map((t, index) => {
+          const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", {
+            locale: idLocale,
+          });
+          const descStr = [t.title, t.description].filter(Boolean).join("\n");
+          
+          const sourceLower = (t.taskSource ?? "").toLowerCase();
+          const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
+          const atasanCheck = !isMeeting ? "✓" : "";
+          const meetingCheck = isMeeting ? "✓" : "";
 
-      const targetStr = t.dueDate
-        ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
-        : "—";
-      const outputStr = t.outputDescription ?? "—";
-      return [String(index + 1), dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
-    }),
+          const targetStr = t.dueDate
+            ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
+            : "—";
+          const outputStr = t.outputDescription ?? "—";
+          return [String(index + 1), dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
+        }),
     theme: "grid",
-    headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
-    bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    headStyles: { 
+      fillColor: [0, 119, 182], 
+      textColor: [255, 255, 255], 
+      fontStyle: "bold", 
+      fontSize: 9, 
+      lineColor: [255, 255, 255], 
+      lineWidth: 0.15 
+    },
+    bodyStyles: { 
+      fontSize: 8.5, 
+      lineColor: [226, 232, 240], 
+      lineWidth: 0.15,
+      textColor: [51, 65, 85]
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
       1: { cellWidth: 35 },
@@ -481,21 +528,40 @@ async function generateHarianPdf(
   // 1. Title
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 119, 182); // Brand color #0077B6
   doc.text("LOG BOOK KEGIATAN HARIAN", pageW / 2, marginMm + 5, {
     align: "center",
   });
 
-  // 2. Metadata Info Box (2 rows)
-  const metadataY = marginMm + 15;
-  const boxW = pageW - (marginMm * 2);
-  doc.rect(marginMm, metadataY - 3, boxW, 13);
+  // Decorative underline below title
+  doc.setDrawColor(0, 119, 182);
+  doc.setLineWidth(0.5);
+  doc.line(pageW / 2 - 25, marginMm + 7, pageW / 2 + 25, marginMm + 7);
+  doc.setTextColor(0, 0, 0); // reset color
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
+  // 2. Metadata Info Box (2 rows)
+  const metadataY = marginMm + 16;
+  const boxW = pageW - (marginMm * 2);
+  
+  // Draw card background
+  doc.setFillColor(248, 250, 252); // Slate 50
+  doc.rect(marginMm, metadataY - 3, boxW, 14, "F");
+
+  // Draw blue accent bar on the left
+  doc.setFillColor(0, 119, 182);
+  doc.rect(marginMm, metadataY - 3, 2.5, 14, "F");
+
+  // Draw card border
+  doc.setDrawColor(226, 232, 240); // Slate 200
+  doc.setLineWidth(0.15);
+  doc.rect(marginMm, metadataY - 3, boxW, 14, "D");
+
+  doc.setFontSize(9.5);
   // Row 1: Nama & Divisi
-  doc.text("Nama", marginMm + 3, metadataY + 2);
+  doc.setFont("helvetica", "bold");
+  doc.text("Nama", marginMm + 6, metadataY + 2);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${input.generatedByName}`, marginMm + 20, metadataY + 2);
+  doc.text(`: ${input.generatedByName}`, marginMm + 22, metadataY + 2);
 
   doc.setFont("helvetica", "bold");
   doc.text("Divisi", marginMm + 100, metadataY + 2);
@@ -504,18 +570,25 @@ async function generateHarianPdf(
 
   // Row 2: Bulan & Tahun
   doc.setFont("helvetica", "bold");
-  doc.text("Bulan", marginMm + 3, metadataY + 7);
+  doc.text("Bulan", marginMm + 6, metadataY + 8);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${monthName}`, marginMm + 20, metadataY + 7);
+  doc.text(`: ${monthName}`, marginMm + 22, metadataY + 8);
 
   doc.setFont("helvetica", "bold");
-  doc.text("Tahun", marginMm + 100, metadataY + 7);
+  doc.text("Tahun", marginMm + 100, metadataY + 8);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 7);
+  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 8);
+
+  // Subheading
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(51, 65, 85); // Slate 700
+  doc.text("A. DAFTAR KEGIATAN HARIAN", marginMm, metadataY + 20);
+  doc.setTextColor(0, 0, 0); // reset color
 
   // Table
   autoTable(doc, {
-    startY: metadataY + 15,
+    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
     head: [
       [
         { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
@@ -531,33 +604,59 @@ async function generateHarianPdf(
         { content: "Selesai", styles: { halign: "center" } },
       ]
     ],
-    body: (logs ?? []).map((l, index) => {
-      const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", {
-        locale: idLocale,
-      });
-      const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-      const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
-      
-      const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
-      const onProgresCheck = !isDone ? "✓" : "";
-      const selesaiCheck = isDone ? "✓" : "";
-      
-      const validatedStr = l.isValidated ? "✓" : "";
-      const remarksStr = l.remarks ?? "—";
-      return [
-        String(index + 1),
-        dayDateStr,
-        timeStr,
-        activityStr,
-        onProgresCheck,
-        selesaiCheck,
-        validatedStr,
-        remarksStr,
-      ];
-    }),
+    body: (logs ?? []).length === 0
+      ? Array.from({ length: 5 }).map((_, index) => [
+          String(index + 1), // No
+          "", // Hari / Tanggal
+          "", // Jam
+          "", // Implementasi Kegiatan
+          "", // On Progres
+          "", // Selesai
+          "", // Validasi Atasan
+          ""  // Keterangan
+        ])
+      : (logs ?? []).map((l, index) => {
+          const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", {
+            locale: idLocale,
+          });
+          const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+          const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
+          
+          const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
+          const onProgresCheck = !isDone ? "✓" : "";
+          const selesaiCheck = isDone ? "✓" : "";
+          
+          const validatedStr = l.isValidated ? "✓" : "";
+          const remarksStr = l.remarks ?? "—";
+          return [
+            String(index + 1),
+            dayDateStr,
+            timeStr,
+            activityStr,
+            onProgresCheck,
+            selesaiCheck,
+            validatedStr,
+            remarksStr,
+          ];
+        }),
     theme: "grid",
-    headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
-    bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    headStyles: { 
+      fillColor: [0, 119, 182], 
+      textColor: [255, 255, 255], 
+      fontStyle: "bold", 
+      fontSize: 9, 
+      lineColor: [255, 255, 255], 
+      lineWidth: 0.15 
+    },
+    bodyStyles: { 
+      fontSize: 8.5, 
+      lineColor: [226, 232, 240], 
+      lineWidth: 0.15,
+      textColor: [51, 65, 85]
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
       1: { cellWidth: 35 },
