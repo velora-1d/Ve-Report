@@ -92,7 +92,7 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {task ? "Ubah Log Meeting / Tugas" : "Tambah Log Meeting / Tugas"}
