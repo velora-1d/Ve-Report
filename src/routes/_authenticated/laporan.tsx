@@ -1025,7 +1025,7 @@ function ReportPreviewGrid({
             }}
           >
             {/* Watermark Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.12] select-none z-20">
               <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
             </div>
 
@@ -1083,11 +1083,17 @@ function ReportPreviewGrid({
                 </thead>
                 <tbody>
                   {tasks.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-4 border border-slate-200 text-center text-muted-foreground bg-white">
-                        Tidak ada data tugas meeting pada periode ini.
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={`empty-task-${index}`} className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8">
+                        <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">{index + 1}</td>
+                        <td className="p-2 border border-slate-200"></td>
+                        <td className="p-2 border border-slate-200"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200"></td>
+                      </tr>
+                    ))
                   ) : (
                     tasks.map((t: any, index: number) => {
                       const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", { locale: idLocale });
@@ -1206,7 +1212,7 @@ function ReportPreviewGrid({
             }}
           >
             {/* Watermark Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.12] select-none z-20">
               <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
             </div>
 
@@ -1265,11 +1271,18 @@ function ReportPreviewGrid({
                 </thead>
                 <tbody>
                   {logs.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="p-4 border border-slate-200 text-center text-muted-foreground bg-white">
-                        Tidak ada data log harian pada periode ini.
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={`empty-log-${index}`} className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8">
+                        <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">{index + 1}</td>
+                        <td className="p-2 border border-slate-200"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200 text-center"></td>
+                        <td className="p-2 border border-slate-200"></td>
+                      </tr>
+                    ))
                   ) : (
                     logs.map((l: any, index: number) => {
                       const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", { locale: idLocale });
