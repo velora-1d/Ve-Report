@@ -35,3 +35,20 @@ Baca dokumen berikut sebelum generate kode apapun:
 - Kalau ada ambiguitas, tanya dulu — jangan asumsi sendiri.
 - Konsisten dengan penamaan yang sudah ada di dokumen (jangan ganti-ganti istilah antar file/halaman).
 - Jangan menghapus atau mengganti keputusan arsitektur yang sudah ditetapkan di dokumen tanpa konfirmasi eksplisit.
+
+---
+
+## Setup Global Komponen Wajib (gemini.md)
+
+Aturan di [gemini.md](file:///home/pak-hakim/Hakim/Project/Ve-Report/gemini.md) berlaku secara penuh dan wajib diaktifkan pada semua tool: **opencode**, **codex**, **agy**, **antigravity ide**, dan **claude code**. 
+
+Sembilan komponen wajib yang harus aktif:
+1. **ponytail** (YAGNI & Komentar `// ponytail:`)
+2. **codegraph** (Pemetaan simbol relasi)
+3. **serena** (Anti-sycophancy)
+4. **caveman** (Git local commit, no automatic push)
+5. **contextmode** (Optimasi context window)
+6. **headroom** (Manajemen resource/task)
+7. **rtk** (Perintah diawali `rtk`)
+8. **skills** (Gunakan skill terinstal)
+9. **mcp** (Gunakan Model Context Protocol)
