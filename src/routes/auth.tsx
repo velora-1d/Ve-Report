@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useSearch,
+} from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -6,7 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Loader2 } from "lucide-react";
 
@@ -19,7 +29,11 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Masuk — VeReport" },
-      { name: "description", content: "Masuk ke akun VeReport Anda untuk mengelola tugas dan laporan tim." },
+      {
+        name: "description",
+        content:
+          "Masuk ke akun VeReport Anda untuk mengelola tugas dan laporan tim.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -45,10 +59,15 @@ function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     setLoading(false);
     if (error) {
-      toast.error("Gagal masuk", { description: translateAuthError(error.message) });
+      toast.error("Gagal masuk", {
+        description: translateAuthError(error.message),
+      });
       return;
     }
     toast.success("Berhasil masuk");
@@ -68,7 +87,9 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) {
-      toast.error("Gagal mendaftar", { description: translateAuthError(error.message) });
+      toast.error("Gagal mendaftar", {
+        description: translateAuthError(error.message),
+      });
       return;
     }
     toast.success("Akun berhasil dibuat", {
@@ -92,7 +113,9 @@ function AuthPage() {
         <Card className="surface-card border-0">
           <CardHeader>
             <CardTitle>Selamat datang</CardTitle>
-            <CardDescription>Masuk atau daftar untuk melanjutkan.</CardDescription>
+            <CardDescription>
+              Masuk atau daftar untuk melanjutkan.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
@@ -128,7 +151,9 @@ function AuthPage() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {loading && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
                     Masuk
                   </Button>
                 </form>
@@ -173,11 +198,14 @@ function AuthPage() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {loading && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
                     Daftar Akun
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
-                    Akun baru akan didaftarkan sebagai Staff. Hubungi Admin untuk perubahan peran.
+                    Akun baru akan didaftarkan sebagai Staff. Hubungi Admin
+                    untuk perubahan peran.
                   </p>
                 </form>
               </TabsContent>
@@ -195,7 +223,9 @@ function translateAuthError(msg: string): string {
   if (m.includes("email not confirmed")) return "Email belum dikonfirmasi.";
   if (m.includes("already registered") || m.includes("already been registered"))
     return "Email sudah terdaftar. Silakan masuk.";
-  if (m.includes("password")) return "Kata sandi tidak valid (minimal 6 karakter).";
-  if (m.includes("rate limit")) return "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.";
+  if (m.includes("password"))
+    return "Kata sandi tidak valid (minimal 6 karakter).";
+  if (m.includes("rate limit"))
+    return "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.";
   return msg;
 }

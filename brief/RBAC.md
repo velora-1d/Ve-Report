@@ -10,16 +10,16 @@ Seluruh UI aplikasi berbahasa Indonesia (label menu, tombol, pesan sistem, lapor
 
 ## Matrix Akses per Menu
 
-| Menu | Staff | Admin | Developer |
-|---|---|---|---|
-| Login | ✅ | ✅ | ✅ |
-| Dasbor | ✅ (data sendiri) | ✅ (semua data) | ✅ (semua data) |
-| Tugas & Jadwal | ✅ (tugas/jadwal sendiri) | ✅ (semua, bisa assign) | ✅ (semua) |
-| Pelacak | ✅ (log sendiri) | ✅ (semua log) | ✅ (semua) |
-| Laporan | ✅ (laporan diri sendiri) | ✅ (semua/per user) | ✅ (semua) |
-| Manajemen Pengguna | ❌ | ✅ | ✅ |
-| Pengaturan (Profil, Branding, PDF) | ✅ (profil sendiri) | ✅ (profil + branding + PDF) | ✅ (semua) |
-| Panel Developer | ❌ | ❌ | ✅ |
+| Menu                               | Staff                     | Admin                        | Developer       |
+| ---------------------------------- | ------------------------- | ---------------------------- | --------------- |
+| Login                              | ✅                        | ✅                           | ✅              |
+| Dasbor                             | ✅ (data sendiri)         | ✅ (semua data)              | ✅ (semua data) |
+| Tugas & Jadwal                     | ✅ (tugas/jadwal sendiri) | ✅ (semua, bisa assign)      | ✅ (semua)      |
+| Pelacak                            | ✅ (log sendiri)          | ✅ (semua log)               | ✅ (semua)      |
+| Laporan                            | ✅ (laporan diri sendiri) | ✅ (semua/per user)          | ✅ (semua)      |
+| Manajemen Pengguna                 | ❌                        | ✅                           | ✅              |
+| Pengaturan (Profil, Branding, PDF) | ✅ (profil sendiri)       | ✅ (profil + branding + PDF) | ✅ (semua)      |
+| Panel Developer                    | ❌                        | ❌                           | ✅              |
 
 ## Aturan Tambahan
 

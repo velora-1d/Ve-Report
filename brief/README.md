@@ -19,20 +19,20 @@ Sistem manajemen tugas, jadwal, dan pelacak progres berbasis tim, dengan kemampu
 
 ## Struktur Dokumentasi
 
-| File | Isi |
-|---|---|
-| `AGENT.md` | Aturan wajib untuk AI coding agent |
-| `RBAC.md` | Matrix akses per role |
-| `MENU.md` | Struktur menu & filter |
-| `FLOW.md` | Alur proses aplikasi |
-| `SECURITY.md` | Kebijakan keamanan |
-| `RELATIONS.md` | Relasi antar entitas/tabel |
-| `UI_THEME.md` | Arah desain visual (Soft Minimalist) |
-| `API.md` | Daftar server functions |
-| `DATABASE.md` | Skema database lengkap |
-| `ENV.md` | Daftar environment variable |
-| `DEPLOYMENT.md` | Panduan deploy via Dokploy |
-| `PDF_TEMPLATE.md` | Spesifikasi desain laporan PDF |
+| File              | Isi                                  |
+| ----------------- | ------------------------------------ |
+| `AGENT.md`        | Aturan wajib untuk AI coding agent   |
+| `RBAC.md`         | Matrix akses per role                |
+| `MENU.md`         | Struktur menu & filter               |
+| `FLOW.md`         | Alur proses aplikasi                 |
+| `SECURITY.md`     | Kebijakan keamanan                   |
+| `RELATIONS.md`    | Relasi antar entitas/tabel           |
+| `UI_THEME.md`     | Arah desain visual (Soft Minimalist) |
+| `API.md`          | Daftar server functions              |
+| `DATABASE.md`     | Skema database lengkap               |
+| `ENV.md`          | Daftar environment variable          |
+| `DEPLOYMENT.md`   | Panduan deploy via Dokploy           |
+| `PDF_TEMPLATE.md` | Spesifikasi desain laporan PDF       |
 
 ## Role Pengguna
 

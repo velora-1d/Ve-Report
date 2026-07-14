@@ -3,7 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Plus, Pencil, Trash2, Clock, ListChecks, TrendingUp } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Clock,
+  ListChecks,
+  TrendingUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -35,7 +42,10 @@ export const Route = createFileRoute("/_authenticated/pelacak")({
   head: () => ({
     meta: [
       { title: "Pelacak — VeReport" },
-      { name: "description", content: "Catat dan lihat log progres/waktu per tugas." },
+      {
+        name: "description",
+        content: "Catat dan lihat log progres/waktu per tugas.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -103,7 +113,10 @@ function PelacakPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tracker_logs").delete().eq("id", id);
+      const { error } = await supabase
+        .from("tracker_logs")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -112,20 +125,38 @@ function PelacakPage() {
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setDeletingId(null);
     },
-    onError: (e: Error) => toast.error("Gagal menghapus", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menghapus", { description: e.message }),
   });
 
   const stats = [
-    { label: "Hari Ini", value: formatDuration(summary.todayMin), icon: Clock, tone: "text-primary" },
-    { label: "Minggu Ini", value: formatDuration(summary.weekMin), icon: TrendingUp, tone: "text-info" },
-    { label: "Total Tercatat", value: formatDuration(summary.totalMin), icon: ListChecks, tone: "text-success" },
+    {
+      label: "Hari Ini",
+      value: formatDuration(summary.todayMin),
+      icon: Clock,
+      tone: "text-primary",
+    },
+    {
+      label: "Minggu Ini",
+      value: formatDuration(summary.weekMin),
+      icon: TrendingUp,
+      tone: "text-info",
+    },
+    {
+      label: "Total Tercatat",
+      value: formatDuration(summary.totalMin),
+      icon: ListChecks,
+      tone: "text-success",
+    },
   ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Pelacak Waktu</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Pelacak Waktu
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Catat berapa lama Anda mengerjakan setiap tugas.
           </p>
@@ -147,10 +178,14 @@ function PelacakPage() {
             <Card key={s.label} className="surface-card border-0">
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {s.label}
+                  </span>
                   <Icon className={`w-4 h-4 ${s.tone}`} />
                 </div>
-                <div className="text-2xl font-semibold tracking-tight">{s.value}</div>
+                <div className="text-2xl font-semibold tracking-tight">
+                  {s.value}
+                </div>
               </CardContent>
             </Card>
           );
@@ -189,11 +224,15 @@ function PelacakPage() {
                     {(logs ?? []).map((l) => (
                       <TableRow key={l.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {format(new Date(l.logged_date), "d MMM yyyy", { locale: idLocale })}
+                          {format(new Date(l.logged_date), "d MMM yyyy", {
+                            locale: idLocale,
+                          })}
                         </TableCell>
                         <TableCell className="text-sm">
                           {l.tasks?.title ?? (
-                            <span className="text-muted-foreground italic">(dihapus)</span>
+                            <span className="text-muted-foreground italic">
+                              (dihapus)
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="text-sm font-medium">
@@ -245,7 +284,9 @@ function PelacakPage() {
               <ul className="space-y-3">
                 {summary.topTasks.map((t) => {
                   const pct =
-                    summary.totalMin > 0 ? Math.round((t.mins / summary.totalMin) * 100) : 0;
+                    summary.totalMin > 0
+                      ? Math.round((t.mins / summary.totalMin) * 100)
+                      : 0;
                   return (
                     <li key={t.id} className="space-y-1">
                       <div className="flex items-center justify-between gap-2 text-sm">
@@ -278,12 +319,16 @@ function PelacakPage() {
         editing={editing}
       />
 
-      <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(v) => !v && setDeletingId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus log?</AlertDialogTitle>
             <AlertDialogDescription>
-              Log waktu ini akan dihapus permanen. Tindakan tidak dapat dibatalkan.
+              Log waktu ini akan dihapus permanen. Tindakan tidak dapat
+              dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

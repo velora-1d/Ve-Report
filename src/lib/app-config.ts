@@ -19,7 +19,10 @@ export async function upsertAppConfig(
   existingId?: string,
 ) {
   if (existingId) {
-    const { error } = await supabase.from("app_config").update(patch).eq("id", existingId);
+    const { error } = await supabase
+      .from("app_config")
+      .update(patch)
+      .eq("id", existingId);
     if (error) throw error;
     return;
   }

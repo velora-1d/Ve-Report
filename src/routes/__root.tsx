@@ -19,7 +19,9 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Halaman tidak ditemukan</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Halaman tidak ditemukan
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Halaman yang Anda cari tidak ada atau telah dipindahkan.
         </p>
@@ -74,48 +76,60 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "VeReport — Manajemen Tugas & Laporan Tim" },
-      {
-        name: "description",
-        content:
-          "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
-      },
-      { name: "author", content: "VeReport" },
-      { property: "og:title", content: "VeReport — Manajemen Tugas & Laporan Tim" },
-      {
-        property: "og:description",
-        content:
-          "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "VeReport — Manajemen Tugas & Laporan Tim" },
-      { name: "twitter:description", content: "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi." },
-      { property: "og:image", content: "/og-image.png" },
-      { name: "twitter:image", content: "/og-image.png" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
-      },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    head: () => ({
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: "VeReport — Manajemen Tugas & Laporan Tim" },
+        {
+          name: "description",
+          content:
+            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+        },
+        { name: "author", content: "VeReport" },
+        {
+          property: "og:title",
+          content: "VeReport — Manajemen Tugas & Laporan Tim",
+        },
+        {
+          property: "og:description",
+          content:
+            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+        {
+          name: "twitter:title",
+          content: "VeReport — Manajemen Tugas & Laporan Tim",
+        },
+        {
+          name: "twitter:description",
+          content:
+            "VeReport: kelola tugas, jadwal, pelacak progres, dan laporan PDF tim Anda dalam satu tempat yang tenang dan rapi.",
+        },
+        { property: "og:image", content: "/og-image.png" },
+        { name: "twitter:image", content: "/og-image.png" },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        },
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      ],
+    }),
+    shellComponent: RootShell,
+    component: RootComponent,
+    notFoundComponent: NotFoundComponent,
+    errorComponent: ErrorComponent,
+  },
+);
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
@@ -137,7 +151,12 @@ function RootComponent() {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (
+        event !== "SIGNED_IN" &&
+        event !== "SIGNED_OUT" &&
+        event !== "USER_UPDATED"
+      )
+        return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });

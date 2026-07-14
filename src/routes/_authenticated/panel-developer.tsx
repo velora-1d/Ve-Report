@@ -3,11 +3,23 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Terminal, Send, Database as DbIcon, Trash2, Loader2 } from "lucide-react";
+import {
+  Terminal,
+  Send,
+  Database as DbIcon,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAppConfig, upsertAppConfig } from "@/lib/app-config";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -47,7 +59,10 @@ export const Route = createFileRoute("/_authenticated/panel-developer")({
   head: () => ({
     meta: [
       { title: "Panel Developer — VeReport" },
-      { name: "description", content: "Log sistem, status database, konfigurasi Telegram." },
+      {
+        name: "description",
+        content: "Log sistem, status database, konfigurasi Telegram.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -57,7 +72,11 @@ export const Route = createFileRoute("/_authenticated/panel-developer")({
 function PanelDeveloperPage() {
   const [levelFilter, setLevelFilter] = useState<string>("all");
 
-  const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
+  const {
+    data: logs,
+    isLoading: logsLoading,
+    refetch: refetchLogs,
+  } = useQuery({
     queryKey: ["system-logs", levelFilter],
     queryFn: async () => {
       let q = supabase
@@ -75,7 +94,13 @@ function PanelDeveloperPage() {
   const { data: dbHealth } = useQuery({
     queryKey: ["db-health"],
     queryFn: async () => {
-      const tables = ["profiles", "tasks", "schedules", "tracker_logs", "reports"] as const;
+      const tables = [
+        "profiles",
+        "tasks",
+        "schedules",
+        "tracker_logs",
+        "reports",
+      ] as const;
       const results = await Promise.all(
         tables.map(async (t) => {
           const { count } = await supabase
@@ -121,7 +146,9 @@ function PanelDeveloperPage() {
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <DbIcon className="w-3 h-3" /> {h.table}
               </div>
-              <div className="text-xl font-semibold mt-1">{h.count.toLocaleString("id-ID")}</div>
+              <div className="text-xl font-semibold mt-1">
+                {h.count.toLocaleString("id-ID")}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -162,7 +189,9 @@ function PanelDeveloperPage() {
           {logsLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : (logs ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">Belum ada log.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Belum ada log.
+            </p>
           ) : (
             <ul className="space-y-1.5 max-h-[500px] overflow-y-auto">
               {logs!.map((l) => (
@@ -170,12 +199,20 @@ function PanelDeveloperPage() {
                   key={l.id}
                   className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 text-sm"
                 >
-                  <Badge className={`${LEVEL_TONE[l.level]} shrink-0 text-[10px]`}>{l.level}</Badge>
+                  <Badge
+                    className={`${LEVEL_TONE[l.level]} shrink-0 text-[10px]`}
+                  >
+                    {l.level}
+                  </Badge>
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{l.message}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {l.category && <span className="mr-2">[{l.category}]</span>}
-                      {format(new Date(l.created_at), "d MMM yyyy HH:mm:ss", { locale: idLocale })}
+                      {l.category && (
+                        <span className="mr-2">[{l.category}]</span>
+                      )}
+                      {format(new Date(l.created_at), "d MMM yyyy HH:mm:ss", {
+                        locale: idLocale,
+                      })}
                     </div>
                   </div>
                 </li>
@@ -190,7 +227,10 @@ function PanelDeveloperPage() {
 
 function TelegramConfigCard() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["app-config"], queryFn: fetchAppConfig });
+  const { data, isLoading } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: fetchAppConfig,
+  });
   const [token, setToken] = useState("");
   const [chatId, setChatId] = useState("");
   const [testing, setTesting] = useState(false);
@@ -216,7 +256,8 @@ function TelegramConfigCard() {
       toast.success("Konfigurasi Telegram disimpan");
       qc.invalidateQueries({ queryKey: ["app-config"] });
     },
-    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   const sendTest = async () => {
@@ -226,14 +267,17 @@ function TelegramConfigCard() {
     }
     setTesting(true);
     try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: "🔔 Uji coba notifikasi dari VeReport",
-        }),
-      });
+      const res = await fetch(
+        `https://api.telegram.org/bot${token}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: "🔔 Uji coba notifikasi dari VeReport",
+          }),
+        },
+      );
       const json = await res.json();
       if (!json.ok) throw new Error(json.description || "Gagal mengirim");
       toast.success("Pesan tes terkirim");
@@ -291,7 +335,9 @@ function TelegramConfigCard() {
                 Kirim Tes
               </Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>
-                {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {save.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 Simpan
               </Button>
             </div>

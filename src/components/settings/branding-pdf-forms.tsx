@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +24,10 @@ import { fetchAppConfig, upsertAppConfig } from "@/lib/app-config";
 
 export function BrandingForm() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["app-config"], queryFn: fetchAppConfig });
+  const { data, isLoading } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: fetchAppConfig,
+  });
   const [appName, setAppName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
@@ -40,7 +49,8 @@ export function BrandingForm() {
       toast.success("Branding disimpan");
       qc.invalidateQueries({ queryKey: ["app-config"] });
     },
-    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   if (isLoading) {
@@ -56,7 +66,8 @@ export function BrandingForm() {
       <CardHeader>
         <CardTitle>Branding & Logo</CardTitle>
         <CardDescription>
-          Nama aplikasi dan URL logo yang tampil di sidebar, halaman login, dan header PDF.
+          Nama aplikasi dan URL logo yang tampil di sidebar, halaman login, dan
+          header PDF.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -73,13 +84,19 @@ export function BrandingForm() {
           />
           {logoUrl && (
             <div className="mt-2 p-3 rounded-lg surface-panel inline-block">
-              <img src={logoUrl} alt="Preview logo" className="h-12 w-auto object-contain" />
+              <img
+                src={logoUrl}
+                alt="Preview logo"
+                className="h-12 w-auto object-contain"
+              />
             </div>
           )}
         </div>
         <div className="flex justify-end">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {save.isPending && (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            )}
             Simpan
           </Button>
         </div>
@@ -90,7 +107,10 @@ export function BrandingForm() {
 
 export function PdfConfigForm() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["app-config"], queryFn: fetchAppConfig });
+  const { data, isLoading } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: fetchAppConfig,
+  });
   const [paper, setPaper] = useState("A4");
   const [orientation, setOrientation] = useState("portrait");
   const [margin, setMargin] = useState("20");
@@ -124,7 +144,8 @@ export function PdfConfigForm() {
       toast.success("Konfigurasi PDF disimpan");
       qc.invalidateQueries({ queryKey: ["app-config"] });
     },
-    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   if (isLoading) {
@@ -139,14 +160,18 @@ export function PdfConfigForm() {
     <Card className="surface-card border-0">
       <CardHeader>
         <CardTitle>Konfigurasi PDF</CardTitle>
-        <CardDescription>Default ukuran, orientasi, margin, header dan footer laporan.</CardDescription>
+        <CardDescription>
+          Default ukuran, orientasi, margin, header dan footer laporan.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Ukuran Kertas</Label>
             <Select value={paper} onValueChange={setPaper}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="A4">A4</SelectItem>
                 <SelectItem value="Letter">Letter</SelectItem>
@@ -157,7 +182,9 @@ export function PdfConfigForm() {
           <div className="space-y-2">
             <Label>Orientasi</Label>
             <Select value={orientation} onValueChange={setOrientation}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="portrait">Portrait</SelectItem>
                 <SelectItem value="landscape">Landscape</SelectItem>
@@ -181,11 +208,17 @@ export function PdfConfigForm() {
         </div>
         <div className="space-y-2">
           <Label>Teks Footer</Label>
-          <Textarea rows={2} value={footer} onChange={(e) => setFooter(e.target.value)} />
+          <Textarea
+            rows={2}
+            value={footer}
+            onChange={(e) => setFooter(e.target.value)}
+          />
         </div>
         <div className="flex justify-end">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {save.isPending && (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            )}
             Simpan
           </Button>
         </div>

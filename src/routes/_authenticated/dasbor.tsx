@@ -3,7 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { format, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { CheckCircle2, Clock, ListTodo, TrendingUp, CalendarDays, AlertCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  ListTodo,
+  TrendingUp,
+  CalendarDays,
+  AlertCircle,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
@@ -16,7 +23,11 @@ export const Route = createFileRoute("/_authenticated/dasbor")({
   head: () => ({
     meta: [
       { title: "Dasbor — VeReport" },
-      { name: "description", content: "Ringkasan tugas harian, progres mingguan, dan aktivitas terbaru tim Anda." },
+      {
+        name: "description",
+        content:
+          "Ringkasan tugas harian, progres mingguan, dan aktivitas terbaru tim Anda.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -63,7 +74,11 @@ function DasborPage() {
         .limit(5);
       if (se) throw se;
 
-      return { tasks: tasks ?? [], logs: logs ?? [], schedules: schedules ?? [] };
+      return {
+        tasks: tasks ?? [],
+        logs: logs ?? [],
+        schedules: schedules ?? [],
+      };
     },
   });
 
@@ -73,9 +88,12 @@ function DasborPage() {
     const todo = tasks.filter((t) => t.status === "todo").length;
     const inProgress = tasks.filter((t) => t.status === "in_progress").length;
     const doneToday = tasks.filter(
-      (t) => t.status === "done" && t.updated_at?.slice(0, 10) === today
+      (t) => t.status === "done" && t.updated_at?.slice(0, 10) === today,
     ).length;
-    const weekMin = (data?.logs ?? []).reduce((s, l) => s + (l.duration_minutes ?? 0), 0);
+    const weekMin = (data?.logs ?? []).reduce(
+      (s, l) => s + (l.duration_minutes ?? 0),
+      0,
+    );
     return { todo, inProgress, doneToday, weekMin };
   }, [data]);
 
@@ -83,22 +101,42 @@ function DasborPage() {
     const now = new Date();
     return (data?.tasks ?? [])
       .filter((t) => t.due_date && t.status !== "done")
-      .map((t) => ({ ...t, days: differenceInCalendarDays(new Date(t.due_date!), now) }))
+      .map((t) => ({
+        ...t,
+        days: differenceInCalendarDays(new Date(t.due_date!), now),
+      }))
       .filter((t) => t.days >= 0 && t.days <= 7)
       .sort((a, b) => a.days - b.days)
       .slice(0, 5);
   }, [data]);
 
-  const recentTasks = useMemo(
-    () => (data?.tasks ?? []).slice(0, 5),
-    [data]
-  );
+  const recentTasks = useMemo(() => (data?.tasks ?? []).slice(0, 5), [data]);
 
   const cards = [
-    { label: "Belum Dikerjakan", value: stats.todo, icon: ListTodo, tone: "text-muted-foreground" },
-    { label: "Dikerjakan", value: stats.inProgress, icon: Clock, tone: "text-info" },
-    { label: "Selesai Hari Ini", value: stats.doneToday, icon: CheckCircle2, tone: "text-success" },
-    { label: "Waktu Minggu Ini", value: formatDuration(stats.weekMin), icon: TrendingUp, tone: "text-primary" },
+    {
+      label: "Belum Dikerjakan",
+      value: stats.todo,
+      icon: ListTodo,
+      tone: "text-muted-foreground",
+    },
+    {
+      label: "Dikerjakan",
+      value: stats.inProgress,
+      icon: Clock,
+      tone: "text-info",
+    },
+    {
+      label: "Selesai Hari Ini",
+      value: stats.doneToday,
+      icon: CheckCircle2,
+      tone: "text-success",
+    },
+    {
+      label: "Waktu Minggu Ini",
+      value: formatDuration(stats.weekMin),
+      icon: TrendingUp,
+      tone: "text-primary",
+    },
   ];
 
   return (
@@ -121,7 +159,9 @@ function DasborPage() {
             <Card key={s.label} className="surface-card border-0">
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {s.label}
+                  </span>
                   <Icon className={`w-4 h-4 ${s.tone}`} />
                 </div>
                 <div className="text-2xl font-semibold tracking-tight">
@@ -137,7 +177,8 @@ function DasborPage() {
         <Card className="surface-card border-0">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500" /> Deadline Mendekat
+              <AlertCircle className="w-4 h-4 text-amber-500" /> Deadline
+              Mendekat
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -182,7 +223,8 @@ function DasborPage() {
         <Card className="surface-card border-0">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-primary" /> Jadwal Berikutnya
+              <CalendarDays className="w-4 h-4 text-primary" /> Jadwal
+              Berikutnya
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -190,13 +232,16 @@ function DasborPage() {
               <Skeleton className="h-16 w-full" />
             ) : (data?.schedules ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Belum ada jadwal mendatang. Buat jadwal dari menu Tugas & Jadwal.
+                Belum ada jadwal mendatang. Buat jadwal dari menu Tugas &
+                Jadwal.
               </p>
             ) : (
               <ul className="space-y-2">
                 {data!.schedules.map((s) => (
                   <li key={s.id} className="p-2 rounded-lg hover:bg-muted/50">
-                    <div className="text-sm font-medium truncate">{s.title}</div>
+                    <div className="text-sm font-medium truncate">
+                      {s.title}
+                    </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {format(new Date(s.start_time), "EEE, d MMM • HH:mm", {
                         locale: idLocale,
@@ -222,12 +267,19 @@ function DasborPage() {
           ) : (
             <ul className="divide-y divide-border/60">
               {recentTasks.map((t) => (
-                <li key={t.id} className="py-2.5 flex items-center justify-between gap-3">
+                <li
+                  key={t.id}
+                  className="py-2.5 flex items-center justify-between gap-3"
+                >
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{t.title}</div>
+                    <div className="text-sm font-medium truncate">
+                      {t.title}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       Diperbarui{" "}
-                      {format(new Date(t.updated_at), "d MMM, HH:mm", { locale: idLocale })}
+                      {format(new Date(t.updated_at), "d MMM, HH:mm", {
+                        locale: idLocale,
+                      })}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

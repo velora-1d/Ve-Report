@@ -23,11 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ScheduleFormDialog, type ScheduleRow } from "./schedule-form-dialog";
 
@@ -42,14 +38,18 @@ export function CalendarTab() {
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
 
   const range = useMemo(() => {
-    if (view === "day") return { start: startOfDay(cursor), end: addDays(startOfDay(cursor), 1) };
+    if (view === "day")
+      return { start: startOfDay(cursor), end: addDays(startOfDay(cursor), 1) };
     if (view === "week") {
       const start = startOfWeek(cursor, { weekStartsOn: 1 });
       return { start, end: addDays(start, 7) };
     }
     if (view === "month") {
       const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
-      const end = addDays(endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 }), 1);
+      const end = addDays(
+        endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 }),
+        1,
+      );
       return { start, end };
     }
     const start = startOfYear(cursor);
@@ -100,13 +100,15 @@ export function CalendarTab() {
   };
 
   const label = useMemo(() => {
-    if (view === "day") return format(cursor, "EEEE, d MMMM yyyy", { locale: idLocale });
+    if (view === "day")
+      return format(cursor, "EEEE, d MMMM yyyy", { locale: idLocale });
     if (view === "week") {
       const s = startOfWeek(cursor, { weekStartsOn: 1 });
       const e = addDays(s, 6);
       return `${format(s, "d MMM", { locale: idLocale })} – ${format(e, "d MMM yyyy", { locale: idLocale })}`;
     }
-    if (view === "month") return format(cursor, "MMMM yyyy", { locale: idLocale });
+    if (view === "month")
+      return format(cursor, "MMMM yyyy", { locale: idLocale });
     return format(cursor, "yyyy");
   }, [view, cursor]);
 
@@ -118,11 +120,17 @@ export function CalendarTab() {
             <Button size="icon" variant="ghost" onClick={() => step(-1)}>
               <ChevronLeft className="size-4" />
             </Button>
-            <div className="min-w-[180px] text-center font-medium capitalize">{label}</div>
+            <div className="min-w-[180px] text-center font-medium capitalize">
+              {label}
+            </div>
             <Button size="icon" variant="ghost" onClick={() => step(1)}>
               <ChevronRight className="size-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCursor(new Date())}
+            >
               Hari ini
             </Button>
           </div>
@@ -142,10 +150,35 @@ export function CalendarTab() {
         </div>
       </Card>
 
-      {view === "day" && <DayView date={cursor} schedules={schedules ?? []} onEdit={openEdit} />}
-      {view === "week" && <WeekView cursor={cursor} byDate={byDate} onEdit={openEdit} onNew={openNew} />}
-      {view === "month" && <MonthView cursor={cursor} byDate={byDate} onEdit={openEdit} onNew={openNew} />}
-      {view === "year" && <YearView cursor={cursor} schedules={schedules ?? []} onPickMonth={(d) => { setCursor(d); setView("month"); }} />}
+      {view === "day" && (
+        <DayView date={cursor} schedules={schedules ?? []} onEdit={openEdit} />
+      )}
+      {view === "week" && (
+        <WeekView
+          cursor={cursor}
+          byDate={byDate}
+          onEdit={openEdit}
+          onNew={openNew}
+        />
+      )}
+      {view === "month" && (
+        <MonthView
+          cursor={cursor}
+          byDate={byDate}
+          onEdit={openEdit}
+          onNew={openNew}
+        />
+      )}
+      {view === "year" && (
+        <YearView
+          cursor={cursor}
+          schedules={schedules ?? []}
+          onPickMonth={(d) => {
+            setCursor(d);
+            setView("month");
+          }}
+        />
+      )}
 
       {user && (
         <ScheduleFormDialog
@@ -160,7 +193,15 @@ export function CalendarTab() {
   );
 }
 
-function ScheduleItem({ s, onEdit, compact }: { s: ScheduleRow; onEdit: (s: ScheduleRow) => void; compact?: boolean }) {
+function ScheduleItem({
+  s,
+  onEdit,
+  compact,
+}: {
+  s: ScheduleRow;
+  onEdit: (s: ScheduleRow) => void;
+  compact?: boolean;
+}) {
   return (
     <button
       onClick={() => onEdit(s)}
@@ -170,14 +211,26 @@ function ScheduleItem({ s, onEdit, compact }: { s: ScheduleRow; onEdit: (s: Sche
         compact && "truncate",
       )}
     >
-      <span className="font-medium">{format(new Date(s.start_time), "HH:mm")}</span>{" "}
+      <span className="font-medium">
+        {format(new Date(s.start_time), "HH:mm")}
+      </span>{" "}
       <span>{s.title}</span>
     </button>
   );
 }
 
-function DayView({ date, schedules, onEdit }: { date: Date; schedules: ScheduleRow[]; onEdit: (s: ScheduleRow) => void }) {
-  const items = schedules.filter((s) => isSameDay(new Date(s.start_time), date));
+function DayView({
+  date,
+  schedules,
+  onEdit,
+}: {
+  date: Date;
+  schedules: ScheduleRow[];
+  onEdit: (s: ScheduleRow) => void;
+}) {
+  const items = schedules.filter((s) =>
+    isSameDay(new Date(s.start_time), date),
+  );
   return (
     <Card className="p-4 surface-card">
       {items.length === 0 ? (
@@ -196,13 +249,16 @@ function DayView({ date, schedules, onEdit }: { date: Date; schedules: ScheduleR
                 <div>
                   <div className="font-medium">{s.title}</div>
                   {s.description && (
-                    <div className="text-sm text-muted-foreground mt-0.5">{s.description}</div>
+                    <div className="text-sm text-muted-foreground mt-0.5">
+                      {s.description}
+                    </div>
                   )}
                 </div>
                 <div className="text-right text-sm text-muted-foreground shrink-0">
                   <div className="inline-flex items-center gap-1">
                     <Clock className="size-3.5" />
-                    {format(new Date(s.start_time), "HH:mm")} – {format(new Date(s.end_time), "HH:mm")}
+                    {format(new Date(s.start_time), "HH:mm")} –{" "}
+                    {format(new Date(s.end_time), "HH:mm")}
                   </div>
                   {s.reminder_minutes_before ? (
                     <div className="inline-flex items-center gap-1 text-xs mt-1">
@@ -284,7 +340,9 @@ function MonthView({
     <Card className="surface-card overflow-hidden">
       <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-xs font-medium text-muted-foreground">
         {weekdays.map((w) => (
-          <div key={w} className="px-2 py-2 text-center">{w}</div>
+          <div key={w} className="px-2 py-2 text-center">
+            {w}
+          </div>
         ))}
       </div>
       <div className="grid grid-cols-7">
@@ -305,7 +363,8 @@ function MonthView({
                 onClick={() => onNew(d)}
                 className={cn(
                   "text-xs font-medium px-1.5 py-0.5 rounded transition hover:bg-muted",
-                  isToday(d) && "bg-primary text-primary-foreground hover:bg-primary/90",
+                  isToday(d) &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90",
                   outside && !isToday(d) && "text-muted-foreground",
                 )}
               >
@@ -340,7 +399,9 @@ function YearView({
 }) {
   const year = cursor.getFullYear();
   const monthly = Array.from({ length: 12 }, (_, m) => {
-    const count = schedules.filter((s) => new Date(s.start_time).getMonth() === m).length;
+    const count = schedules.filter(
+      (s) => new Date(s.start_time).getMonth() === m,
+    ).length;
     return { month: m, count };
   });
   return (

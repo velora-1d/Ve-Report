@@ -32,5 +32,15 @@ export const TASK_PRIORITY_TONE: Record<TaskPriority, string> = {
   urgent: "bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
-export const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "review", "done"];
-export const TASK_PRIORITIES: TaskPriority[] = ["low", "medium", "high", "urgent"];
+export const TASK_STATUSES: TaskStatus[] = [
+  "todo",
+  "in_progress",
+  "review",
+  "done",
+];
+export const TASK_PRIORITIES: TaskPriority[] = [
+  "low",
+  "medium",
+  "high",
+  "urgent",
+];

@@ -1,14 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BrandingForm, PdfConfigForm } from "@/components/settings/branding-pdf-forms";
+import {
+  BrandingForm,
+  PdfConfigForm,
+} from "@/components/settings/branding-pdf-forms";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +28,10 @@ export const Route = createFileRoute("/_authenticated/pengaturan")({
   head: () => ({
     meta: [
       { title: "Pengaturan — VeReport" },
-      { name: "description", content: "Kelola profil, branding, dan konfigurasi PDF laporan." },
+      {
+        name: "description",
+        content: "Kelola profil, branding, dan konfigurasi PDF laporan.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -50,7 +62,9 @@ function PengaturanPage() {
       <Tabs defaultValue="profil">
         <TabsList>
           <TabsTrigger value="profil">Profil Saya</TabsTrigger>
-          {canAdmin && <TabsTrigger value="branding">Branding & Logo</TabsTrigger>}
+          {canAdmin && (
+            <TabsTrigger value="branding">Branding & Logo</TabsTrigger>
+          )}
           {canAdmin && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
         </TabsList>
 
@@ -111,13 +125,17 @@ function ProfileForm() {
     <Card className="surface-card border-0">
       <CardHeader>
         <CardTitle>Profil Saya</CardTitle>
-        <CardDescription>Perbarui biodata dan foto profil Anda.</CardDescription>
+        <CardDescription>
+          Perbarui biodata dan foto profil Anda.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSave} className="space-y-5">
           <div className="flex items-center gap-4">
             <Avatar className="w-16 h-16">
-              {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
+              {user.avatarUrl && (
+                <AvatarImage src={user.avatarUrl} alt={user.name} />
+              )}
               <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                 {initials || "?"}
               </AvatarFallback>
@@ -130,7 +148,12 @@ function ProfileForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nama Lengkap</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

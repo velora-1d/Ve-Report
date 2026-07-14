@@ -13,11 +13,13 @@ Tersedia konsisten di setiap menu (posisi sama):
 ## Daftar Menu
 
 ### 0. Login
+
 - Form: Email, Password
 - Pesan error dalam Bahasa Indonesia
 - (Fase 2, opsional): "Ingat saya", Lupa password
 
 ### 1. Dasbor
+
 - Ringkasan tugas hari ini (jumlah Belum Dikerjakan/Dikerjakan/Selesai)
 - Progres mingguan (grafik sederhana)
 - Deadline mendekat (3-5 hari ke depan)
@@ -25,7 +27,9 @@ Tersedia konsisten di setiap menu (posisi sama):
 - (Admin/Dev): ringkasan seluruh tim
 
 ### 2. Tugas & Jadwal
+
 **Tab: Daftar Tugas**
+
 - List semua tugas (status, prioritas, assignee, deadline)
 - Buat tugas baru — judul, deskripsi, assignee, prioritas, deadline
 - Detail tugas — histori status, catatan
@@ -34,6 +38,7 @@ Tersedia konsisten di setiap menu (posisi sama):
 - Filter: Status, Prioritas, Ditugaskan ke, Terlambat
 
 **Tab: Kalender**
+
 - Tampilan: Harian / Mingguan / Bulanan / Tahunan
 - Input jadwal lengkap: tanggal (hari, bulan, tahun), jam mulai, jam selesai
 - Bisa berdiri sendiri atau terhubung ke Tugas
@@ -42,12 +47,14 @@ Tersedia konsisten di setiap menu (posisi sama):
 - Filter: Tampilan, Terhubung Tugas, Rentang Tanggal
 
 ### 3. Pelacak
+
 - Catat progress/waktu per tugas (durasi, catatan, tanggal)
 - Riwayat log per tugas & per user
 - Ringkasan total waktu per tugas/per user
 - Filter: Per Tugas, Per Pengguna, Durasi
 
 ### 4. Laporan
+
 - Generate laporan by periode (harian/mingguan/bulanan/custom)
 - Filter saat generate: user, status, prioritas
 - Preview sebelum export
@@ -56,22 +63,27 @@ Tersedia konsisten di setiap menu (posisi sama):
 - Filter: Periode, Status Laporan, Pengguna
 
 ### 5. Manajemen Pengguna (Admin & Dev)
+
 - Tambah/edit/nonaktifkan user
 - Atur role
 - Reset password user
 - (Akun Developer tidak muncul di list ini)
 
 ### 6. Pengaturan
+
 **Sub: Profil Saya**
+
 - Foto profil (upload gambar)
 - Biodata: Nama lengkap, Email, No. Telepon, Jabatan/Posisi, Bio singkat
 - Ubah password
 
 **Sub: Branding & Logo** (Admin/Dev only)
+
 - Upload Logo Aplikasi — dipakai di Login, Sidebar, Header PDF
 - Preview sebelum simpan
 
 **Sub: Konfigurasi PDF** (Admin/Dev only)
+
 - Ukuran kertas: A4 / Letter / Legal
 - Orientasi: Potrait / Landscape
 - Header PDF: teks custom + logo
@@ -79,6 +91,7 @@ Tersedia konsisten di setiap menu (posisi sama):
 - Margin: default / custom
 
 ### 7. Panel Developer (Dev only, tersembunyi dari menu biasa)
+
 - Log sistem (filter: Tipe Log, Level Severity, Rentang Waktu)
 - Status database (koneksi, ukuran)
 - Konfigurasi Telegram bot (token, chat ID)

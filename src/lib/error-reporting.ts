@@ -1,3 +1,6 @@
-export function reportError(error: unknown, context: Record<string, unknown> = {}) {
+export function reportError(
+  error: unknown,
+  context: Record<string, unknown> = {},
+) {
   console.error("Reported Error:", error, context);
 }

@@ -5,36 +5,43 @@ PDF di-generate server-side memakai Puppeteer (render HTML/CSS → PDF). Gaya vi
 ## Struktur Halaman
 
 ### Header (setiap halaman)
+
 - Logo organisasi (kiri) — diambil dari Branding
 - Judul laporan (tengah/kanan) — contoh: "Laporan Tugas & Aktivitas"
 - Info kecil: periode laporan, tanggal digenerate
 - Teks header custom (dari Konfigurasi PDF, jika diisi)
 
 ### Bagian Identitas Laporan
+
 - Nama laporan
 - Periode (dari tanggal – sampai tanggal)
 - Digenerate oleh (nama user)
 - Filter yang diterapkan (user tertentu/semua, status tertentu)
 
 ### Bagian Ringkasan
+
 - Total tugas dalam periode
 - Breakdown status (Selesai/Dikerjakan/Belum Dikerjakan/Ditinjau) — tabel angka + persentase
 - Total waktu tercatat (dari Pelacak)
 - Tugas terlambat (jika ada) — ditandai jelas
 
 ### Bagian Detail Tugas (Tabel)
+
 ```
 No | Judul Tugas | Ditugaskan ke | Prioritas | Status | Deadline | Waktu Tercatat
 ```
+
 - Baris zebra (selang-seling warna sangat halus) untuk keterbacaan
 - Status ditandai label kecil, bukan warna latar penuh (tetap jelas di cetak hitam-putih)
 
 ### Bagian Detail Log Pelacak (opsional, sesuai filter)
+
 ```
 Tanggal | Tugas | Pengguna | Durasi | Catatan
 ```
 
 ### Footer (setiap halaman)
+
 - Nomor halaman ("Halaman 2 dari 5")
 - Nama aplikasi kecil di pojok
 - Teks footer custom (dari Konfigurasi PDF, jika diisi)

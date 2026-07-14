@@ -46,7 +46,10 @@ export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
   head: () => ({
     meta: [
       { title: "Manajemen Pengguna — VeReport" },
-      { name: "description", content: "Kelola daftar pengguna, peran, dan status akun." },
+      {
+        name: "description",
+        content: "Kelola daftar pengguna, peran, dan status akun.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -71,13 +74,14 @@ function ManajemenPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["users-mgmt"],
     queryFn: async (): Promise<UserRow[]> => {
-      const [{ data: profiles, error: pe }, { data: rolesData, error: re }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id,name,email,position,is_active,created_at")
-          .order("created_at", { ascending: false }),
-        supabase.from("user_roles").select("user_id,role"),
-      ]);
+      const [{ data: profiles, error: pe }, { data: rolesData, error: re }] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id,name,email,position,is_active,created_at")
+            .order("created_at", { ascending: false }),
+          supabase.from("user_roles").select("user_id,role"),
+        ]);
       if (pe) throw pe;
       if (re) throw re;
       const roleMap = new Map<string, AppRole[]>();
@@ -132,7 +136,9 @@ function ManajemenPage() {
       currentRoles: AppRole[];
     }) => {
       // Remove non-dev roles the user currently has (dev role never touched from UI)
-      const toRemove = currentRoles.filter((r) => r !== "developer" && r !== newRole);
+      const toRemove = currentRoles.filter(
+        (r) => r !== "developer" && r !== newRole,
+      );
       if (toRemove.length) {
         const { error } = await supabase
           .from("user_roles")
@@ -152,14 +158,17 @@ function ManajemenPage() {
       toast.success("Peran diperbarui");
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
     },
-    onError: (e: Error) => toast.error("Gagal ubah peran", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal ubah peran", { description: e.message }),
   });
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Manajemen Pengguna</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Manajemen Pengguna
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Kelola daftar pengguna, peran, dan status aktif akun.
           </p>
@@ -251,13 +260,17 @@ function ManajemenPage() {
                         <TableCell>
                           <Badge
                             variant={u.is_active ? "default" : "secondary"}
-                            className={u.is_active ? "bg-success/15 text-success" : ""}
+                            className={
+                              u.is_active ? "bg-success/15 text-success" : ""
+                            }
                           >
                             {u.is_active ? "Aktif" : "Nonaktif"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(new Date(u.created_at), "d MMM yyyy", { locale: idLocale })}
+                          {format(new Date(u.created_at), "d MMM yyyy", {
+                            locale: idLocale,
+                          })}
                         </TableCell>
                         <TableCell className="text-right">
                           {!isDev && !isMe && (
@@ -265,16 +278,21 @@ function ManajemenPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                toggleActive.mutate({ id: u.id, active: !u.is_active })
+                                toggleActive.mutate({
+                                  id: u.id,
+                                  active: !u.is_active,
+                                })
                               }
                             >
                               {u.is_active ? (
                                 <>
-                                  <ShieldOff className="w-3.5 h-3.5 mr-1" /> Nonaktifkan
+                                  <ShieldOff className="w-3.5 h-3.5 mr-1" />{" "}
+                                  Nonaktifkan
                                 </>
                               ) : (
                                 <>
-                                  <Shield className="w-3.5 h-3.5 mr-1" /> Aktifkan
+                                  <Shield className="w-3.5 h-3.5 mr-1" />{" "}
+                                  Aktifkan
                                 </>
                               )}
                             </Button>

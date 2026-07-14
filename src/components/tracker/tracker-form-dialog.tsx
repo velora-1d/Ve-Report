@@ -31,7 +31,12 @@ interface Props {
   defaultTaskId?: string | null;
 }
 
-export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }: Props) {
+export function TrackerFormDialog({
+  open,
+  onOpenChange,
+  editing,
+  defaultTaskId,
+}: Props) {
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
 
@@ -40,6 +45,9 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
   const [hours, setHours] = useState<string>("0");
   const [minutes, setMinutes] = useState<string>("30");
   const [note, setNote] = useState<string>("");
+  const [startTime, setStartTime] = useState<string>("08:00");
+  const [endTime, setEndTime] = useState<string>("17:00");
+  const [remarks, setRemarks] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -50,12 +58,18 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
       setHours(String(Math.floor(total / 60)));
       setMinutes(String(total % 60));
       setNote(editing.note ?? "");
+      setStartTime(editing.start_time ?? "08:00");
+      setEndTime(editing.end_time ?? "17:00");
+      setRemarks(editing.remarks ?? "");
     } else {
       setTaskId(defaultTaskId ?? "");
       setDate(todayISO());
       setHours("0");
       setMinutes("30");
       setNote("");
+      setStartTime("08:00");
+      setEndTime("17:00");
+      setRemarks("");
     }
   }, [open, editing, defaultTaskId]);
 
@@ -77,7 +91,9 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
     mutationFn: async () => {
       if (!user) throw new Error("Belum masuk");
       if (!taskId) throw new Error("Pilih tugas terlebih dulu");
-      const totalMin = (parseInt(hours || "0", 10) || 0) * 60 + (parseInt(minutes || "0", 10) || 0);
+      const totalMin =
+        (parseInt(hours || "0", 10) || 0) * 60 +
+        (parseInt(minutes || "0", 10) || 0);
       if (totalMin <= 0) throw new Error("Durasi harus lebih dari 0 menit");
       const payload = {
         task_id: taskId,
@@ -85,6 +101,9 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
         logged_date: date,
         duration_minutes: totalMin,
         note: note.trim() || null,
+        start_time: startTime,
+        end_time: endTime,
+        remarks: remarks.trim() || null,
       };
       if (editing) {
         const { error } = await supabase
@@ -104,14 +123,17 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       onOpenChange(false);
     },
-    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? "Ubah Log Pelacak" : "Catat Waktu"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Ubah Log Pelacak" : "Catat Waktu"}
+          </DialogTitle>
           <DialogDescription>
             Catat berapa lama Anda mengerjakan sebuah tugas.
           </DialogDescription>
@@ -139,7 +161,11 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
           </div>
           <div className="space-y-2">
             <Label>Tanggal</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -172,12 +198,46 @@ export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Jam Mulai</Label>
+              <Input
+                id="start_time"
+                type="text"
+                placeholder="08:00"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end_time">Jam Selesai</Label>
+              <Input
+                id="end_time"
+                type="text"
+                placeholder="17:00"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Keterangan / Hambatan (opsional)</Label>
+            <Input
+              id="remarks"
+              placeholder="Contoh: Hambatan server down"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Batal
           </Button>
-          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+          >
             {mutation.isPending ? "Menyimpan…" : "Simpan"}
           </Button>
         </DialogFooter>

@@ -9,6 +9,7 @@ Filosofi: **"Tenang tapi hidup."** Setiap elemen terlihat jelas tanpa border teg
 ## Responsivitas
 
 Wajib responsif penuh di tiga breakpoint:
+
 - **Mobile**: grid wajib minimal 2 kolom (tidak boleh 1 kolom polos, kecuali form/detail page)
 - **Tablet**: grid menyesuaikan (3-4 kolom untuk card/list)
 - **Desktop**: grid penuh dengan sidebar tetap terlihat
@@ -46,11 +47,13 @@ Wajib responsif penuh di tiga breakpoint:
 Dilarang pakai `alert()`, `confirm()`, `prompt()` bawaan browser — semua notifikasi dan konfirmasi wajib pakai komponen custom mengikuti gaya Soft Minimalist di atas.
 
 **Toast/Notifikasi** (info singkat: berhasil, error, peringatan)
+
 - Muncul di pojok layar (posisi konsisten di seluruh aplikasi)
 - Auto-hilang setelah beberapa detik, bisa di-dismiss manual
 - Varian: Sukses (aksen hijau lembut), Error (aksen merah lembut), Peringatan (aksen kuning lembut), Info (aksen netral)
 
 **Modal Konfirmasi** (aksi penting: hapus, keluar, ubah role)
+
 - Muncul di tengah layar dengan overlay blur/gelap transparan
 - Judul jelas + deskripsi konsekuensi aksi
 - Dua tombol: Batal (netral) dan Konfirmasi (warna sesuai tingkat risiko)

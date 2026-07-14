@@ -51,7 +51,12 @@ const MAIN_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
-  { to: "/manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, requiresAdmin: true },
+  {
+    to: "/manajemen-pengguna",
+    label: "Manajemen Pengguna",
+    icon: Users,
+    requiresAdmin: true,
+  },
 ];
 
 const SETTINGS_NAV: NavItem[] = [
@@ -59,7 +64,12 @@ const SETTINGS_NAV: NavItem[] = [
 ];
 
 const DEV_NAV: NavItem[] = [
-  { to: "/panel-developer", label: "Panel Developer", icon: Terminal, requiresDev: true },
+  {
+    to: "/panel-developer",
+    label: "Panel Developer",
+    icon: Terminal,
+    requiresDev: true,
+  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -89,11 +99,13 @@ function AppSidebar() {
 
   const initials = useMemo(() => {
     const n = user?.name ?? "";
-    return n
-      .split(" ")
-      .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() ?? "")
-      .join("") || "?";
+    return (
+      n
+        .split(" ")
+        .slice(0, 2)
+        .map((s) => s[0]?.toUpperCase() ?? "")
+        .join("") || "?"
+    );
   }, [user?.name]);
 
   const handleSignOut = async () => {
@@ -136,7 +148,11 @@ function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {ADMIN_NAV.map((item) => (
-                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
+                  <NavLink
+                    key={item.to}
+                    item={item}
+                    active={isActive(item.to)}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -152,7 +168,11 @@ function AppSidebar() {
               ))}
               {canDev &&
                 DEV_NAV.map((item) => (
-                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
+                  <NavLink
+                    key={item.to}
+                    item={item}
+                    active={isActive(item.to)}
+                  />
                 ))}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -162,16 +182,24 @@ function AppSidebar() {
       <SidebarFooter className="p-3">
         <div className="flex items-center gap-3 p-2 rounded-xl surface-panel">
           <Avatar className="w-9 h-9">
-            {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
+            {user?.avatarUrl && (
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+            )}
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{user?.name ?? "…"}</div>
+            <div className="text-sm font-medium truncate">
+              {user?.name ?? "…"}
+            </div>
             <div className="flex items-center gap-1.5">
               {roles.map((r) => (
-                <Badge key={r} variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                <Badge
+                  key={r}
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0 h-4"
+                >
                   {ROLE_LABEL[r]}
                 </Badge>
               ))}
@@ -208,7 +236,10 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function TopBar() {
   const location = useLocation();
-  const title = useMemo(() => titleFromPath(location.pathname), [location.pathname]);
+  const title = useMemo(
+    () => titleFromPath(location.pathname),
+    [location.pathname],
+  );
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 backdrop-blur px-4 md:px-6 sticky top-0 z-10">
       <SidebarTrigger className="md:hidden">
@@ -229,6 +260,8 @@ function titleFromPath(path: string): string {
     "/pengaturan": "Pengaturan",
     "/panel-developer": "Panel Developer",
   };
-  const key = Object.keys(map).find((k) => path === k || path.startsWith(k + "/"));
+  const key = Object.keys(map).find(
+    (k) => path === k || path.startsWith(k + "/"),
+  );
   return key ? map[key] : "VeReport";
 }

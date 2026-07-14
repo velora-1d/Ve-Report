@@ -98,7 +98,8 @@ export function ScheduleFormDialog({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Judul jadwal wajib diisi.");
-      if (!startTime || !endTime) throw new Error("Waktu mulai dan selesai wajib diisi.");
+      if (!startTime || !endTime)
+        throw new Error("Waktu mulai dan selesai wajib diisi.");
       if (new Date(endTime) <= new Date(startTime))
         throw new Error("Waktu selesai harus setelah waktu mulai.");
       const payload = {
@@ -110,7 +111,10 @@ export function ScheduleFormDialog({
         task_id: taskId === "__none__" ? null : taskId,
       };
       if (isEdit && schedule) {
-        const { error } = await supabase.from("schedules").update(payload).eq("id", schedule.id);
+        const { error } = await supabase
+          .from("schedules")
+          .update(payload)
+          .eq("id", schedule.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -130,7 +134,10 @@ export function ScheduleFormDialog({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!schedule) return;
-      const { error } = await supabase.from("schedules").delete().eq("id", schedule.id);
+      const { error } = await supabase
+        .from("schedules")
+        .delete()
+        .eq("id", schedule.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -187,7 +194,9 @@ export function ScheduleFormDialog({
             <div className="space-y-1.5">
               <Label>Pengingat</Label>
               <Select value={reminder} onValueChange={setReminder}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Tanpa pengingat</SelectItem>
                   <SelectItem value="5">5 menit sebelumnya</SelectItem>
@@ -201,11 +210,15 @@ export function ScheduleFormDialog({
             <div className="space-y-1.5">
               <Label>Terhubung ke tugas</Label>
               <Select value={taskId} onValueChange={setTaskId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Tidak terhubung</SelectItem>
                   {tasks?.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -233,10 +246,17 @@ export function ScheduleFormDialog({
             >
               Hapus
             </Button>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
           </div>

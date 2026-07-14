@@ -7,7 +7,12 @@ interface PagePlaceholderProps {
   children?: ReactNode;
 }
 
-export function PagePlaceholder({ title, description, phase, children }: PagePlaceholderProps) {
+export function PagePlaceholder({
+  title,
+  description,
+  phase,
+  children,
+}: PagePlaceholderProps) {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
@@ -22,8 +27,8 @@ export function PagePlaceholder({ title, description, phase, children }: PagePla
           </div>
         )}
         <p className="text-muted-foreground max-w-prose">
-          Halaman ini adalah kerangka fondasi. Fungsionalitas lengkap akan dibangun pada fase
-          berikutnya sesuai brief.
+          Halaman ini adalah kerangka fondasi. Fungsionalitas lengkap akan
+          dibangun pada fase berikutnya sesuai brief.
         </p>
         {children && <div className="mt-6">{children}</div>}
       </div>

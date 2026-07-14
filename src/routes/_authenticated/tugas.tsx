@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_authenticated/tugas")({
   head: () => ({
     meta: [
       { title: "Tugas & Jadwal — VeReport" },
-      { name: "description", content: "Kelola daftar tugas dan jadwal kalender tim Anda." },
+      {
+        name: "description",
+        content: "Kelola daftar tugas dan jadwal kalender tim Anda.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -18,7 +21,9 @@ function TugasPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Tugas & Jadwal</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Tugas & Jadwal
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Daftar tugas dan jadwal kalender dalam satu tempat.
         </p>

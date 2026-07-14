@@ -8,7 +8,13 @@ import {
   type TaskStatus,
 } from "@/lib/tasks";
 
-export function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: TaskStatus;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -22,7 +28,13 @@ export function StatusBadge({ status, className }: { status: TaskStatus; classNa
   );
 }
 
-export function PriorityBadge({ priority, className }: { priority: TaskPriority; className?: string }) {
+export function PriorityBadge({
+  priority,
+  className,
+}: {
+  priority: TaskPriority;
+  className?: string;
+}) {
   return (
     <span
       className={cn(

@@ -87,8 +87,10 @@ export function TaskListTab() {
     if (!tasks) return [];
     return tasks.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-      if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (priorityFilter !== "all" && t.priority !== priorityFilter)
+        return false;
+      if (search && !t.title.toLowerCase().includes(search.toLowerCase()))
+        return false;
       return true;
     });
   }, [tasks, statusFilter, priorityFilter, search]);
@@ -138,20 +140,28 @@ export function TaskListTab() {
               className="md:max-w-xs"
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="md:w-48">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua status</SelectItem>
                 {TASK_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{TASK_STATUS_LABEL[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {TASK_STATUS_LABEL[s]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="md:w-44">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua prioritas</SelectItem>
                 {TASK_PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>{TASK_PRIORITY_LABEL[p]}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {TASK_PRIORITY_LABEL[p]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -172,7 +182,9 @@ export function TaskListTab() {
       <Card className="surface-card overflow-hidden">
         {isLoading ? (
           <div className="p-6 space-y-3">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">
@@ -205,7 +217,10 @@ export function TaskListTab() {
                     <Select
                       value={t.status}
                       onValueChange={(v) =>
-                        statusMutation.mutate({ id: t.id, status: v as TaskStatus })
+                        statusMutation.mutate({
+                          id: t.id,
+                          status: v as TaskStatus,
+                        })
                       }
                     >
                       <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none focus:ring-0">
@@ -213,22 +228,32 @@ export function TaskListTab() {
                       </SelectTrigger>
                       <SelectContent>
                         {TASK_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>{TASK_STATUS_LABEL[s]}</SelectItem>
+                          <SelectItem key={s} value={s}>
+                            {TASK_STATUS_LABEL[s]}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell><PriorityBadge priority={t.priority} /></TableCell>
+                  <TableCell>
+                    <PriorityBadge priority={t.priority} />
+                  </TableCell>
                   <TableCell className="text-sm">
-                    {t.assigned_to ? (profileMap?.[t.assigned_to] ?? "—") : (
-                      <span className="text-muted-foreground">Belum ditugaskan</span>
+                    {t.assigned_to ? (
+                      (profileMap?.[t.assigned_to] ?? "—")
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Belum ditugaskan
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {t.due_date ? (
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays className="size-3.5 text-muted-foreground" />
-                        {format(new Date(t.due_date), "d MMM yyyy", { locale: idLocale })}
+                        {format(new Date(t.due_date), "d MMM yyyy", {
+                          locale: idLocale,
+                        })}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -273,12 +298,16 @@ export function TaskListTab() {
         />
       )}
 
-      <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(v) => !v && setDeletingId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus tugas ini?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Riwayat status dan log pelacak terkait juga akan ikut terhapus.
+              Tindakan ini tidak dapat dibatalkan. Riwayat status dan log
+              pelacak terkait juga akan ikut terhapus.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
