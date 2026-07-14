@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import type { AppRole } from "@/lib/roles";
 
 export interface CurrentUser {
@@ -14,29 +13,25 @@ export interface CurrentUser {
 }
 
 export function useCurrentUser() {
-  return useQuery({
-    queryKey: ["current-user"],
-    queryFn: async (): Promise<CurrentUser | null> => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) return null;
+  const { data, isPending, error } = authClient.useSession();
 
-      const [{ data: profile }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-      ]);
-
-      return {
+  const user = data?.user;
+  const currentUser: CurrentUser | null = user
+    ? {
         id: user.id,
-        email: user.email ?? "",
-        name: profile?.name ?? user.email?.split("@")[0] ?? "Pengguna",
-        avatarUrl: profile?.avatar_url ?? null,
-        phone: profile?.phone ?? null,
-        position: profile?.position ?? null,
-        bio: profile?.bio ?? null,
-        roles: (roles?.map((r) => r.role) as AppRole[]) ?? [],
-      };
-    },
-    staleTime: 60_000,
-  });
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.image ?? null,
+        phone: user.phone ?? null,
+        position: user.position ?? null,
+        bio: user.bio ?? null,
+        roles: [user.role as AppRole],
+      }
+    : null;
+
+  return {
+    data: currentUser,
+    isLoading: isPending,
+    error,
+  };
 }

@@ -8,231 +8,251 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as AuthRouteImport } from "./routes/auth";
-import { Route as AuthenticatedRouteRouteImport } from "./routes/_authenticated/route";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as AuthenticatedTugasRouteImport } from "./routes/_authenticated/tugas";
-import { Route as AuthenticatedPengaturanRouteImport } from "./routes/_authenticated/pengaturan";
-import { Route as AuthenticatedPelacakRouteImport } from "./routes/_authenticated/pelacak";
-import { Route as AuthenticatedPanelDeveloperRouteImport } from "./routes/_authenticated/panel-developer";
-import { Route as AuthenticatedManajemenPenggunaRouteImport } from "./routes/_authenticated/manajemen-pengguna";
-import { Route as AuthenticatedLaporanRouteImport } from "./routes/_authenticated/laporan";
-import { Route as AuthenticatedDasborRouteImport } from "./routes/_authenticated/dasbor";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/tugas'
+import { Route as AuthenticatedPengaturanRouteImport } from './routes/_authenticated/pengaturan'
+import { Route as AuthenticatedPelacakRouteImport } from './routes/_authenticated/pelacak'
+import { Route as AuthenticatedPanelDeveloperRouteImport } from './routes/_authenticated/panel-developer'
+import { Route as AuthenticatedManajemenPenggunaRouteImport } from './routes/_authenticated/manajemen-pengguna'
+import { Route as AuthenticatedLaporanRouteImport } from './routes/_authenticated/laporan'
+import { Route as AuthenticatedDasborRouteImport } from './routes/_authenticated/dasbor'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AuthRoute = AuthRouteImport.update({
-  id: "/auth",
-  path: "/auth",
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: "/_authenticated",
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticatedTugasRoute = AuthenticatedTugasRouteImport.update({
-  id: "/tugas",
-  path: "/tugas",
+  id: '/tugas',
+  path: '/tugas',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedPengaturanRoute = AuthenticatedPengaturanRouteImport.update({
-  id: "/pengaturan",
-  path: "/pengaturan",
+  id: '/pengaturan',
+  path: '/pengaturan',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedPelacakRoute = AuthenticatedPelacakRouteImport.update({
-  id: "/pelacak",
-  path: "/pelacak",
+  id: '/pelacak',
+  path: '/pelacak',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedPanelDeveloperRoute =
   AuthenticatedPanelDeveloperRouteImport.update({
-    id: "/panel-developer",
-    path: "/panel-developer",
+    id: '/panel-developer',
+    path: '/panel-developer',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
+  } as any)
 const AuthenticatedManajemenPenggunaRoute =
   AuthenticatedManajemenPenggunaRouteImport.update({
-    id: "/manajemen-pengguna",
-    path: "/manajemen-pengguna",
+    id: '/manajemen-pengguna',
+    path: '/manajemen-pengguna',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
+  } as any)
 const AuthenticatedLaporanRoute = AuthenticatedLaporanRouteImport.update({
-  id: "/laporan",
-  path: "/laporan",
+  id: '/laporan',
+  path: '/laporan',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
 const AuthenticatedDasborRoute = AuthenticatedDasborRouteImport.update({
-  id: "/dasbor",
-  path: "/dasbor",
+  id: '/dasbor',
+  path: '/dasbor',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRoute;
-  "/dasbor": typeof AuthenticatedDasborRoute;
-  "/laporan": typeof AuthenticatedLaporanRoute;
-  "/manajemen-pengguna": typeof AuthenticatedManajemenPenggunaRoute;
-  "/panel-developer": typeof AuthenticatedPanelDeveloperRoute;
-  "/pelacak": typeof AuthenticatedPelacakRoute;
-  "/pengaturan": typeof AuthenticatedPengaturanRoute;
-  "/tugas": typeof AuthenticatedTugasRoute;
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dasbor': typeof AuthenticatedDasborRoute
+  '/laporan': typeof AuthenticatedLaporanRoute
+  '/manajemen-pengguna': typeof AuthenticatedManajemenPenggunaRoute
+  '/panel-developer': typeof AuthenticatedPanelDeveloperRoute
+  '/pelacak': typeof AuthenticatedPelacakRoute
+  '/pengaturan': typeof AuthenticatedPengaturanRoute
+  '/tugas': typeof AuthenticatedTugasRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRoute;
-  "/dasbor": typeof AuthenticatedDasborRoute;
-  "/laporan": typeof AuthenticatedLaporanRoute;
-  "/manajemen-pengguna": typeof AuthenticatedManajemenPenggunaRoute;
-  "/panel-developer": typeof AuthenticatedPanelDeveloperRoute;
-  "/pelacak": typeof AuthenticatedPelacakRoute;
-  "/pengaturan": typeof AuthenticatedPengaturanRoute;
-  "/tugas": typeof AuthenticatedTugasRoute;
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dasbor': typeof AuthenticatedDasborRoute
+  '/laporan': typeof AuthenticatedLaporanRoute
+  '/manajemen-pengguna': typeof AuthenticatedManajemenPenggunaRoute
+  '/panel-developer': typeof AuthenticatedPanelDeveloperRoute
+  '/pelacak': typeof AuthenticatedPelacakRoute
+  '/pengaturan': typeof AuthenticatedPengaturanRoute
+  '/tugas': typeof AuthenticatedTugasRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/_authenticated": typeof AuthenticatedRouteRouteWithChildren;
-  "/auth": typeof AuthRoute;
-  "/_authenticated/dasbor": typeof AuthenticatedDasborRoute;
-  "/_authenticated/laporan": typeof AuthenticatedLaporanRoute;
-  "/_authenticated/manajemen-pengguna": typeof AuthenticatedManajemenPenggunaRoute;
-  "/_authenticated/panel-developer": typeof AuthenticatedPanelDeveloperRoute;
-  "/_authenticated/pelacak": typeof AuthenticatedPelacakRoute;
-  "/_authenticated/pengaturan": typeof AuthenticatedPengaturanRoute;
-  "/_authenticated/tugas": typeof AuthenticatedTugasRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dasbor': typeof AuthenticatedDasborRoute
+  '/_authenticated/laporan': typeof AuthenticatedLaporanRoute
+  '/_authenticated/manajemen-pengguna': typeof AuthenticatedManajemenPenggunaRoute
+  '/_authenticated/panel-developer': typeof AuthenticatedPanelDeveloperRoute
+  '/_authenticated/pelacak': typeof AuthenticatedPelacakRoute
+  '/_authenticated/pengaturan': typeof AuthenticatedPengaturanRoute
+  '/_authenticated/tugas': typeof AuthenticatedTugasRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/auth"
-    | "/dasbor"
-    | "/laporan"
-    | "/manajemen-pengguna"
-    | "/panel-developer"
-    | "/pelacak"
-    | "/pengaturan"
-    | "/tugas";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/auth'
+    | '/dasbor'
+    | '/laporan'
+    | '/manajemen-pengguna'
+    | '/panel-developer'
+    | '/pelacak'
+    | '/pengaturan'
+    | '/tugas'
+    | '/api/auth/$'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/auth"
-    | "/dasbor"
-    | "/laporan"
-    | "/manajemen-pengguna"
-    | "/panel-developer"
-    | "/pelacak"
-    | "/pengaturan"
-    | "/tugas";
+    | '/'
+    | '/auth'
+    | '/dasbor'
+    | '/laporan'
+    | '/manajemen-pengguna'
+    | '/panel-developer'
+    | '/pelacak'
+    | '/pengaturan'
+    | '/tugas'
+    | '/api/auth/$'
   id:
-    | "__root__"
-    | "/"
-    | "/_authenticated"
-    | "/auth"
-    | "/_authenticated/dasbor"
-    | "/_authenticated/laporan"
-    | "/_authenticated/manajemen-pengguna"
-    | "/_authenticated/panel-developer"
-    | "/_authenticated/pelacak"
-    | "/_authenticated/pengaturan"
-    | "/_authenticated/tugas";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dasbor'
+    | '/_authenticated/laporan'
+    | '/_authenticated/manajemen-pengguna'
+    | '/_authenticated/panel-developer'
+    | '/_authenticated/pelacak'
+    | '/_authenticated/pengaturan'
+    | '/_authenticated/tugas'
+    | '/api/auth/$'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren;
-  AuthRoute: typeof AuthRoute;
+  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/auth": {
-      id: "/auth";
-      path: "/auth";
-      fullPath: "/auth";
-      preLoaderRoute: typeof AuthRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated": {
-      id: "/_authenticated";
-      path: "";
-      fullPath: "/";
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated/tugas": {
-      id: "/_authenticated/tugas";
-      path: "/tugas";
-      fullPath: "/tugas";
-      preLoaderRoute: typeof AuthenticatedTugasRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/pengaturan": {
-      id: "/_authenticated/pengaturan";
-      path: "/pengaturan";
-      fullPath: "/pengaturan";
-      preLoaderRoute: typeof AuthenticatedPengaturanRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/pelacak": {
-      id: "/_authenticated/pelacak";
-      path: "/pelacak";
-      fullPath: "/pelacak";
-      preLoaderRoute: typeof AuthenticatedPelacakRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/panel-developer": {
-      id: "/_authenticated/panel-developer";
-      path: "/panel-developer";
-      fullPath: "/panel-developer";
-      preLoaderRoute: typeof AuthenticatedPanelDeveloperRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/manajemen-pengguna": {
-      id: "/_authenticated/manajemen-pengguna";
-      path: "/manajemen-pengguna";
-      fullPath: "/manajemen-pengguna";
-      preLoaderRoute: typeof AuthenticatedManajemenPenggunaRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/laporan": {
-      id: "/_authenticated/laporan";
-      path: "/laporan";
-      fullPath: "/laporan";
-      preLoaderRoute: typeof AuthenticatedLaporanRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/dasbor": {
-      id: "/_authenticated/dasbor";
-      path: "/dasbor";
-      fullPath: "/dasbor";
-      preLoaderRoute: typeof AuthenticatedDasborRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/tugas': {
+      id: '/_authenticated/tugas'
+      path: '/tugas'
+      fullPath: '/tugas'
+      preLoaderRoute: typeof AuthenticatedTugasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pengaturan': {
+      id: '/_authenticated/pengaturan'
+      path: '/pengaturan'
+      fullPath: '/pengaturan'
+      preLoaderRoute: typeof AuthenticatedPengaturanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pelacak': {
+      id: '/_authenticated/pelacak'
+      path: '/pelacak'
+      fullPath: '/pelacak'
+      preLoaderRoute: typeof AuthenticatedPelacakRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/panel-developer': {
+      id: '/_authenticated/panel-developer'
+      path: '/panel-developer'
+      fullPath: '/panel-developer'
+      preLoaderRoute: typeof AuthenticatedPanelDeveloperRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manajemen-pengguna': {
+      id: '/_authenticated/manajemen-pengguna'
+      path: '/manajemen-pengguna'
+      fullPath: '/manajemen-pengguna'
+      preLoaderRoute: typeof AuthenticatedManajemenPenggunaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/laporan': {
+      id: '/_authenticated/laporan'
+      path: '/laporan'
+      fullPath: '/laporan'
+      preLoaderRoute: typeof AuthenticatedLaporanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dasbor': {
+      id: '/_authenticated/dasbor'
+      path: '/dasbor'
+      fullPath: '/dasbor'
+      preLoaderRoute: typeof AuthenticatedDasborRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedDasborRoute: typeof AuthenticatedDasborRoute;
-  AuthenticatedLaporanRoute: typeof AuthenticatedLaporanRoute;
-  AuthenticatedManajemenPenggunaRoute: typeof AuthenticatedManajemenPenggunaRoute;
-  AuthenticatedPanelDeveloperRoute: typeof AuthenticatedPanelDeveloperRoute;
-  AuthenticatedPelacakRoute: typeof AuthenticatedPelacakRoute;
-  AuthenticatedPengaturanRoute: typeof AuthenticatedPengaturanRoute;
-  AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute;
+  AuthenticatedDasborRoute: typeof AuthenticatedDasborRoute
+  AuthenticatedLaporanRoute: typeof AuthenticatedLaporanRoute
+  AuthenticatedManajemenPenggunaRoute: typeof AuthenticatedManajemenPenggunaRoute
+  AuthenticatedPanelDeveloperRoute: typeof AuthenticatedPanelDeveloperRoute
+  AuthenticatedPelacakRoute: typeof AuthenticatedPelacakRoute
+  AuthenticatedPengaturanRoute: typeof AuthenticatedPengaturanRoute
+  AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -243,26 +263,27 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPelacakRoute: AuthenticatedPelacakRoute,
   AuthenticatedPengaturanRoute: AuthenticatedPengaturanRoute,
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
-};
+}
 
 const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren);
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-};
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { startInstance } from "./start.ts";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

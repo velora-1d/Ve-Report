@@ -30,7 +30,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ROLE_LABEL, isAdminOrDev, isDeveloper } from "@/lib/roles";
 import { toast } from "sonner";
@@ -111,7 +111,7 @@ function AppSidebar() {
   const handleSignOut = async () => {
     await qc.cancelQueries();
     qc.clear();
-    await supabase.auth.signOut();
+    await authClient.signOut();
     toast.success("Berhasil keluar");
     navigate({ to: "/auth", replace: true });
   };

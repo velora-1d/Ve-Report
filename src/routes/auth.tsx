@@ -6,7 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,25 +48,25 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [nameSignup, setNameSignup] = useState("");
 
+  const { data: session } = authClient.useSession();
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        navigate({ to: search.redirect ?? "/dasbor", replace: true });
-      }
-    });
-  }, [navigate, search.redirect]);
+    if (session) {
+      navigate({ to: search.redirect ?? "/dasbor", replace: true });
+    }
+  }, [session, navigate, search.redirect]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await authClient.signIn.email({
       email,
       password,
     });
     setLoading(false);
     if (error) {
       toast.error("Gagal masuk", {
-        description: translateAuthError(error.message),
+        description: translateAuthError(error.message || "Email atau password salah"),
       });
       return;
     }
@@ -77,18 +77,15 @@ function AuthPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error } = await authClient.signUp.email({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dasbor`,
-        data: { name: nameSignup || email.split("@")[0] },
-      },
+      name: nameSignup || email.split("@")[0],
     });
     setLoading(false);
     if (error) {
       toast.error("Gagal mendaftar", {
-        description: translateAuthError(error.message),
+        description: translateAuthError(error.message || "Gagal membuat akun"),
       });
       return;
     }
