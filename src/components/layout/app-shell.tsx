@@ -121,24 +121,33 @@ function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-4"}>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-gradient-to-b from-sidebar via-sidebar to-background shadow-soft">
+      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5"}>
         <Link to="/dasbor" className="flex items-center justify-center shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-soft-sm shrink-0">
-            <FileText className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.25)] shrink-0 transition-transform duration-300 hover:rotate-6">
+            <FileText className="w-5 h-5 text-primary-foreground" />
           </div>
           {!isCollapsed && (
-            <div className="ml-2.5">
-              <div className="font-semibold tracking-tight">Log Book</div>
-              <div className="text-xs text-muted-foreground">Manajemen Tim</div>
+            <div className="ml-3">
+              <div className="font-bold tracking-tight text-foreground text-base">
+                Ve-Report<span className="text-primary font-black">.</span>
+              </div>
+              <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
+                Workspace
+              </div>
             </div>
           )}
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className={isCollapsed ? "px-1" : "px-2"}>
+      <SidebarContent className={isCollapsed ? "px-1.5" : "px-3"}>
         <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel>Utama</SidebarGroupLabel>}
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-primary/40" />
+              Utama
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
               {MAIN_NAV.map((item) => (
@@ -150,7 +159,12 @@ function AppSidebar() {
 
         {canAdmin && (
           <SidebarGroup>
-            {!isCollapsed && <SidebarGroupLabel>Administrasi</SidebarGroupLabel>}
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-primary/40" />
+                Administrasi
+              </SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
               <SidebarMenu>
                 {ADMIN_NAV.map((item) => (
@@ -166,7 +180,12 @@ function AppSidebar() {
         )}
 
         <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel>Pengaturan</SidebarGroupLabel>}
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-primary/40" />
+              Pengaturan
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
               {SETTINGS_NAV.map((item) => (
@@ -185,26 +204,26 @@ function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3"}>
+      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4"}>
         {!isCollapsed ? (
-          <div className="flex items-center gap-3 p-2 rounded-xl surface-panel overflow-hidden w-full">
-            <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-muted/50 via-muted/30 to-transparent border border-border/40 backdrop-blur-sm shadow-soft-sm overflow-hidden w-full transition-all duration-300 hover:border-primary/20">
+            <div className="w-[30px] h-[40px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm ring-1 ring-primary/5 hover:ring-primary/20 transition-all">
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-primary text-[10px] font-bold">{initials}</span>
+                <span className="text-primary text-[11px] font-bold">{initials}</span>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">
+              <div className="text-sm font-semibold text-foreground truncate">
                 {user?.name ?? "…"}
               </div>
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1 mt-0.5">
                 {roles.map((r) => (
                   <Badge
                     key={r}
                     variant="secondary"
-                    className="text-[10px] px-1.5 py-0 h-4"
+                    className="text-[9px] px-1.5 py-0 h-4 bg-primary/8 text-primary border-none font-medium hover:bg-primary/8"
                   >
                     {ROLE_LABEL[r]}
                   </Badge>
@@ -216,18 +235,18 @@ function AppSidebar() {
               size="icon"
               onClick={handleSignOut}
               title="Keluar"
-              className="shrink-0"
+              className="shrink-0 h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 w-full">
-            <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative" title={user?.name}>
+          <div className="flex flex-col items-center gap-2.5 w-full">
+            <div className="w-[30px] h-[40px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm ring-2 ring-primary/5 hover:ring-primary/20 transition-all" title={user?.name}>
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-primary text-[10px] font-bold">{initials}</span>
+                <span className="text-primary text-[11px] font-bold">{initials}</span>
               )}
             </div>
             <Button
@@ -235,7 +254,7 @@ function AppSidebar() {
               size="icon"
               onClick={handleSignOut}
               title="Keluar"
-              className="w-8 h-8 rounded-lg hover:bg-destructive/10 hover:text-destructive flex items-center justify-center"
+              className="w-8 h-8 rounded-lg hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-all hover:scale-105 active:scale-95"
             >
               <LogOut className="w-4 h-4" />
             </Button>
@@ -254,7 +273,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <SidebarMenuItem className="relative">
       {active && (
-        <div className={`absolute bg-primary rounded-full transition-all duration-200 ${
+        <div className={`absolute bg-gradient-to-b from-primary to-primary-hover rounded-full transition-all duration-200 shadow-[0_0_6px_rgba(37,99,235,0.4)] ${
           isCollapsed ? "left-1.5 w-1 top-2 bottom-2" : "left-0 w-[3px] top-1.5 bottom-1.5 rounded-r"
         }`} />
       )}
@@ -262,17 +281,23 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         asChild
         isActive={active}
         className={`rounded-lg transition-all duration-200 ${
-          isCollapsed ? "justify-center px-0 mx-auto" : "pl-3.5"
+          isCollapsed
+            ? "justify-center px-0 mx-auto"
+            : "pl-3.5"
         } ${
           active
-            ? "bg-primary/8 text-primary hover:bg-primary/12 hover:text-primary font-medium"
-            : "text-foreground/80 hover:bg-muted hover:text-foreground"
+            ? isCollapsed
+              ? "bg-gradient-to-tr from-primary/15 to-primary/5 text-primary font-semibold shadow-[0_2px_8px_-2px_rgba(37,99,235,0.15)] scale-105"
+              : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent text-primary font-semibold shadow-[inset_1.5px_0_0_0_rgba(37,99,235,0.3)]"
+            : isCollapsed
+              ? "text-foreground/75 hover:bg-primary/8 hover:text-primary hover:scale-105"
+              : "text-foreground/75 hover:bg-primary/5 hover:text-primary hover:translate-x-0.5"
         }`}
       >
         <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-2.5 w-full"}>
           <Icon
             className={`w-4 h-4 transition-colors duration-200 shrink-0 ${
-              active ? "text-primary" : "text-foreground/60"
+              active ? "text-primary drop-shadow-[0_0_6px_rgba(37,99,235,0.35)]" : "text-foreground/50 group-hover:text-primary"
             }`}
           />
           {!isCollapsed && <span>{item.label}</span>}
