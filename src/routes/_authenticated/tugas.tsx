@@ -1,5 +1,7 @@
 // ponytail: Mengganti query Supabase client-side untuk tugas dan jadwal dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getAppConfig } from "@/lib/app-config";
 import { createServerFn } from "@tanstack/react-start";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskListTab } from "@/components/tasks/task-list-tab";
@@ -242,11 +244,17 @@ export const Route = createFileRoute("/_authenticated/tugas")({
 });
 
 function TugasPage() {
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
+
   return (
     <div className="w-full space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          Log Book Meeting
+          {appName} Meeting
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Daftar penugasan dari atasan dan hasil meeting harian.

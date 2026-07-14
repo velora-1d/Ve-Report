@@ -115,7 +115,15 @@ function AppSidebar() {
     return allowedMenus.includes(menuKey);
   };
 
-  const allowedMain = MAIN_NAV.filter((item) => isMenuAllowed(item.to));
+  const allowedMain = MAIN_NAV.map((item) => {
+    if (item.to === "/tugas") {
+      return { ...item, label: `${appName} Meeting` };
+    }
+    if (item.to === "/pelacak") {
+      return { ...item, label: `${appName} Harian` };
+    }
+    return item;
+  }).filter((item) => isMenuAllowed(item.to));
   const allowedAdmin = ADMIN_NAV.filter((item) => isMenuAllowed(item.to));
   const allowedSettings = SETTINGS_NAV.filter((item) => isMenuAllowed(item.to));
 
@@ -351,9 +359,15 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function TopBar() {
   const location = useLocation();
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
+
   const title = useMemo(
-    () => titleFromPath(location.pathname),
-    [location.pathname],
+    () => titleFromPath(location.pathname, appName),
+    [location.pathname, appName],
   );
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 backdrop-blur px-4 md:px-6 sticky top-0 z-10">
@@ -365,11 +379,11 @@ function TopBar() {
   );
 }
 
-function titleFromPath(path: string): string {
+function titleFromPath(path: string, appName: string): string {
   const map: Record<string, string> = {
     "/dasbor": "Dasbor",
-    "/tugas": "Log Book Meeting",
-    "/pelacak": "Log Book Harian",
+    "/tugas": `${appName} Meeting`,
+    "/pelacak": `${appName} Harian`,
     "/laporan": "Laporan",
     "/manajemen-pengguna": "Pengguna",
     "/pengaturan": "Pengaturan",
@@ -378,5 +392,5 @@ function titleFromPath(path: string): string {
   const key = Object.keys(map).find(
     (k) => path === k || path.startsWith(k + "/"),
   );
-  return key ? map[key] : "Log Book";
+  return key ? map[key] : appName;
 }

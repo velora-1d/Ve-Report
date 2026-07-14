@@ -227,6 +227,11 @@ function LaporanPage() {
   const { data: me } = useCurrentUser();
   const { hasPermission } = usePermission();
   const qc = useQueryClient();
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
   const canFilterUser = me ? isAdminOrDev(me.roles) : false;
 
   const [title, setTitle] = useState("Laporan Kinerja");
@@ -322,7 +327,7 @@ function LaporanPage() {
 
       // ponytail: Memastikan laporan Log Book Harian & Meeting tidak dibuat secara global/tanpa filter user
       if ((reportType === "meeting" || reportType === "harian") && !targetUser) {
-        throw new Error("Laporan Log Book harus difilter untuk satu pengguna tertentu (tidak bisa Semua Pengguna).");
+        throw new Error(`Laporan ${appName} harus difilter untuk satu pengguna tertentu (tidak bisa Semua Pengguna).`);
       }
 
       // ponytail: Mengambil semua data laporan dari Server Function sekaligus (YAGNI / optimasi database roundtrip)
@@ -453,8 +458,8 @@ function LaporanPage() {
                     if (type === "standard") {
                       setTitle("Laporan Kinerja");
                     } else {
-                      if (type === "meeting") setTitle("Log Book Meeting");
-                      else if (type === "harian") setTitle("Log Book Harian");
+                      if (type === "meeting") setTitle(`${appName} Meeting`);
+                      else if (type === "harian") setTitle(`${appName} Harian`);
                       if (userId === "all") setUserId("me");
                     }
                   }}
@@ -467,10 +472,10 @@ function LaporanPage() {
                       Laporan Kinerja (Standar)
                     </SelectItem>
                     <SelectItem value="meeting">
-                      Log Book Meeting (Excel / PDF)
+                      {appName} Meeting (Excel / PDF)
                     </SelectItem>
                     <SelectItem value="harian">
-                      Log Book Harian (Excel / PDF)
+                      {appName} Harian (Excel / PDF)
                     </SelectItem>
                   </SelectContent>
                 </Select>

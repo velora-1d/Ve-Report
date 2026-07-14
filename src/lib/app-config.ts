@@ -31,7 +31,13 @@ export const saveAppConfig = createServerFn({ method: "POST" })
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
     const role = session.user.role || "staff";
-    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+    if (role !== "developer") {
+      const currentConfig = await db.query.appConfig.findFirst();
+      const perms = currentConfig?.permissions as any;
+      const rolePerms = perms?.[role];
+      const hasUpdate = rolePerms?.actions?.["pengaturan"]?.includes("update") ?? (role === "admin");
+      if (!hasUpdate) throw new Error("Forbidden");
+    }
 
     const payload = {
       logoUrl: data.logoUrl || null,

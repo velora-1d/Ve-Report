@@ -455,20 +455,23 @@ function RbacMatrixCard() {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
 
+  const appName = config?.appName || "Log Book";
+
   const AVAILABLE_MENUS = [
     { key: "dasbor", label: "Dasbor" },
-    { key: "tugas", label: "Log Book Meeting" },
-    { key: "pelacak", label: "Log Book Harian" },
+    { key: "tugas", label: `${appName} Meeting` },
+    { key: "pelacak", label: `${appName} Harian` },
     { key: "laporan", label: "Laporan" },
     { key: "manajemen-pengguna", label: "Pengguna" },
     { key: "pengaturan", label: "Pengaturan" },
   ];
 
   const MODULES = [
-    { key: "tugas", label: "Log Book Meeting (Tugas)" },
-    { key: "pelacak", label: "Log Book Harian (Tracker)" },
+    { key: "tugas", label: `${appName} Meeting (Tugas)` },
+    { key: "pelacak", label: `${appName} Harian (Tracker)` },
     { key: "laporan", label: "Laporan" },
     { key: "pengguna", label: "Pengguna" },
+    { key: "pengaturan", label: "Pengaturan" },
   ];
 
   const ACTIONS = [

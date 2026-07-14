@@ -22,9 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getAppConfig, saveAppConfig } from "@/lib/app-config";
+import { usePermission } from "@/hooks/use-permission";
 
 export function BrandingForm() {
   const qc = useQueryClient();
+  const { hasPermission } = usePermission();
+  const canUpdate = hasPermission("pengaturan", "update");
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => getAppConfig(),
@@ -81,6 +84,7 @@ export function BrandingForm() {
             onChange={(e) => setAppName(e.target.value)}
             placeholder="Log Book, Ve-Report, dll."
             required
+            disabled={!canUpdate}
           />
         </div>
         <div className="space-y-2">
@@ -109,8 +113,9 @@ export function BrandingForm() {
                     }
                   }}
                   className="max-w-[200px]"
+                  disabled={!canUpdate}
                 />
-                {logoUrl && (
+                {logoUrl && canUpdate && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -122,18 +127,20 @@ export function BrandingForm() {
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Maksimal ukuran file 1MB, format PNG atau JPG.
+                Maksimal ukuran file 1MB, format PNG or JPG.
               </p>
             </div>
           </div>
         </div>
         <div className="flex justify-end pt-2">
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending && (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            )}
-            Simpan
-          </Button>
+          {canUpdate && (
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Simpan
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -142,6 +149,8 @@ export function BrandingForm() {
 
 export function PdfConfigForm() {
   const qc = useQueryClient();
+  const { hasPermission } = usePermission();
+  const canUpdate = hasPermission("pengaturan", "update");
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => getAppConfig(),
@@ -199,7 +208,7 @@ export function PdfConfigForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Ukuran Kertas</Label>
-            <Select value={paper} onValueChange={setPaper}>
+            <Select value={paper} onValueChange={setPaper} disabled={!canUpdate}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -212,7 +221,7 @@ export function PdfConfigForm() {
           </div>
           <div className="space-y-2">
             <Label>Orientasi</Label>
-            <Select value={orientation} onValueChange={setOrientation}>
+            <Select value={orientation} onValueChange={setOrientation} disabled={!canUpdate}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -225,7 +234,7 @@ export function PdfConfigForm() {
         </div>
         <div className="space-y-2">
           <Label>Teks Header</Label>
-          <Input value={header} onChange={(e) => setHeader(e.target.value)} />
+          <Input value={header} onChange={(e) => setHeader(e.target.value)} disabled={!canUpdate} />
         </div>
         <div className="space-y-2">
           <Label>Teks Footer</Label>
@@ -233,15 +242,18 @@ export function PdfConfigForm() {
             rows={2}
             value={footer}
             onChange={(e) => setFooter(e.target.value)}
+            disabled={!canUpdate}
           />
         </div>
         <div className="flex justify-end">
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending && (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            )}
-            Simpan
-          </Button>
+          {canUpdate && (
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Simpan
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

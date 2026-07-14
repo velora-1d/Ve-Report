@@ -23,6 +23,7 @@ import {
   PdfConfigForm,
 } from "@/components/settings/branding-pdf-forms";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-permission";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
 import { users as usersTable } from "@/db/schema";
@@ -73,7 +74,8 @@ export const Route = createFileRoute("/_authenticated/pengaturan")({
 
 function PengaturanPage() {
   const { data: user, isLoading } = useCurrentUser();
-  const canAdmin = isAdminOrDev(user?.roles ?? []);
+  const { hasPermission } = usePermission();
+  const canReadSettings = hasPermission("pengaturan", "read");
 
   if (isLoading || !user) {
     return (
@@ -95,23 +97,23 @@ function PengaturanPage() {
       <Tabs defaultValue="profil">
         <TabsList>
           <TabsTrigger value="profil">Profil Saya</TabsTrigger>
-          {canAdmin && (
+          {canReadSettings && (
             <TabsTrigger value="branding">Branding & Logo</TabsTrigger>
           )}
-          {canAdmin && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
+          {canReadSettings && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profil" className="mt-4">
           <ProfileForm />
         </TabsContent>
 
-        {canAdmin && (
+        {canReadSettings && (
           <TabsContent value="branding" className="mt-4">
             <BrandingForm />
           </TabsContent>
         )}
 
-        {canAdmin && (
+        {canReadSettings && (
           <TabsContent value="pdf" className="mt-4">
             <PdfConfigForm />
           </TabsContent>

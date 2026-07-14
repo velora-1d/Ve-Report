@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
+import { getAppConfig } from "@/lib/app-config";
 import { db } from "@/db";
 import { trackerLogs as logsTable, tasks as tasksTable } from "@/db/schema";
 import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
@@ -196,6 +197,11 @@ function PelacakPage() {
   const { data: user } = useCurrentUser();
   const { hasPermission } = usePermission();
   const qc = useQueryClient();
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -290,7 +296,7 @@ function PelacakPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
-            Log Book Harian
+            {appName} Harian
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Catat aktivitas kegiatan harian dan log pengerjaan tugas.
