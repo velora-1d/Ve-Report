@@ -17,7 +17,9 @@ export const Route = createFileRoute("/_authenticated")({
         role = override;
       }
     }
-    if (role !== "developer") {
+    if (location.pathname.startsWith("/panel-developer") && originalRole === "developer") {
+      // Selalu izinkan akses ke panel-developer bagi pemilik akun developer asli (YAGNI / bypass check impersonasi)
+    } else if (role !== "developer") {
       const { getAppConfig } = await import("@/lib/app-config");
       const config = await getAppConfig();
       const permissions = config?.permissions as any;
