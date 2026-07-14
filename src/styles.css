@@ -70,8 +70,8 @@
 :root {
   --radius: 0.5rem; /* 8px default radius */
 
-  /* MediCare+ Calming Blue Sterile Theme Palette */
-  --background: #FAFCFF;
+  /* ponytail: Warm Cream V2 Theme Palette (Kertas Putih, UI Krem Alabaster & Sand) */
+  --background: #FAF8F5;
   --foreground: #0F172A;
   --card: #FFFFFF;
   --card-foreground: #0F172A;
@@ -79,8 +79,8 @@
   --popover-foreground: #0F172A;
   
   --surface: #FFFFFF;
-  --surface-raised: #F0F7FF;
-  --surface-sunken: #FAFCFF;
+  --surface-raised: #FAF8F5;
+  --surface-sunken: #F4EFE6;
 
   --primary: #0077B6;
   --primary-foreground: #FFFFFF;
@@ -89,7 +89,7 @@
   --secondary: #48CAE4;
   --secondary-foreground: #0F172A;
 
-  --muted: #F0F7FF;
+  --muted: #F4EFE6;
   --muted-foreground: #475569;
 
   --accent: #48CAE4;
@@ -105,17 +105,17 @@
   --info: #0077B6;
   --info-foreground: #FFFFFF;
 
-  --border: #E2E8F0;
+  --border: #E8E2D5;
   --input: #CBD5E1;
   --ring: #0077B6;
 
-  --sidebar: #FAFCFF;
+  --sidebar: #FAF8F5;
   --sidebar-foreground: #0F172A;
   --sidebar-primary: #0077B6;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F0F7FF;
+  --sidebar-accent: #F4EFE6;
   --sidebar-accent-foreground: #0077B6;
-  --sidebar-border: #E2E8F0;
+  --sidebar-border: #E8E2D5;
   --sidebar-ring: #0077B6;
 }
 
