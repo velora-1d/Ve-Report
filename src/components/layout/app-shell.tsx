@@ -45,8 +45,8 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { to: "/dasbor", label: "Dasbor", icon: LayoutDashboard },
-  { to: "/tugas", label: "Tugas & Jadwal", icon: ListChecks },
-  { to: "/pelacak", label: "Pelacak", icon: Timer },
+  { to: "/tugas", label: "Log Book Meeting", icon: FileText },
+  { to: "/pelacak", label: "Log Book Harian", icon: Timer },
   { to: "/laporan", label: "Laporan", icon: FileText },
 ];
 
@@ -220,13 +220,29 @@ function AppSidebar() {
   );
 }
 
+// ponytail: Modifikasi NavLink sidebar agar lebih estetik sesuai dengan design token (terracotta left bar & primary tint background)
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} className="rounded-lg">
+    <SidebarMenuItem className="relative">
+      {active && (
+        <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r" />
+      )}
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        className={`rounded-lg transition-all duration-200 pl-3.5 ${
+          active
+            ? "bg-primary/8 text-primary hover:bg-primary/12 hover:text-primary font-medium"
+            : "text-foreground/80 hover:bg-muted hover:text-foreground"
+        }`}
+      >
         <Link to={item.to}>
-          <Icon className="w-4 h-4" />
+          <Icon
+            className={`w-4 h-4 transition-colors duration-200 ${
+              active ? "text-primary" : "text-foreground/60"
+            }`}
+          />
           <span>{item.label}</span>
         </Link>
       </SidebarMenuButton>
@@ -253,8 +269,8 @@ function TopBar() {
 function titleFromPath(path: string): string {
   const map: Record<string, string> = {
     "/dasbor": "Dasbor",
-    "/tugas": "Tugas & Jadwal",
-    "/pelacak": "Pelacak",
+    "/tugas": "Log Book Meeting",
+    "/pelacak": "Log Book Harian",
     "/laporan": "Laporan",
     "/manajemen-pengguna": "Manajemen Pengguna",
     "/pengaturan": "Pengaturan",
