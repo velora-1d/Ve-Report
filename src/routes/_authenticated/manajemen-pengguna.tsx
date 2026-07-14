@@ -126,9 +126,8 @@ const updateUserMgmt = createServerFn({ method: "POST" })
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
     // Developer tidak bisa diubah oleh admin, hanya developer lain / ybs yang bisa
-    const targetUser = await db.query.users.findFirst({
-      where: eq(usersTable.id, data.id),
-    });
+    const usersList = await db.select().from(usersTable).where(eq(usersTable.id, data.id)).limit(1);
+    const targetUser = usersList[0] || null;
     if (!targetUser) throw new Error("User tidak ditemukan");
     if (targetUser.role === "developer" && role !== "developer") {
       throw new Error("Forbidden: Tidak dapat memperbarui status Developer");
@@ -150,12 +149,16 @@ const updateUserMgmt = createServerFn({ method: "POST" })
       const { hashPassword } = await import("better-auth/crypto");
       const hashedPassword = await hashPassword(data.password);
       
-      const existingAccount = await db.query.accounts.findFirst({
-        where: and(
-          eq(accountsTable.userId, data.id),
-          eq(accountsTable.providerId, "email")
-        ),
-      });
+      const existingAccounts = await db.select()
+        .from(accountsTable)
+        .where(
+          and(
+            eq(accountsTable.userId, data.id),
+            eq(accountsTable.providerId, "email")
+          )
+        )
+        .limit(1);
+      const existingAccount = existingAccounts[0] || null;
 
       if (existingAccount) {
         await db.update(accountsTable)
@@ -193,9 +196,8 @@ const deleteUserMgmt = createServerFn({ method: "POST" })
 
     if (session.user.id === userId) throw new Error("Tidak dapat menghapus diri sendiri");
 
-    const targetUser = await db.query.users.findFirst({
-      where: eq(usersTable.id, userId),
-    });
+    const usersList = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const targetUser = usersList[0] || null;
     if (!targetUser) throw new Error("User tidak ditemukan");
     if (targetUser.role === "developer" && role !== "developer") {
       throw new Error("Forbidden: Tidak dapat menghapus Developer");
