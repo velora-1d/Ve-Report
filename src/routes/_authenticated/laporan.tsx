@@ -972,7 +972,7 @@ function ReportPreviewGrid({
 
         <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div 
-            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto"
+            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
               width: orientation === "landscape" 
@@ -983,7 +983,12 @@ function ReportPreviewGrid({
                 : (paperSize === "F4" ? "330mm" : "297mm"),
             }}
           >
-            <div>
+            {/* Watermark Background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0">
+              <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
+            </div>
+
+            <div className="relative z-10 flex flex-col justify-between h-full">
               {/* Title */}
               <div className="text-center mb-6">
                 <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK MEETING</h2>
@@ -1147,7 +1152,7 @@ function ReportPreviewGrid({
 
         <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div 
-            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto"
+            className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
               width: orientation === "landscape" 
@@ -1158,7 +1163,12 @@ function ReportPreviewGrid({
                 : (paperSize === "F4" ? "330mm" : "297mm"),
             }}
           >
-            <div>
+            {/* Watermark Background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0">
+              <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
+            </div>
+
+            <div className="relative z-10 flex flex-col justify-between h-full">
               {/* Title */}
               <div className="text-center mb-6">
                 <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK KEGIATAN HARIAN</h2>

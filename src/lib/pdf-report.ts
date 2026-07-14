@@ -6,6 +6,54 @@ import { id as idLocale } from "date-fns/locale";
 import { TASK_STATUS_LABEL, TASK_PRIORITY_LABEL } from "@/lib/tasks";
 import { formatDuration } from "@/lib/tracker";
 
+async function addWatermarkToAllPages(doc: jsPDF, watermarkUrl: string) {
+  try {
+    const response = await fetch(watermarkUrl);
+    const blob = await response.blob();
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = reader.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0);
+    const base64Png = canvas.toDataURL("image/png");
+
+    const pageCount = doc.internal.getNumberOfPages();
+    const imgAspect = img.height / img.width;
+
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+
+      const w = pageW * 0.5;
+      const h = w * imgAspect;
+      const x = (pageW - w) / 2;
+      const y = (pageH - h) / 2;
+
+      doc.saveGraphicsState();
+      const gState = new (doc as any).GState({ opacity: 0.07 });
+      doc.setGState(gState);
+      doc.addImage(base64Png, "PNG", x, y, w, h);
+      doc.restoreGraphicsState();
+    }
+  } catch (err) {
+    console.error("Failed to add watermark to PDF:", err);
+  }
+}
+
 export interface ReportInput {
   title: string;
   periodStart: string; // ISO date
@@ -59,7 +107,7 @@ export async function generateReportPdf(
   const employeePosition = data.position || "Staf";
 
   if (input.reportType === "meeting") {
-    return generateMeetingPdf(
+    return await generateMeetingPdf(
       input,
       data.tasks,
       employeePosition,
@@ -69,7 +117,7 @@ export async function generateReportPdf(
       cfg?.pdfFooterText || "",
     );
   } else if (input.reportType === "harian") {
-    return generateHarianPdf(
+    return await generateHarianPdf(
       input,
       data.logs,
       employeePosition,
@@ -212,11 +260,12 @@ export async function generateReportPdf(
     });
   }
 
+  await addWatermarkToAllPages(doc, "/watermark.webp");
   return doc.output("blob");
 }
 
 // ponytail: Mengubah desain PDF Log Book Meeting agar persis dengan template Excel yang diminta (split header, kotak info, tandatangan, dan abu-abu)
-function generateMeetingPdf(
+async function generateMeetingPdf(
   input: ReportInput,
   tasks: any[],
   position: string,
@@ -224,7 +273,7 @@ function generateMeetingPdf(
   orientation: "portrait" | "landscape",
   marginMm: number,
   footerText: string,
-): Blob {
+): Promise<Blob> {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -408,11 +457,12 @@ function generateMeetingPdf(
     });
   }
 
+  await addWatermarkToAllPages(doc, "/watermark.webp");
   return doc.output("blob");
 }
 
 // ponytail: Mengubah desain PDF Log Book Harian agar persis dengan template Excel yang diminta (split header status, kotak info, tandatangan, dan abu-abu)
-function generateHarianPdf(
+async function generateHarianPdf(
   input: ReportInput,
   logs: any[],
   position: string,
@@ -420,7 +470,7 @@ function generateHarianPdf(
   orientation: "portrait" | "landscape",
   marginMm: number,
   footerText: string,
-): Blob {
+): Promise<Blob> {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -617,5 +667,6 @@ function generateHarianPdf(
     });
   }
 
+  await addWatermarkToAllPages(doc, "/watermark.webp");
   return doc.output("blob");
 }
