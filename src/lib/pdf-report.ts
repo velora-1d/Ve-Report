@@ -335,9 +335,9 @@ async function generateMeetingPdf(
 
   // Subheading
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(51, 65, 85); // Slate 700
-  doc.text("A. DAFTAR PENUGASAN / HASIL MEETING", marginMm, metadataY + 20);
+  doc.setFontSize(9.5);
+  doc.setTextColor(0, 119, 182); // Brand color #0077B6
+  doc.text("DAFTAR PENUGASAN / HASIL MEETING", marginMm, metadataY + 20);
   doc.setTextColor(0, 0, 0); // reset color
 
   // Table
@@ -581,9 +581,9 @@ async function generateHarianPdf(
 
   // Subheading
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(51, 65, 85); // Slate 700
-  doc.text("A. DAFTAR KEGIATAN HARIAN", marginMm, metadataY + 20);
+  doc.setFontSize(9.5);
+  doc.setTextColor(0, 119, 182); // Brand color #0077B6
+  doc.text("DAFTAR KEGIATAN HARIAN", marginMm, metadataY + 20);
   doc.setTextColor(0, 0, 0); // reset color
 
   // Table

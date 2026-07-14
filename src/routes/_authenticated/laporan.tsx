@@ -1061,8 +1061,8 @@ function ReportPreviewGrid({
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-slate-700 uppercase tracking-wide">
-                A. DAFTAR PENUGASAN / HASIL MEETING
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide">
+                DAFTAR PENUGASAN / HASIL MEETING
               </div>
 
               {/* Table */}
@@ -1242,8 +1242,8 @@ function ReportPreviewGrid({
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-slate-700 uppercase tracking-wide">
-                A. DAFTAR KEGIATAN HARIAN
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide">
+                DAFTAR KEGIATAN HARIAN
               </div>
 
               {/* Table */}
