@@ -219,7 +219,7 @@ function AuthPage() {
           <Card className="border border-slate-100 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.04)] rounded-3xl overflow-hidden">
             <CardContent className="p-6">
               <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid grid-cols-2 w-full bg-slate-100 p-1 rounded-2xl border-none">
+                <TabsList className="grid grid-cols-2 w-full bg-slate-100 p-1 rounded-2xl border-none h-auto">
                   <TabsTrigger value="login" className="rounded-xl py-2.5 font-bold text-xs tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none">
                     MASUK
                   </TabsTrigger>
