@@ -167,7 +167,7 @@ function AppSidebar() {
 
   const roles = user?.roles ?? [];
   const canAdmin = isAdminOrDev(roles);
-  const canDev = isDeveloper(roles);
+  const canDev = user?.originalRole === "developer";
 
   const isActive = (to: string) =>
     location.pathname === to || location.pathname.startsWith(to + "/");
