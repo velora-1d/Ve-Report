@@ -247,6 +247,27 @@ function LaporanPage() {
     queryFn: () => getReportsHistory(),
   });
 
+  // ponytail: Mengambil data pratinjau grid laporan secara real-time (reactive) setiap kali filter berubah
+  const targetUser =
+    !canFilterUser || userId === "me"
+      ? me?.id
+      : userId === "all"
+        ? null
+        : userId;
+
+  const { data: previewData, isLoading: previewLoading } = useQuery({
+    queryKey: ["report-preview", start, end, targetUser, reportType],
+    enabled: !!me && !!start && !!end && !((reportType === "meeting" || reportType === "harian") && !targetUser),
+    queryFn: () =>
+      getReportData({
+        data: {
+          periodStart: start,
+          periodEnd: end,
+          userId: targetUser,
+        },
+      }),
+  });
+
   const generate = useMutation({
     mutationFn: async (fileFormat: "pdf" | "excel") => {
       if (!me) throw new Error("Belum masuk");
@@ -471,6 +492,13 @@ function LaporanPage() {
         </CardContent>
       </Card>
 
+      {/* ponytail: Render pratinjau grid laporan secara live/real-time */}
+      <ReportPreviewGrid
+        reportType={reportType}
+        data={previewData}
+        isLoading={previewLoading}
+      />
+
       <Card className="surface-card border-0">
         <CardHeader>
           <CardTitle className="text-base">Riwayat Laporan</CardTitle>
@@ -513,4 +541,194 @@ function LaporanPage() {
       </Card>
     </div>
   );
+}
+
+// ponytail: Komponen pratinjau grid laporan secara live/real-time untuk melihat struktur data sebelum diekspor
+function ReportPreviewGrid({
+  reportType,
+  data,
+  isLoading,
+}: {
+  reportType: "standard" | "meeting" | "harian";
+  data: any;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <Card className="surface-card border-0 p-6">
+        <div className="space-y-3">
+          <div className="h-5 w-48 bg-muted animate-pulse rounded" />
+          <div className="h-[200px] w-full bg-muted/60 animate-pulse rounded" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Card className="surface-card border-0 p-6 text-center text-muted-foreground">
+        Masukkan periode dan filter pengguna untuk memuat pratinjau.
+      </Card>
+    );
+  }
+
+  // Pratinjau Kinerja Standar
+  if (reportType === "standard") {
+    const total = data.tasks?.length ?? 0;
+    const done = data.tasks?.filter((t: any) => t.status === "done").length ?? 0;
+    const inProg = data.tasks?.filter((t: any) => t.status === "in_progress").length ?? 0;
+    const todo = data.tasks?.filter((t: any) => t.status === "todo").length ?? 0;
+
+    return (
+      <Card className="surface-card border-0 p-6 space-y-4">
+        <h3 className="font-semibold text-base">Pratinjau Laporan Kinerja (Standar)</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="p-3 bg-muted rounded-lg text-center">
+            <div className="text-2xl font-bold">{total}</div>
+            <div className="text-xs text-muted-foreground">Total Tugas</div>
+          </div>
+          <div className="p-3 bg-muted rounded-lg text-center">
+            <div className="text-2xl font-bold text-success">{done}</div>
+            <div className="text-xs text-muted-foreground">Selesai</div>
+          </div>
+          <div className="p-3 bg-muted rounded-lg text-center">
+            <div className="text-2xl font-bold text-primary">{inProg}</div>
+            <div className="text-xs text-muted-foreground">Sedang Berjalan</div>
+          </div>
+          <div className="p-3 bg-muted rounded-lg text-center">
+            <div className="text-2xl font-bold text-warning">{todo}</div>
+            <div className="text-xs text-muted-foreground">Belum Mulai</div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // Pratinjau Log Book Meeting
+  if (reportType === "meeting") {
+    const tasks = data.tasks ?? [];
+    return (
+      <Card className="surface-card border-0 p-6 space-y-4 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="font-bold text-base">Pratinjau Live: LOG BOOK MEETING</h3>
+          <span className="text-xs text-muted-foreground font-mono">
+            {tasks.length} Baris Ditemukan
+          </span>
+        </div>
+
+        <div className="border border-slate-300 rounded-lg overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Hari / Tanggal</th>
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Uraian Tugas</th>
+                <th colSpan={2} className="p-2 border-b border-r border-slate-300 text-center">Pemberi Tugas</th>
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Target Selesai</th>
+                <th rowSpan={2} className="p-2.5 text-center align-middle">Out Put</th>
+              </tr>
+              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
+                <th className="p-1.5 border-r border-slate-300 text-center">Atasan</th>
+                <th className="p-1.5 border-r border-slate-300 text-center">Meeting</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                    Tidak ada data tugas meeting pada periode ini.
+                  </td>
+                </tr>
+              ) : (
+                tasks.map((t: any) => {
+                  const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                  const descStr = [t.title, t.description].filter(Boolean).join(" - ");
+                  const sourceLower = (t.taskSource ?? "").toLowerCase();
+                  const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
+                  const targetStr = t.dueDate ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale }) : "—";
+                  const outputStr = t.outputDescription ?? "—";
+
+                  return (
+                    <tr key={t.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="p-2 border-r border-slate-200 text-black font-medium">{dayDateStr}</td>
+                      <td className="p-2 border-r border-slate-200 whitespace-pre-line text-black">{descStr}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{!isMeeting ? "✓" : ""}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{isMeeting ? "✓" : ""}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-black">{targetStr}</td>
+                      <td className="p-2 text-black">{outputStr}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    );
+  }
+
+  // Pratinjau Log Book Harian
+  if (reportType === "harian") {
+    const logs = data.logs ?? [];
+    return (
+      <Card className="surface-card border-0 p-6 space-y-4 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="font-bold text-base">Pratinjau Live: LOG BOOK KEGIATAN HARIAN</h3>
+          <span className="text-xs text-muted-foreground font-mono">
+            {logs.length} Baris Ditemukan
+          </span>
+        </div>
+
+        <div className="border border-slate-300 rounded-lg overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Hari / Tanggal</th>
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Jam</th>
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Implementasi Kegiatan</th>
+                <th colSpan={2} className="p-2 border-b border-r border-slate-300 text-center">Status</th>
+                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Validasi Atasan</th>
+                <th rowSpan={2} className="p-2.5 text-center align-middle">Keterangan</th>
+              </tr>
+              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
+                <th className="p-1.5 border-r border-slate-300 text-center">On Progres</th>
+                <th className="p-1.5 border-r border-slate-300 text-center">Selesai</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-4 text-center text-muted-foreground">
+                    Tidak ada data log harian pada periode ini.
+                  </td>
+                </tr>
+              ) : (
+                logs.map((l: any) => {
+                  const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                  const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+                  const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
+                  const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
+                  const validatedStr = l.isValidated ? "✓" : "";
+                  const remarksStr = l.remarks ?? "—";
+
+                  return (
+                    <tr key={l.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="p-2 border-r border-slate-200 text-black font-medium">{dayDateStr}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-black">{timeStr}</td>
+                      <td className="p-2 border-r border-slate-200 whitespace-pre-line text-black">{activityStr}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{!isDone ? "✓" : ""}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{isDone ? "✓" : ""}</td>
+                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{validatedStr}</td>
+                      <td className="p-2 text-black">{remarksStr}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    );
+  }
+
+  return null;
 }
