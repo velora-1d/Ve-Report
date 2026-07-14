@@ -11,6 +11,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/db";
 import { tasks as tasksTable, users as usersTable, schedules as schedulesTable } from "@/db/schema";
 import { eq, desc, and, gte, lt, ne, inArray, or } from "drizzle-orm";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 // ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee)
 export const getTasksList = createServerFn({ method: "GET" }).handler(async () => {
@@ -124,6 +125,27 @@ export const saveTask = createServerFn({ method: "POST" })
         ...payload,
         createdBy: session.user.id,
       });
+
+      // ponytail: Ambil nama penerima tugas jika ada
+      let assigneeName = "";
+      if (data.assignedTo && data.assignedTo !== "__none__") {
+        const u = await db.query.users.findFirst({
+          where: eq(usersTable.id, data.assignedTo),
+          columns: { name: true }
+        });
+        if (u?.name) assigneeName = u.name;
+      }
+
+      // ponytail: Kirim notifikasi instan ke grup/channel Telegram
+      await sendTelegramNotification(
+        `📋 *Log Book Meeting Baru*\n\n` +
+        `• *Judul*: ${data.title}\n` +
+        `• *Sifat*: ${data.priority.toUpperCase()}\n` +
+        `• *Sumber*: ${data.taskSource || "atasan"}\n` +
+        (assigneeName ? `• *Penerima*: ${assigneeName}\n` : "") +
+        `• *Batas Waktu*: ${data.dueDate || "-"}\n` +
+        `• *Deskripsi*: ${data.description || "-"}`
+      );
     }
   });
 

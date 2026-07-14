@@ -25,6 +25,7 @@ import { generateReportPdf } from "@/lib/pdf-report";
 import { generateReportExcel } from "@/lib/excel-report";
 import { todayISO } from "@/lib/tracker";
 import { uploadToRustFS } from "@/lib/storage";
+import { sendTelegramNotification } from "@/lib/telegram";
 import {
   Card,
   CardContent,
@@ -102,6 +103,14 @@ const saveReportRecord = createServerFn({ method: "POST" })
       generatedBy: session.user.id,
       filterUserId: data.filterUserId || null,
     });
+
+    // ponytail: Kirim notifikasi instan ke grup/channel Telegram
+    await sendTelegramNotification(
+      `📄 *Laporan Baru Diterbitkan*\n\n` +
+      `• *Judul*: ${data.title}\n` +
+      `• *Periode*: ${data.periodStart} s/d ${data.periodEnd}\n` +
+      `• *Dibuat Oleh*: ${session.user.name || session.user.email}`
+    );
   });
 
 // ponytail: Fungsi server untuk mengambil semua data yang dibutuhkan laporan (tugas, log, config, position) sekaligus

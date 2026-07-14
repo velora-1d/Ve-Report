@@ -22,6 +22,7 @@ import { db } from "@/db";
 import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable } from "@/db/schema";
 import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { sendTelegramNotification } from "@/lib/telegram";
 import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,26 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       await db.update(logsTable).set(payload).where(eq(logsTable.id, data.id));
     } else {
       await db.insert(logsTable).values(payload);
+
+      // ponytail: Ambil judul tugas terkait jika ada untuk mempercantik notifikasi
+      let taskTitle = "";
+      if (data.taskId) {
+        const t = await db.query.tasks.findFirst({
+          where: eq(tasksTable.id, data.taskId),
+          columns: { title: true }
+        });
+        if (t?.title) taskTitle = t.title;
+      }
+
+      // ponytail: Kirim notifikasi instan ke grup/channel Telegram
+      await sendTelegramNotification(
+        `🕒 *Log Book Harian Baru*\n\n` +
+        `• *Oleh*: ${session.user.name || session.user.email}\n` +
+        `• *Tanggal*: ${data.loggedDate}\n` +
+        `• *Durasi*: ${data.durationMinutes} menit (${data.startTime || "08:00"} - ${data.endTime || "17:00"})\n` +
+        (taskTitle ? `• *Tugas*: ${taskTitle}\n` : "") +
+        `• *Catatan*: ${data.note || "-"}`
+      );
     }
   });
 
