@@ -17,6 +17,7 @@ import {
   ClipboardList,
   FileBarChart,
   BadgeCheck,
+  User,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -321,7 +322,9 @@ function AppSidebar() {
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[#0077B6] dark:text-[#48CAE4] text-[11px] font-bold">{initials}</span>
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
+                  <User className="w-3.5 h-3.5" />
+                </div>
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -356,7 +359,9 @@ function AppSidebar() {
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[#0077B6] dark:text-[#48CAE4] text-[11px] font-bold">{initials}</span>
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
+                  <User className="w-3.5 h-3.5" />
+                </div>
               )}
             </div>
             <Button

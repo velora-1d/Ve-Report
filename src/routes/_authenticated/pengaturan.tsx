@@ -29,7 +29,7 @@ import { db } from "@/db";
 import { users as usersTable, accounts as accountsTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
-import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock, User } from "lucide-react";
 import { uploadToRustFS } from "@/lib/storage";
 
 // ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
@@ -276,7 +276,9 @@ function ProfileForm() {
               {avatar ? (
                 <img src={avatar} alt={name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-primary text-xl font-bold">{initials || "?"}</span>
+                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
+                  <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                </div>
               )}
             </div>
             <div className="space-y-1">
