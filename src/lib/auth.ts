@@ -20,7 +20,10 @@ function getTrustedOrigins(): string[] {
   if (origins) {
     return origins.split(",").map((o) => o.trim());
   }
-  return [getBaseURL()];
+  const baseUrl = getBaseURL();
+  const httpVariant = baseUrl.replace(/^https:/i, "http:");
+  const httpsVariant = baseUrl.replace(/^http:/i, "https:");
+  return Array.from(new Set([baseUrl, httpVariant, httpsVariant]));
 }
 
 export const auth = betterAuth({
