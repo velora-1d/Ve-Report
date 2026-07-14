@@ -8,14 +8,23 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
 import { tasks as tasksTable, users as usersTable, schedules as schedulesTable } from "@/db/schema";
-import { eq, desc, and, gte, lt, ne, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, lt, ne, inArray, or } from "drizzle-orm";
 
 // ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee)
 export const getTasksList = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession();
   if (!session || !session.user) throw new Error("Unauthorized");
 
+  const role = session.user.role || "staff";
+  const whereClause = role === "staff"
+    ? or(
+        eq(tasksTable.assignedTo, session.user.id),
+        eq(tasksTable.createdBy, session.user.id)
+      )
+    : undefined;
+
   return db.query.tasks.findMany({
+    where: whereClause,
     with: {
       assignee: {
         columns: {
@@ -62,6 +71,7 @@ export const saveTask = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
 
     const payload = {
       title: data.title,
@@ -69,13 +79,21 @@ export const saveTask = createServerFn({ method: "POST" })
       status: data.status,
       priority: data.priority,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
-      assignedTo: data.assignedTo === "__none__" || !data.assignedTo ? null : data.assignedTo,
+      assignedTo: role === "staff"
+        ? session.user.id
+        : (data.assignedTo === "__none__" || !data.assignedTo ? null : data.assignedTo),
       taskSource: data.taskSource || "atasan",
       outputDescription: data.outputDescription || null,
       updatedAt: new Date(),
     };
 
     if (data.id) {
+      if (role === "staff") {
+        const existing = await db.query.tasks.findFirst({
+          where: and(eq(tasksTable.id, data.id), eq(tasksTable.createdBy, session.user.id)),
+        });
+        if (!existing) throw new Error("Forbidden");
+      }
       await db.update(tasksTable).set(payload).where(eq(tasksTable.id, data.id));
     } else {
       await db.insert(tasksTable).values({
@@ -92,7 +110,15 @@ export const deleteTask = createServerFn({ method: "POST" })
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
     const role = session.user.role || "staff";
-    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    if (role === "staff") {
+      const task = await db.query.tasks.findFirst({
+        where: and(eq(tasksTable.id, id), eq(tasksTable.createdBy, session.user.id)),
+      });
+      if (!task) throw new Error("Forbidden");
+    } else if (role !== "admin" && role !== "developer") {
+      throw new Error("Forbidden");
+    }
 
     await db.delete(tasksTable).where(eq(tasksTable.id, id));
   });

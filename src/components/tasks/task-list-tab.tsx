@@ -146,16 +146,14 @@ export function TaskListTab() {
               </SelectContent>
             </Select>
           </div>
-          {canManage && (
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" /> Tambah Log Meeting
-            </Button>
-          )}
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="size-4" /> Tambah Log Meeting
+          </Button>
         </div>
       </Card>
 
@@ -180,7 +178,7 @@ export function TaskListTab() {
                 <TableHead>Target Selesai</TableHead>
                 <TableHead>Out Put</TableHead>
                 <TableHead>Status</TableHead>
-                {canManage && <TableHead className="text-right">Aksi</TableHead>}
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,6 +230,7 @@ export function TaskListTab() {
                           status: v as TaskStatus,
                         })
                       }
+                      disabled={!(isAdminOrDev(user?.roles ?? []) || t.assignedTo === user?.id || t.createdBy === user?.id)}
                     >
                       <SelectTrigger className="h-8 w-32 border-0 bg-transparent p-0 shadow-none focus:ring-0">
                         <StatusBadge status={t.status as any} />
@@ -245,29 +244,31 @@ export function TaskListTab() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditing(t);
-                            setFormOpen(true);
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeletingId(t.id)}
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {(isAdminOrDev(user?.roles ?? []) || t.createdBy === user?.id) && (
+                        <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditing(t);
+                              setFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeletingId(t.id)}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

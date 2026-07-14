@@ -18,8 +18,9 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
 import { trackerLogs as logsTable, tasks as tasksTable } from "@/db/schema";
-import { eq, desc, and, gte, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { isAdminOrDev } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -44,19 +45,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrackerFormDialog } from "@/components/tracker/tracker-form-dialog";
 import { formatDuration, todayISO } from "@/lib/tracker";
 
-// ponytail: Fungsi server untuk mengambil log pelacak milik user saat ini
+// ponytail: Fungsi server untuk mengambil log pelacak milik user saat ini / semua user (jika admin)
 export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession();
   if (!session || !session.user) throw new Error("Unauthorized");
 
+  const role = session.user.role || "staff";
+  const whereClause = role === "staff"
+    ? eq(logsTable.userId, session.user.id)
+    : undefined;
+
   const logs = await db.query.trackerLogs.findMany({
-    where: eq(logsTable.userId, session.user.id),
+    where: whereClause,
     with: {
       task: {
         columns: {
           id: true,
           title: true,
           status: true,
+        }
+      },
+      user: {
+        columns: {
+          id: true,
+          name: true,
         }
       }
     },
@@ -72,8 +84,16 @@ export const getAssignableTasks = createServerFn({ method: "GET" }).handler(asyn
   const session = await getSession();
   if (!session || !session.user) throw new Error("Unauthorized");
 
+  const role = session.user.role || "staff";
+  const whereClause = role === "staff"
+    ? and(
+        inArray(tasksTable.status, ["todo", "in_progress", "review"]),
+        eq(tasksTable.assignedTo, session.user.id)
+      )
+    : inArray(tasksTable.status, ["todo", "in_progress", "review"]);
+
   const tasksList = await db.query.tasks.findMany({
-    where: inArray(tasksTable.status, ["todo", "in_progress", "review"]),
+    where: whereClause,
     columns: {
       id: true,
       title: true,
@@ -90,12 +110,13 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id: z.string().optional(),
-      taskId: z.string(),
+      taskId: z.string().nullable().optional(),
       loggedDate: z.string(),
       durationMinutes: z.number(),
       note: z.string().nullable().optional(),
       startTime: z.string().optional(),
       endTime: z.string().optional(),
+      status: z.string().optional(),
       remarks: z.string().nullable().optional(),
     })
   )
@@ -104,13 +125,14 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
     if (!session || !session.user) throw new Error("Unauthorized");
 
     const payload = {
-      taskId: data.taskId,
+      taskId: data.taskId || null,
       userId: session.user.id,
       loggedDate: data.loggedDate,
       durationMinutes: data.durationMinutes,
       note: data.note || null,
       startTime: data.startTime || "08:00",
       endTime: data.endTime || "17:00",
+      status: data.status || "progress",
       remarks: data.remarks || null,
     };
 
@@ -130,6 +152,29 @@ export const deleteTrackerLog = createServerFn({ method: "POST" })
 
     await db.delete(logsTable)
       .where(and(eq(logsTable.id, id), eq(logsTable.userId, session.user.id)));
+  });
+
+// ponytail: Fungsi server untuk memvalidasi/menyetujui log harian oleh atasan/admin
+export const validateTrackerLog = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string(),
+      isValidated: z.boolean(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    await db.update(logsTable)
+      .set({
+        isValidated: data.isValidated,
+        validatedBy: data.isValidated ? session.user.id : null,
+      })
+      .where(eq(logsTable.id, data.id));
   });
 
 export const Route = createFileRoute("/_authenticated/pelacak")({
@@ -177,8 +222,8 @@ function PelacakPage() {
       totalMin += m;
       if (l.loggedDate === today) todayMin += m;
       if (l.loggedDate >= weekStartISO) weekMin += m;
-      const key = l.task?.id ?? l.taskId;
-      const title = l.task?.title ?? "(Tugas dihapus)";
+      const key = l.task?.id ?? l.taskId ?? "manual";
+      const title = l.note ?? l.task?.title ?? "Aktivitas Manual";
       const cur = perTask.get(key);
       perTask.set(key, { title, mins: (cur?.mins ?? 0) + m });
     }
@@ -203,6 +248,18 @@ function PelacakPage() {
       toast.error("Gagal menghapus", { description: e.message }),
   });
 
+  const validateMutation = useMutation({
+    mutationFn: (v: { id: string; isValidated: boolean }) =>
+      validateTrackerLog({ data: v }),
+    onSuccess: () => {
+      toast.success("Status validasi diperbarui");
+      qc.invalidateQueries({ queryKey: ["tracker-logs"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (e: Error) =>
+      toast.error("Gagal memvalidasi", { description: e.message }),
+  });
+
   const stats = [
     {
       label: "Hari Ini",
@@ -223,6 +280,8 @@ function PelacakPage() {
       tone: "text-success",
     },
   ];
+
+  const showStaffName = isAdminOrDev(user?.roles ?? []);
 
   return (
     <div className="w-full space-y-6">
@@ -288,6 +347,7 @@ function PelacakPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Hari / Tanggal</TableHead>
+                      {showStaffName && <TableHead>Nama Staff</TableHead>}
                       <TableHead>Jam</TableHead>
                       <TableHead>Implementasi Kegiatan</TableHead>
                       <TableHead>Status</TableHead>
@@ -299,13 +359,12 @@ function PelacakPage() {
                   <TableBody>
                     {(logs ?? []).map((l) => {
                       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-                      const activityStr = [l.task?.title, l.note]
-                        .filter(Boolean)
-                        .join(" - ");
-                      const isDone = l.task?.status === "done";
+                      const activityStr = l.note || l.task?.title || "—";
+                      const isDone = l.status === "done";
                       const statusStr = isDone ? "Selesai" : "On Progres";
                       const validatedStr = l.isValidated ? "Disetujui" : "Belum";
                       const remarksStr = l.remarks ?? "—";
+                      const canEditOrDeleteLog = !l.isValidated || isAdminOrDev(user?.roles ?? []);
 
                       return (
                         <TableRow key={l.id}>
@@ -314,11 +373,21 @@ function PelacakPage() {
                               locale: idLocale,
                             }) : "—"}
                           </TableCell>
+                          {showStaffName && (
+                            <TableCell className="text-sm font-semibold text-slate-700">
+                              {l.user?.name ?? "—"}
+                            </TableCell>
+                          )}
                           <TableCell className="text-sm font-medium">
                             {timeStr}
                           </TableCell>
                           <TableCell className="text-sm text-slate-800 font-medium">
                             {activityStr || "—"}
+                            {l.task?.title && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                Tugas: {l.task.title}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-sky-50 text-sky-700 border border-sky-200'}`}>
@@ -326,34 +395,51 @@ function PelacakPage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-sm">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500'}`}>
-                              {validatedStr}
-                            </span>
+                            {isAdminOrDev(user?.roles ?? []) ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`px-2 py-0.5 h-auto text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                onClick={() => validateMutation.mutate({ id: l.id, isValidated: !l.isValidated })}
+                              >
+                                {validatedStr}
+                              </Button>
+                            ) : (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500'}`}>
+                                {validatedStr}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {remarksStr}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  setEditing(l);
-                                  setFormOpen(true);
-                                }}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => setDeletingId(l.id)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                              {canEditOrDeleteLog ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => {
+                                      setEditing(l);
+                                      setFormOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    onClick={() => setDeletingId(l.id)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-muted-foreground px-2 py-1">Terkunci</span>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

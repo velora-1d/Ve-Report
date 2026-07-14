@@ -41,19 +41,36 @@ export function TrackerFormDialog({
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
 
-  const [taskId, setTaskId] = useState<string>("");
   const [date, setDate] = useState<string>(todayISO());
   const [hours, setHours] = useState<string>("0");
   const [minutes, setMinutes] = useState<string>("30");
   const [note, setNote] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("08:00");
   const [endTime, setEndTime] = useState<string>("17:00");
-  const [remarks, setRemarks] = useState<string>("");
+  const [status, setStatus] = useState<string>("progress"); // 'progress' | 'done'
+  const [remarks, setRemarks] = useState<string>("—");
+  const [taskId, setTaskId] = useState<string>("__none__");
+
+  const { data: tasksList } = useQuery({
+    queryKey: ["assignable-tasks", user?.id],
+    queryFn: () => getAssignableTasks(),
+    enabled: open && !!user,
+    staleTime: 60_000,
+  });
+
+  const handleTaskChange = (val: string) => {
+    setTaskId(val);
+    if (val !== "__none__" && !note.trim()) {
+      const selected = tasksList?.find((t) => t.id === val);
+      if (selected) {
+        setNote(selected.title);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
     if (editing) {
-      setTaskId(editing.taskId);
       setDate(editing.loggedDate);
       const total = editing.durationMinutes ?? 0;
       setHours(String(Math.floor(total / 60)));
@@ -61,29 +78,26 @@ export function TrackerFormDialog({
       setNote(editing.note ?? "");
       setStartTime(editing.startTime ?? "08:00");
       setEndTime(editing.endTime ?? "17:00");
-      setRemarks(editing.remarks ?? "");
+      setStatus(editing.status ?? "progress");
+      setRemarks(editing.remarks ?? "—");
+      setTaskId(editing.taskId ?? "__none__");
     } else {
-      setTaskId(defaultTaskId ?? "");
       setDate(todayISO());
       setHours("0");
       setMinutes("30");
       setNote("");
       setStartTime("08:00");
       setEndTime("17:00");
-      setRemarks("");
+      setStatus("progress");
+      setRemarks("—");
+      setTaskId(defaultTaskId ?? "__none__");
     }
   }, [open, editing, defaultTaskId]);
-
-  const { data: tasks } = useQuery({
-    queryKey: ["tasks", "assignable", user?.id],
-    enabled: open && !!user?.id,
-    queryFn: () => getAssignableTasks(),
-  });
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Belum masuk");
-      if (!taskId) throw new Error("Pilih tugas terlebih dulu");
+      if (!note.trim()) throw new Error("Implementasi Kegiatan tidak boleh kosong");
       const totalMin =
         (parseInt(hours || "0", 10) || 0) * 60 +
         (parseInt(minutes || "0", 10) || 0);
@@ -92,12 +106,13 @@ export function TrackerFormDialog({
       await saveTrackerLog({
         data: {
           id: editing?.id,
-          taskId,
+          taskId: taskId === "__none__" ? null : taskId,
           loggedDate: date,
           durationMinutes: totalMin,
           note: note.trim() || null,
           startTime,
           endTime,
+          status,
           remarks: remarks.trim() || null,
         }
       });
@@ -118,30 +133,38 @@ export function TrackerFormDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {editing ? "Ubah Log Pelacak" : "Catat Waktu"}
+            {editing ? "Ubah Log Harian" : "Tambah Log Harian"}
           </DialogTitle>
           <DialogDescription>
-            Catat berapa lama Anda mengerjakan sebuah tugas.
+            Catat detail implementasi kegiatan harian Anda.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Pilih Tugas / Log Rapat</Label>
-            <Select value={taskId} onValueChange={setTaskId}>
+            <Label>Hubungkan ke Tugas / Meeting (Opsional)</Label>
+            <Select value={taskId} onValueChange={handleTaskChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih tugas aktif" />
+                <SelectValue placeholder="Pilih tugas/meeting jika ada" />
               </SelectTrigger>
               <SelectContent>
-                {(tasks ?? []).map((t) => (
+                <SelectItem value="__none__">Aktivitas Manual (Tanpa Link Tugas)</SelectItem>
+                {tasksList?.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
-                    {t.title}
+                    {t.title} ({t.status})
                   </SelectItem>
                 ))}
-                {(!tasks || tasks.length === 0) && (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    Belum ada tugas aktif.
-                  </div>
-                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Status Kegiatan</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="progress">On Progres</SelectItem>
+                <SelectItem value="done">Selesai</SelectItem>
               </SelectContent>
             </Select>
           </div>

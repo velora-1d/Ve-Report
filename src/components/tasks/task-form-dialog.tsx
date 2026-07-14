@@ -30,6 +30,8 @@ import {
   type TaskStatus,
 } from "@/lib/tasks";
 import { getAssignableUsers, saveTask } from "@/routes/_authenticated/tugas";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { isAdminOrDev } from "@/lib/roles";
 
 interface Props {
   open: boolean;
@@ -45,7 +47,10 @@ export function TaskFormDialog({
   currentUserId,
 }: Props) {
   const qc = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
   const isEdit = !!task;
+
+  const canAssign = currentUser ? isAdminOrDev(currentUser.roles) : false;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -63,10 +68,10 @@ export function TaskFormDialog({
     setStatus(task?.status ?? "todo");
     setPriority(task?.priority ?? "medium");
     setDueDate(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
-    setAssignedTo(task?.assignedTo ?? "__none__");
+    setAssignedTo(task?.assignedTo ?? (canAssign ? "__none__" : currentUserId));
     setTaskSource(task?.taskSource ?? "atasan");
     setOutputDescription(task?.outputDescription ?? "");
-  }, [open, task]);
+  }, [open, task, canAssign, currentUserId]);
 
   const { data: users } = useQuery({
     queryKey: ["assignable-users"],
@@ -183,7 +188,7 @@ export function TaskFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Ditugaskan kepada</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <Select value={assignedTo} onValueChange={setAssignedTo} disabled={!canAssign}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih pengguna" />
                 </SelectTrigger>
