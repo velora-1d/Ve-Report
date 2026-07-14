@@ -29,7 +29,7 @@ import { db } from "@/db";
 import { users as usersTable, accounts as accountsTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
-import { Loader2, Eye, EyeOff, Lock, User } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock, User, Palette, FileText } from "lucide-react";
 import { uploadToRustFS } from "@/lib/storage";
 
 // ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
@@ -197,13 +197,33 @@ function PengaturanPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profil">
-        <TabsList>
-          <TabsTrigger value="profil">Profil Saya</TabsTrigger>
+      <Tabs defaultValue="profil" className="w-full">
+        <TabsList className="bg-slate-100/70 dark:bg-slate-900/60 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/60 gap-1 h-auto flex self-start w-fit">
+          <TabsTrigger
+            value="profil"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0077B6] data-[state=active]:to-[#0077B6]/90 data-[state=active]:text-white data-[state=active]:shadow-[0_4px_12px_rgba(0,119,182,0.2)] hover:bg-slate-200/40 dark:hover:bg-slate-850/40 cursor-pointer"
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Profil Saya</span>
+          </TabsTrigger>
           {canReadBranding && (
-            <TabsTrigger value="branding">Branding & Logo</TabsTrigger>
+            <TabsTrigger
+              value="branding"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0077B6] data-[state=active]:to-[#0077B6]/90 data-[state=active]:text-white data-[state=active]:shadow-[0_4px_12px_rgba(0,119,182,0.2)] hover:bg-slate-200/40 dark:hover:bg-slate-850/40 cursor-pointer"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>Branding & Logo</span>
+            </TabsTrigger>
           )}
-          {canReadPdf && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
+          {canReadPdf && (
+            <TabsTrigger
+              value="pdf"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0077B6] data-[state=active]:to-[#0077B6]/90 data-[state=active]:text-white data-[state=active]:shadow-[0_4px_12px_rgba(0,119,182,0.2)] hover:bg-slate-200/40 dark:hover:bg-slate-850/40 cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Konfigurasi PDF</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profil" className="mt-4 space-y-6">
