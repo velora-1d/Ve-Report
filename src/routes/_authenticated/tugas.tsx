@@ -215,7 +215,7 @@ export const Route = createFileRoute("/_authenticated/tugas")({
 
 function TugasPage() {
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
           Tugas & Jadwal

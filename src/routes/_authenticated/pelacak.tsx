@@ -224,7 +224,7 @@ function PelacakPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
