@@ -92,14 +92,13 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex bg-[#fafbfc] font-sans antialiased overflow-hidden relative">
-      {/* LEFT SIDE: Brand Showcase & Content (50% width on desktop, elements 30% larger, aligned 20% to the left) */}
-      <div className="hidden md:flex md:w-1/2 relative flex-col justify-between p-16 overflow-hidden bg-gradient-to-br from-[#0b0f19] via-[#111827] to-[#1e1b4b] text-white select-none border-r border-slate-800/10">
+      <div className="hidden md:flex md:w-1/2 relative flex-col justify-between py-16 pr-16 pl-[20%] overflow-hidden bg-gradient-to-br from-[#0b0f19] via-[#111827] to-[#1e1b4b] text-white select-none border-r border-slate-800/10">
         {/* Subtle decorative mesh grid */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff03_1.5px,transparent_1.5px)] [background-size:24px_24px] opacity-80"></div>
         <div className="absolute top-[-10%] right-[-10%] w-[80%] h-[80%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse duration-8000"></div>
 
         {/* Content Wrapper aligned centrally with larger max-width */}
-        <div className="relative flex flex-col justify-between h-full z-10 max-w-lg ml-[20%] mr-auto w-full">
+        <div className="relative flex flex-col justify-between h-full z-10 max-w-lg w-full">
           {/* Brand Header (30% larger) */}
           <div className="flex items-center gap-4.5">
             <div className="w-13 h-13 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
