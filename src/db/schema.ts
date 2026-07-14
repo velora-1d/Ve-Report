@@ -135,6 +135,7 @@ export const appConfig = pgTable("app_config", {
   id: uuid("id").primaryKey().defaultRandom(),
   logoUrl: text("logo_url"),
   appName: text("app_name").default("Log Book"), // ponytail: Menambahkan nama aplikasi dinamis
+  permissions: jsonb("permissions"), // ponytail: Kolom permissions RBAC Matrix dinamis
   pdfPaperSize: varchar("pdf_paper_size", { length: 20 }).default("A4"),
   pdfOrientation: varchar("pdf_orientation", { length: 20 }).default("portrait"),
   pdfHeaderText: text("pdf_header_text"),

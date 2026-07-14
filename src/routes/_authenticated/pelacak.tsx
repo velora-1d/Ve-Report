@@ -20,6 +20,7 @@ import { db } from "@/db";
 import { trackerLogs as logsTable, tasks as tasksTable } from "@/db/schema";
 import { eq, desc, and, gte, inArray, or } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,6 +194,7 @@ export const Route = createFileRoute("/_authenticated/pelacak")({
 
 function PelacakPage() {
   const { data: user } = useCurrentUser();
+  const { hasPermission } = usePermission();
   const qc = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
@@ -294,16 +296,18 @@ function PelacakPage() {
             Catat aktivitas kegiatan harian dan log pengerjaan tugas.
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-          className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 border border-primary/20"
-        >
-          <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
-          <span>Tambah Log Harian</span>
-        </Button>
+        {hasPermission("pelacak", "create") && (
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 border border-primary/20"
+          >
+            <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
+            <span>Tambah Log Harian</span>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -417,27 +421,31 @@ function PelacakPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              {canEditOrDeleteLog ? (
+                              {canEditOrDeleteLog && (hasPermission("pelacak", "update") || hasPermission("pelacak", "delete")) ? (
                                 <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                      setEditing(l);
-                                      setFormOpen(true);
-                                    }}
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={() => setDeletingId(l.id)}
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
+                                  {hasPermission("pelacak", "update") && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                        setEditing(l);
+                                        setFormOpen(true);
+                                      }}
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                  {hasPermission("pelacak", "delete") && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={() => setDeletingId(l.id)}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
                                 </>
                               ) : (
                                 <span className="text-xs text-muted-foreground px-2 py-1">Terkunci</span>

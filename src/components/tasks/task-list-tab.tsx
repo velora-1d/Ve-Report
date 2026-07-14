@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ import { getTasksList, updateTaskStatus, deleteTask } from "@/routes/_authentica
 
 export function TaskListTab() {
   const { data: user } = useCurrentUser();
+  const { hasPermission } = usePermission();
   const qc = useQueryClient();
   const canManage = user ? isAdminOrDev(user.roles) : false;
 
@@ -146,16 +148,18 @@ export function TaskListTab() {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 border border-primary/20"
-          >
-            <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
-            <span>Tambah Log Meeting</span>
-          </Button>
+          {hasPermission("tugas", "create") && (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 border border-primary/20"
+            >
+              <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
+              <span>Tambah Log Meeting</span>
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -248,23 +252,27 @@ export function TaskListTab() {
                     <div className="flex justify-end gap-1">
                       {(isAdminOrDev(user?.roles ?? []) || t.createdBy === user?.id) && (
                         <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditing(t);
-                              setFormOpen(true);
-                            }}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setDeletingId(t.id)}
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
+                          {hasPermission("tugas", "update") && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditing(t);
+                                setFormOpen(true);
+                              }}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                          {hasPermission("tugas", "delete") && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setDeletingId(t.id)}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>

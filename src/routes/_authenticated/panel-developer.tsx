@@ -45,6 +45,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getAppConfig, saveAppConfig } from "@/lib/app-config";
+import { ShieldAlert } from "lucide-react";
 
 type LogLevel = "info" | "warning" | "error" | "critical";
 
@@ -198,6 +201,8 @@ function PanelDeveloperPage() {
       </div>
 
       <TelegramConfigCard />
+
+      <RbacMatrixCard />
 
       <Card className="surface-card border-0">
         <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -358,6 +363,217 @@ function TelegramConfigCard() {
           </Button>
           <Button onClick={save}>
             Simpan
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RbacMatrixCard() {
+  const qc = useQueryClient();
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+
+  const [permissions, setPermissions] = useState<any>({
+    admin: {
+      menus: ["dasbor", "tugas", "pelacak", "laporan", "manajemen-pengguna", "pengaturan"],
+      actions: {
+        tugas: ["create", "read", "update", "delete"],
+        pelacak: ["create", "read", "update", "delete"],
+        laporan: ["create", "read", "update", "delete"],
+        pengguna: ["create", "read", "update", "delete"]
+      }
+    },
+    staff: {
+      menus: ["dasbor", "tugas", "pelacak", "laporan", "pengaturan"],
+      actions: {
+        tugas: ["create", "read", "update"],
+        pelacak: ["create", "read", "update"],
+        laporan: ["create", "read"],
+        pengguna: []
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (config?.permissions) {
+      setPermissions(config.permissions);
+    }
+  }, [config]);
+
+  const save = useMutation({
+    mutationFn: (nextPermissions: any) =>
+      saveAppConfig({
+        data: {
+          id: config?.id,
+          permissions: nextPermissions,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("RBAC Matrix berhasil disimpan");
+      qc.invalidateQueries({ queryKey: ["app-config"] });
+    },
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan RBAC Matrix", { description: e.message }),
+  });
+
+  const toggleMenu = (role: string, menuKey: string) => {
+    const current = permissions[role]?.menus || [];
+    const nextMenus = current.includes(menuKey)
+      ? current.filter((m: string) => m !== menuKey)
+      : [...current, menuKey];
+
+    setPermissions({
+      ...permissions,
+      [role]: {
+        ...permissions[role],
+        menus: nextMenus,
+      },
+    });
+  };
+
+  const toggleAction = (role: string, moduleKey: string, actionKey: string) => {
+    const currentActions = permissions[role]?.actions?.[moduleKey] || [];
+    const nextActions = currentActions.includes(actionKey)
+      ? currentActions.filter((a: string) => a !== actionKey)
+      : [...currentActions, actionKey];
+
+    setPermissions({
+      ...permissions,
+      [role]: {
+        ...permissions[role],
+        actions: {
+          ...(permissions[role]?.actions || {}),
+          [moduleKey]: nextActions,
+        },
+      },
+    });
+  };
+
+  if (isLoading) return <Skeleton className="h-48 w-full" />;
+
+  const AVAILABLE_MENUS = [
+    { key: "dasbor", label: "Dasbor" },
+    { key: "tugas", label: "Log Book Meeting" },
+    { key: "pelacak", label: "Log Book Harian" },
+    { key: "laporan", label: "Laporan" },
+    { key: "manajemen-pengguna", label: "Pengguna" },
+    { key: "pengaturan", label: "Pengaturan" },
+  ];
+
+  const MODULES = [
+    { key: "tugas", label: "Log Book Meeting (Tugas)" },
+    { key: "pelacak", label: "Log Book Harian (Tracker)" },
+    { key: "laporan", label: "Laporan" },
+    { key: "pengguna", label: "Pengguna" },
+  ];
+
+  const ACTIONS = [
+    { key: "create", label: "Create" },
+    { key: "read", label: "Read" },
+    { key: "update", label: "Update" },
+    { key: "delete", label: "Delete" },
+  ];
+
+  const renderRoleSection = (role: "admin" | "staff", title: string) => {
+    const rolePermissions = permissions[role] || { menus: [], actions: {} };
+
+    return (
+      <div className="space-y-6 bg-muted/15 p-4 rounded-xl border border-border/40">
+        <div>
+          <h4 className="font-bold text-sm text-foreground uppercase tracking-wider">{title}</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">Konfigurasi hak akses menu & tindakan CRUD.</p>
+        </div>
+
+        {/* Akses Menu */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-foreground">Akses Menu Halaman</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {AVAILABLE_MENUS.map((menu) => {
+              const isChecked = rolePermissions.menus.includes(menu.key);
+              return (
+                <label
+                  key={menu.key}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/60 hover:bg-muted/30 cursor-pointer transition-all select-none text-xs"
+                >
+                  <Checkbox
+                    id={`${role}-menu-${menu.key}`}
+                    checked={isChecked}
+                    onCheckedChange={() => toggleMenu(role, menu.key)}
+                  />
+                  <span className="font-medium text-foreground/80">{menu.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Akses CRUD Tindakan */}
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold text-foreground">Akses Tindakan CRUD Modul</Label>
+          <div className="overflow-x-auto rounded-lg border border-border/60">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border/60 text-muted-foreground font-semibold">
+                  <th className="p-3">Modul</th>
+                  {ACTIONS.map((act) => (
+                    <th key={act.key} className="p-3 text-center w-20">{act.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {MODULES.map((mod) => {
+                  const allowedActions = rolePermissions.actions?.[mod.key] || [];
+                  return (
+                    <tr key={mod.key} className="hover:bg-muted/10">
+                      <td className="p-3 font-semibold text-foreground/80">{mod.label}</td>
+                      {ACTIONS.map((act) => {
+                        const isChecked = allowedActions.includes(act.key);
+                        return (
+                          <td key={act.key} className="p-3 text-center">
+                            <div className="flex justify-center">
+                              <Checkbox
+                                id={`${role}-action-${mod.key}-${act.key}`}
+                                checked={isChecked}
+                                onCheckedChange={() => toggleAction(role, mod.key, act.key)}
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="surface-card border-0">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-primary" /> Matrix Hak Akses (RBAC)
+        </CardTitle>
+        <CardDescription>
+          Halaman kontrol khusus Developer untuk mengatur menu aktif dan tindakan CRUD tiap role pengguna.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {renderRoleSection("admin", "Admin Role")}
+          {renderRoleSection("staff", "Staff/User Biasa Role")}
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button onClick={() => save.mutate(permissions)} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Simpan Matrix Akses
           </Button>
         </div>
       </CardContent>

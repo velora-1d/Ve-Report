@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { generateReportExcel } from "@/lib/excel-report";
@@ -224,6 +225,7 @@ function firstOfMonthISO() {
 
 function LaporanPage() {
   const { data: me } = useCurrentUser();
+  const { hasPermission } = usePermission();
   const qc = useQueryClient();
   const canFilterUser = me ? isAdminOrDev(me.roles) : false;
 
@@ -711,7 +713,7 @@ function LaporanPage() {
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   onClick={() => generate.mutate("pdf")}
-                  disabled={generate.isPending}
+                  disabled={generate.isPending || !hasPermission("laporan", "create")}
                   className="w-full"
                 >
                   {generate.isPending ? (
@@ -727,7 +729,7 @@ function LaporanPage() {
                 <Button
                   variant="outline"
                   onClick={() => generate.mutate("excel")}
-                  disabled={generate.isPending}
+                  disabled={generate.isPending || !hasPermission("laporan", "create")}
                   className="w-full"
                 >
                   {generate.isPending ? (

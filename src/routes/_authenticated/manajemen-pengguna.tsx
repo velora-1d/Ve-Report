@@ -32,6 +32,7 @@ import { db } from "@/db";
 import { users as usersTable, accounts as accountsTable } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-permission";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -231,6 +232,7 @@ export const Route = createFileRoute("/_authenticated/manajemen-pengguna")({
 
 function ManajemenPage() {
   const { data: me } = useCurrentUser();
+  const { hasPermission } = usePermission();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
 
@@ -394,7 +396,7 @@ function ManajemenPage() {
                                   newRole: v as AppRole,
                                 })
                               }
-                              disabled={isMe}
+                              disabled={isMe || !hasPermission("pengguna", "update")}
                             >
                               <SelectTrigger className="h-8 w-32">
                                 <SelectValue />
@@ -416,7 +418,7 @@ function ManajemenPage() {
                                   active: checked,
                                 })
                               }
-                              disabled={isMe || isDev}
+                              disabled={isMe || isDev || !hasPermission("pengguna", "update")}
                             />
                             <span
                               className={`text-xs font-semibold ${
@@ -436,24 +438,28 @@ function ManajemenPage() {
                           <div className="flex justify-end gap-1.5">
                             {!isDev && !isMe ? (
                               <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                  onClick={() => handleOpenEdit(u)}
-                                  title="Edit Pengguna"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => setDeletingId(u.id)}
-                                  title="Hapus Pengguna"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                {hasPermission("pengguna", "update") && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                    onClick={() => handleOpenEdit(u)}
+                                    title="Edit Pengguna"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                                {hasPermission("pengguna", "delete") && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => setDeletingId(u.id)}
+                                    title="Hapus Pengguna"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
                               </>
                             ) : (
                               <span className="text-xs text-muted-foreground italic px-2">

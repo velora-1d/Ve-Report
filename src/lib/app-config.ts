@@ -20,6 +20,7 @@ export const saveAppConfig = createServerFn({ method: "POST" })
       id: z.string().optional(),
       logoUrl: z.string().nullable().optional(),
       appName: z.string().optional(),
+      permissions: z.record(z.any()).nullable().optional(),
       pdfPaperSize: z.string().optional(),
       pdfOrientation: z.string().optional(),
       pdfHeaderText: z.string().nullable().optional(),
@@ -35,6 +36,7 @@ export const saveAppConfig = createServerFn({ method: "POST" })
     const payload = {
       logoUrl: data.logoUrl || null,
       appName: data.appName || "Log Book",
+      permissions: data.permissions || null,
       pdfPaperSize: data.pdfPaperSize || "A4",
       pdfOrientation: data.pdfOrientation || "portrait",
       pdfHeaderText: data.pdfHeaderText || null,

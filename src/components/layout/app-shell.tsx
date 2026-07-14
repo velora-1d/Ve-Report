@@ -98,6 +98,26 @@ function AppSidebar() {
   });
   const appName = config?.appName || "Log Book";
   const logoUrl = config?.logoUrl || null;
+  const permissions = config?.permissions as any || null;
+
+  const isMenuAllowed = (to: string) => {
+    if (user?.role === "developer") return true;
+    const userRole = user?.role || "staff";
+
+    if (!permissions || !permissions[userRole]) {
+      if (to === "/manajemen-pengguna") return userRole === "admin";
+      if (to === "/panel-developer") return false;
+      return true;
+    }
+
+    const allowedMenus = permissions[userRole]?.menus || [];
+    const menuKey = to.replace(/^\//, "");
+    return allowedMenus.includes(menuKey);
+  };
+
+  const allowedMain = MAIN_NAV.filter((item) => isMenuAllowed(item.to));
+  const allowedAdmin = ADMIN_NAV.filter((item) => isMenuAllowed(item.to));
+  const allowedSettings = SETTINGS_NAV.filter((item) => isMenuAllowed(item.to));
 
   const roles = user?.roles ?? [];
   const canAdmin = isAdminOrDev(roles);
@@ -156,23 +176,25 @@ function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className={isCollapsed ? "px-1.5" : "px-3"}>
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-primary/40" />
-              Utama
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {MAIN_NAV.map((item) => (
-                <NavLink key={item.to} item={item} active={isActive(item.to)} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {allowedMain.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-primary/40" />
+                Utama
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {allowedMain.map((item) => (
+                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        {canAdmin && (
+        {allowedAdmin.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
               <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
@@ -182,7 +204,7 @@ function AppSidebar() {
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {ADMIN_NAV.map((item) => (
+                {allowedAdmin.map((item) => (
                   <NavLink
                     key={item.to}
                     item={item}
@@ -194,29 +216,31 @@ function AppSidebar() {
           </SidebarGroup>
         )}
 
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-primary/40" />
-              Pengaturan
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {SETTINGS_NAV.map((item) => (
-                <NavLink key={item.to} item={item} active={isActive(item.to)} />
-              ))}
-              {canDev &&
-                DEV_NAV.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    item={item}
-                    active={isActive(item.to)}
-                  />
+        {(allowedSettings.length > 0 || (canDev && DEV_NAV.length > 0)) && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-muted-foreground/50 uppercase px-3 py-2 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-primary/40" />
+                Pengaturan
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {allowedSettings.map((item) => (
+                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
                 ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                {canDev &&
+                  DEV_NAV.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      item={item}
+                      active={isActive(item.to)}
+                    />
+                  ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4"}>
