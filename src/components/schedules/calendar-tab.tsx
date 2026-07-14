@@ -292,30 +292,32 @@ function WeekView({
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   return (
     <Card className="surface-card overflow-hidden">
-      <div className="grid grid-cols-7 divide-x divide-border/60">
-        {days.map((d) => {
-          const key = format(d, "yyyy-MM-dd");
-          const items = byDate.get(key) ?? [];
-          return (
-            <div key={key} className="min-h-[220px] p-2 space-y-1.5">
-              <button
-                onClick={() => onNew(d)}
-                className={cn(
-                  "w-full text-left text-xs font-medium px-1 py-0.5 rounded transition hover:bg-muted",
-                  isToday(d) && "text-primary",
-                )}
-              >
-                <div className="capitalize text-muted-foreground text-[10px]">
-                  {format(d, "EEE", { locale: idLocale })}
-                </div>
-                <div className="text-sm">{format(d, "d")}</div>
-              </button>
-              {items.map((s) => (
-                <ScheduleItem key={s.id} s={s} onEdit={onEdit} compact />
-              ))}
-            </div>
-          );
-        })}
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px] grid grid-cols-7 divide-x divide-border/60">
+          {days.map((d) => {
+            const key = format(d, "yyyy-MM-dd");
+            const items = byDate.get(key) ?? [];
+            return (
+              <div key={key} className="min-h-[220px] p-2 space-y-1.5">
+                <button
+                  onClick={() => onNew(d)}
+                  className={cn(
+                    "w-full text-left text-xs font-medium px-1 py-0.5 rounded transition hover:bg-muted",
+                    isToday(d) && "text-primary",
+                  )}
+                >
+                  <div className="capitalize text-muted-foreground text-[10px]">
+                    {format(d, "EEE", { locale: idLocale })}
+                  </div>
+                  <div className="text-sm">{format(d, "d")}</div>
+                </button>
+                {items.map((s) => (
+                  <ScheduleItem key={s.id} s={s} onEdit={onEdit} compact />
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </Card>
   );
@@ -336,54 +338,57 @@ function MonthView({
   const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start, end });
   const weekdays = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-
   return (
     <Card className="surface-card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-xs font-medium text-muted-foreground">
-        {weekdays.map((w) => (
-          <div key={w} className="px-2 py-2 text-center">
-            {w}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {days.map((d, i) => {
-          const key = format(d, "yyyy-MM-dd");
-          const items = byDate.get(key) ?? [];
-          const outside = !isSameMonth(d, cursor);
-          return (
-            <div
-              key={key}
-              className={cn(
-                "min-h-[110px] border-b border-r border-border/40 p-1.5 space-y-1",
-                (i + 1) % 7 === 0 && "border-r-0",
-                outside && "bg-muted/20",
-              )}
-            >
-              <button
-                onClick={() => onNew(d)}
-                className={cn(
-                  "text-xs font-medium px-1.5 py-0.5 rounded transition hover:bg-muted",
-                  isToday(d) &&
-                    "bg-primary text-primary-foreground hover:bg-primary/90",
-                  outside && !isToday(d) && "text-muted-foreground",
-                )}
-              >
-                {format(d, "d")}
-              </button>
-              <div className="space-y-1">
-                {items.slice(0, 3).map((s) => (
-                  <ScheduleItem key={s.id} s={s} onEdit={onEdit} compact />
-                ))}
-                {items.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground px-1">
-                    +{items.length - 3} lainnya
-                  </div>
-                )}
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px]">
+          <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-xs font-medium text-muted-foreground">
+            {weekdays.map((w) => (
+              <div key={w} className="px-2 py-2 text-center">
+                {w}
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {days.map((d, i) => {
+              const key = format(d, "yyyy-MM-dd");
+              const items = byDate.get(key) ?? [];
+              const outside = !isSameMonth(d, cursor);
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "min-h-[110px] border-b border-r border-border/40 p-1.5 space-y-1",
+                    (i + 1) % 7 === 0 && "border-r-0",
+                    outside && "bg-muted/20",
+                  )}
+                >
+                  <button
+                    onClick={() => onNew(d)}
+                    className={cn(
+                      "text-xs font-medium px-1.5 py-0.5 rounded transition hover:bg-muted",
+                      isToday(d) &&
+                        "bg-primary text-primary-foreground hover:bg-primary/90",
+                      outside && !isToday(d) && "text-muted-foreground",
+                    )}
+                  >
+                    {format(d, "d")}
+                  </button>
+                  <div className="space-y-1">
+                    {items.slice(0, 3).map((s) => (
+                      <ScheduleItem key={s.id} s={s} onEdit={onEdit} compact />
+                    ))}
+                    {items.length > 3 && (
+                      <div className="text-[10px] text-muted-foreground px-1">
+                        +{items.length - 3} lainnya
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </Card>
   );

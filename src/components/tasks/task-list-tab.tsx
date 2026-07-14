@@ -175,112 +175,114 @@ export function TaskListTab() {
             Tidak ada log meeting yang cocok dengan filter Anda.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Hari / Tanggal</TableHead>
-                <TableHead>Uraian Tugas</TableHead>
-                <TableHead>Pemberi Tugas</TableHead>
-                <TableHead>Target Selesai</TableHead>
-                <TableHead>Out Put</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="text-sm">
-                    {format(new Date(t.createdAt), "EEEE, d MMM yyyy", {
-                      locale: idLocale,
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{t.title}</div>
-                    {t.description && (
-                      <div className="text-xs text-muted-foreground line-clamp-2">
-                        {t.description}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm font-semibold text-slate-800">
-                    {t.taskSource || "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {t.dueDate ? (
-                      <span className="inline-flex items-center gap-1">
-                        <CalendarDays className="size-3.5 text-muted-foreground" />
-                        {format(new Date(t.dueDate), "d MMM yyyy", {
-                          locale: idLocale,
-                        })}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {t.outputDescription ? (
-                      <span className="font-medium text-slate-800">{t.outputDescription}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={t.status}
-                      onValueChange={(v) =>
-                        statusMutation.mutate({
-                          id: t.id,
-                          status: v as TaskStatus,
-                        })
-                      }
-                      disabled={!(isAdminOrDev(user?.roles ?? []) || t.assignedTo === user?.id || t.createdBy === user?.id)}
-                    >
-                      <SelectTrigger className="h-8 w-32 border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                        <StatusBadge status={t.status as any} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASK_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {TASK_STATUS_LABEL[s]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {(isAdminOrDev(user?.roles ?? []) || t.createdBy === user?.id) && (
-                        <>
-                          {hasPermission("tugas", "update") && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditing(t);
-                                setFormOpen(true);
-                              }}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
-                          {hasPermission("tugas", "delete") && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => setDeletingId(t.id)}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hari / Tanggal</TableHead>
+                  <TableHead>Uraian Tugas</TableHead>
+                  <TableHead>Pemberi Tugas</TableHead>
+                  <TableHead>Target Selesai</TableHead>
+                  <TableHead>Out Put</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="text-sm">
+                      {format(new Date(t.createdAt), "EEEE, d MMM yyyy", {
+                        locale: idLocale,
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{t.title}</div>
+                      {t.description && (
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {t.description}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm font-semibold text-slate-800">
+                      {t.taskSource || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {t.dueDate ? (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarDays className="size-3.5 text-muted-foreground" />
+                          {format(new Date(t.dueDate), "d MMM yyyy", {
+                            locale: idLocale,
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {t.outputDescription ? (
+                        <span className="font-medium text-slate-800">{t.outputDescription}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={t.status}
+                        onValueChange={(v) =>
+                          statusMutation.mutate({
+                            id: t.id,
+                            status: v as TaskStatus,
+                          })
+                        }
+                        disabled={!(isAdminOrDev(user?.roles ?? []) || t.assignedTo === user?.id || t.createdBy === user?.id)}
+                      >
+                        <SelectTrigger className="h-8 w-32 border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                          <StatusBadge status={t.status as any} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TASK_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {TASK_STATUS_LABEL[s]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {(isAdminOrDev(user?.roles ?? []) || t.createdBy === user?.id) && (
+                          <>
+                            {hasPermission("tugas", "update") && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditing(t);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                            )}
+                            {hasPermission("tugas", "delete") && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setDeletingId(t.id)}
+                              >
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
 
