@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "b651e6e6-65c4-482a-bd0b-d54c4c077844",
+  "id": "fff37088-da63-41a9-bf29-f0aff475daeb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -133,11 +133,11 @@
         },
         "app_name": {
           "name": "app_name",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "('Log Book')"
+          "default": "'Log Book'"
         },
         "permissions": {
           "name": "permissions",

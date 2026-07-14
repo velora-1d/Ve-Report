@@ -16,7 +16,7 @@ CREATE TABLE `account` (
 CREATE TABLE `app_config` (
 	`id` varchar(36) NOT NULL,
 	`logo_url` text,
-	`app_name` text DEFAULT ('Log Book'),
+	`app_name` varchar(255) DEFAULT 'Log Book',
 	`permissions` json,
 	`pdf_paper_size` varchar(20) DEFAULT 'A4',
 	`pdf_orientation` varchar(20) DEFAULT 'portrait',

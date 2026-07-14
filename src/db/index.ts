@@ -13,6 +13,9 @@ const globalQueryClient = globalThis as unknown as {
 if (!globalQueryClient.queryClient) {
   globalQueryClient.queryClient = mysql.createPool({
     uri: connectionString,
+    ssl: {
+      rejectUnauthorized: true,
+    },
     waitForConnections: true,
     connectionLimit: 10,
     maxIdle: 10,

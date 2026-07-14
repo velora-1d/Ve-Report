@@ -134,7 +134,7 @@ export const reports = mysqlTable("reports", {
 export const appConfig = mysqlTable("app_config", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   logoUrl: text("logo_url"),
-  appName: text("app_name").default("Log Book"), // ponytail: Menambahkan nama aplikasi dinamis
+  appName: varchar("app_name", { length: 255 }).default("Log Book"), // ponytail: Menambahkan nama aplikasi dinamis
   permissions: json("permissions"), // ponytail: Kolom permissions RBAC Matrix dinamis
   pdfPaperSize: varchar("pdf_paper_size", { length: 20 }).default("A4"),
   pdfOrientation: varchar("pdf_orientation", { length: 20 }).default("portrait"),
