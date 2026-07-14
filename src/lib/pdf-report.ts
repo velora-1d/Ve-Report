@@ -192,6 +192,7 @@ export async function generateReportPdf(
   return doc.output("blob");
 }
 
+// ponytail: Mengubah desain PDF Log Book Meeting agar persis dengan template Excel yang diminta (split header, kotak info, tandatangan, dan abu-abu)
 function generateMeetingPdf(
   input: ReportInput,
   tasks: any[],
@@ -213,53 +214,70 @@ function generateMeetingPdf(
   doc.setFont("helvetica", "bold");
   doc.text("LOG BOOK MEETING", pageW / 2, marginMm + 5, { align: "center" });
 
-  // 2. Metadata Info
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
+  // 2. Metadata Info Box
   const metadataY = marginMm + 15;
-  doc.text(
-    `Nama               : ${input.generatedByName}`,
-    marginMm,
-    metadataY,
-  );
-  doc.text(`Divisi               : ${position}`, marginMm, metadataY + 5);
-  doc.text(
-    `Bulan/Tahun    : ${monthName} ${yearName}`,
-    marginMm,
-    metadataY + 10,
-  );
+  const boxW = pageW - (marginMm * 2);
+  doc.rect(marginMm, metadataY - 3, boxW, 18);
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Nama", marginMm + 3, metadataY + 2);
+  doc.text("Divisi", marginMm + 3, metadataY + 7);
+  doc.text("Bulan dan Tahun", marginMm + 3, metadataY + 12);
+  
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${input.generatedByName}`, marginMm + 35, metadataY + 2);
+  doc.text(`: ${position}`, marginMm + 35, metadataY + 7);
+  doc.text(`: ${monthName} ${yearName}`, marginMm + 35, metadataY + 12);
 
   // Subheading
   doc.setFont("helvetica", "bold");
-  doc.text("PENUGASAN ATASAN/HASIL MEETING/.......", marginMm, metadataY + 18);
+  doc.text("PENUGASAN ATASAN/HASIL MEETING/.......", marginMm, metadataY + 20);
 
   // Table
   autoTable(doc, {
-    startY: metadataY + 22,
+    startY: metadataY + 24,
     head: [
       [
-        "Hari / Tanggal",
-        "Uraian Tugas",
-        "Pemberi Tugas",
-        "Target Selesai",
-        "Out Put",
+        { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Uraian Tugas", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Pemberi Tugas", colSpan: 2, styles: { halign: "center" } },
+        { content: "Target Selesai", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Out Put", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
       ],
+      [
+        { content: "Atasan", styles: { halign: "center" } },
+        { content: "Meeting", styles: { halign: "center" } },
+      ]
     ],
     body: (tasks ?? []).map((t) => {
       const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", {
         locale: idLocale,
       });
       const descStr = [t.title, t.description].filter(Boolean).join("\n");
-      const sourceStr = t.taskSource === "meeting" ? "Meeting" : "Atasan";
+      
+      const sourceLower = (t.taskSource ?? "").toLowerCase();
+      const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
+      const atasanCheck = !isMeeting ? "✓" : "";
+      const meetingCheck = isMeeting ? "✓" : "";
+
       const targetStr = t.dueDate
         ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
         : "—";
       const outputStr = t.outputDescription ?? "—";
-      return [dayDateStr, descStr, sourceStr, targetStr, outputStr];
+      return [dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
     }),
     theme: "grid",
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 8.5 },
+    headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    columnStyles: {
+      0: { cellWidth: 35 },
+      1: { cellWidth: "auto" },
+      2: { cellWidth: 20, halign: "center" },
+      3: { cellWidth: 20, halign: "center" },
+      4: { cellWidth: 30, halign: "center" },
+      5: { cellWidth: 30 },
+    },
     margin: { left: marginMm, right: marginMm },
   });
 
@@ -283,11 +301,11 @@ function generateMeetingPdf(
     sigY,
   );
 
-  doc.text("Yang Membuat", marginMm, sigY + 8);
-  doc.text("Yang Mengetahui", pageW - marginMm - 40, sigY + 8);
+  doc.text("Yang Membuat", marginMm, sigY + 6);
+  doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
 
-  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 30);
-  doc.text("( Atasan / Supervisor )", pageW - marginMm - 40, sigY + 30);
+  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 28);
+  doc.text("( .................................... )", pageW - marginMm - 50, sigY + 28);
 
   // Global page numbers
   const pages = doc.getNumberOfPages();
@@ -304,6 +322,7 @@ function generateMeetingPdf(
   return doc.output("blob");
 }
 
+// ponytail: Mengubah desain PDF Log Book Harian agar persis dengan template Excel yang diminta (split header status, kotak info, tandatangan, dan abu-abu)
 function generateHarianPdf(
   input: ReportInput,
   logs: any[],
@@ -327,30 +346,43 @@ function generateHarianPdf(
     align: "center",
   });
 
-  // 2. Metadata Info
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
+  // 2. Metadata Info Box
   const metadataY = marginMm + 15;
-  doc.text(`Nama    : ${input.generatedByName}`, marginMm, metadataY);
-  doc.text(`Divisi    : ${position}`, marginMm, metadataY + 5);
-  doc.text(
-    `Bulan    : ${monthName}                       Tahun: ${yearName}`,
-    marginMm,
-    metadataY + 10,
-  );
+  const boxW = pageW - (marginMm * 2);
+  doc.rect(marginMm, metadataY - 3, boxW, 18);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Nama", marginMm + 3, metadataY + 2);
+  doc.text("Divisi", marginMm + 3, metadataY + 7);
+  doc.text("Bulan", marginMm + 3, metadataY + 12);
+  
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${input.generatedByName}`, marginMm + 35, metadataY + 2);
+  doc.text(`: ${position}`, marginMm + 35, metadataY + 7);
+  doc.text(`: ${monthName}`, marginMm + 35, metadataY + 12);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Tahun", marginMm + 100, metadataY + 12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`: ${yearName}`, marginMm + 115, metadataY + 12);
 
   // Table
   autoTable(doc, {
-    startY: metadataY + 18,
+    startY: metadataY + 20,
     head: [
       [
-        "Hari / Tanggal",
-        "Jam",
-        "Implementasi Kegiatan",
-        "Status",
-        "Validasi Atasan",
-        "Keterangan",
+        { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Jam", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Implementasi Kegiatan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Status", colSpan: 2, styles: { halign: "center" } },
+        { content: "Validasi Atasan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        { content: "Keterangan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
       ],
+      [
+        { content: "On Progres", styles: { halign: "center" } },
+        { content: "Selesai", styles: { halign: "center" } },
+      ]
     ],
     body: (logs ?? []).map((l) => {
       const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", {
@@ -358,21 +390,43 @@ function generateHarianPdf(
       });
       const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
       const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
-      const statusStr = l.task?.status === "done" ? "Selesai" : "On Progres";
-      const validatedStr = l.isValidated ? "Disetujui" : "Belum";
+      
+      const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
+      const onProgresCheck = !isDone ? "✓" : "";
+      const selesaiCheck = isDone ? "✓" : "";
+      
+      const validatedStr = l.isValidated ? "✓" : "";
       const remarksStr = l.remarks ?? "—";
       return [
         dayDateStr,
         timeStr,
         activityStr,
-        statusStr,
+        onProgresCheck,
+        selesaiCheck,
         validatedStr,
         remarksStr,
       ];
-    }),
+    }).map((row) => [
+      row[0],
+      row[1],
+      row[2],
+      row[3],
+      row[4] === undefined ? "" : row[4], // make sure no undefined value is passed
+      row[5],
+      row[6],
+    ]),
     theme: "grid",
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
-    bodyStyles: { fontSize: 8.5 },
+    headStyles: { fillColor: [218, 222, 229], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 9, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    bodyStyles: { fontSize: 8.5, lineColor: [180, 180, 180], lineWidth: 0.1 },
+    columnStyles: {
+      0: { cellWidth: 35 },
+      1: { cellWidth: 25, halign: "center" },
+      2: { cellWidth: "auto" },
+      3: { cellWidth: 20, halign: "center" },
+      4: { cellWidth: 20, halign: "center" },
+      5: { cellWidth: 20, halign: "center" },
+      6: { cellWidth: 25 },
+    },
     margin: { left: marginMm, right: marginMm },
   });
 
@@ -396,11 +450,11 @@ function generateHarianPdf(
     sigY,
   );
 
-  doc.text("Yang Membuat", marginMm, sigY + 8);
-  doc.text("Yang Mengetahui", pageW - marginMm - 40, sigY + 8);
+  doc.text("Yang Membuat", marginMm, sigY + 6);
+  doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
 
-  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 30);
-  doc.text("( Atasan / Supervisor )", pageW - marginMm - 40, sigY + 30);
+  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 28);
+  doc.text("( .................................... )", pageW - marginMm - 50, sigY + 28);
 
   // Global page numbers
   const pages = doc.getNumberOfPages();
