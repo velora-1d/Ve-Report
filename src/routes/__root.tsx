@@ -110,6 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         { property: "og:image", content: "/og-image.png" },
         { name: "twitter:image", content: "/og-image.png" },
+        { name: "apple-mobile-web-app-title", content: "Velora" },
       ],
       links: [
         {
@@ -120,7 +121,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           rel: "stylesheet",
           href: appCss,
         },
-        { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+        { rel: "icon", type: "image/png", href: "/favicon-96x96.png", sizes: "96x96" },
+        { rel: "shortcut icon", href: "/favicon.ico" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+        { rel: "manifest", href: "/site.webmanifest" },
       ],
     }),
     shellComponent: RootShell,
