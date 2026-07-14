@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -246,45 +247,33 @@ function ManajemenPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={u.isActive ? "default" : "secondary"}
-                            className={
-                              u.isActive ? "bg-success/15 text-success" : ""
-                            }
-                          >
-                            {u.isActive ? "Aktif" : "Nonaktif"}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={u.isActive}
+                              onCheckedChange={(checked) =>
+                                toggleActive.mutate({
+                                  id: u.id,
+                                  active: checked,
+                                })
+                              }
+                              disabled={isMe || isDev}
+                            />
+                            <span
+                              className={`text-xs font-semibold ${
+                                u.isActive ? "text-success" : "text-muted-foreground"
+                              }`}
+                            >
+                              {u.isActive ? "Aktif" : "Nonaktif"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {u.createdAt ? format(new Date(u.createdAt), "d MMM yyyy", {
                             locale: idLocale,
                           }) : "—"}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {!isDev && !isMe && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                toggleActive.mutate({
-                                  id: u.id,
-                                  active: !u.isActive,
-                                })
-                              }
-                            >
-                              {u.isActive ? (
-                                <>
-                                  <ShieldOff className="w-3.5 h-3.5 mr-1" />{" "}
-                                  Nonaktifkan
-                                </>
-                              ) : (
-                                <>
-                                  <Shield className="w-3.5 h-3.5 mr-1" />{" "}
-                                  Aktifkan
-                                </>
-                              )}
-                            </Button>
-                          )}
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {isMe ? "Akun Anda" : isDev ? "Sistem Developer" : "Bisa Dikelola"}
                         </TableCell>
                       </TableRow>
                     );
