@@ -112,9 +112,11 @@ export function BrandingForm() {
                       reader.onloadend = async () => {
                         try {
                           const res = await uploadToRustFS({
-                            base64Data: reader.result as string,
-                            fileName: file.name,
-                            contentType: file.type || "image/png",
+                            data: {
+                              base64Data: reader.result as string,
+                              fileName: file.name,
+                              contentType: file.type || "image/png",
+                            }
                           });
                           if (res?.url) {
                             setLogoUrl(res.url);
