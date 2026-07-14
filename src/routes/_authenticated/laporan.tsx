@@ -24,6 +24,7 @@ import { isAdminOrDev } from "@/lib/roles";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { generateReportExcel } from "@/lib/excel-report";
 import { todayISO } from "@/lib/tracker";
+import { uploadToRustFS } from "@/lib/storage";
 import {
   Card,
   CardContent,
@@ -254,12 +255,29 @@ function LaporanPage() {
   const [checkerSigOffsetX, setCheckerSigOffsetX] = useState<number>(0);
   const [checkerSigOffsetY, setCheckerSigOffsetY] = useState<number>(0);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
+  const [isUploadingSig, setIsUploadingSig] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsUploadingSig(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setter(reader.result as string);
+      reader.onloadend = async () => {
+        try {
+          const res = await uploadToRustFS({
+            base64Data: reader.result as string,
+            fileName: file.name,
+            contentType: file.type || "image/png",
+          });
+          if (res?.url) {
+            setter(res.url);
+            toast.success("Tanda tangan berhasil di-upload ke S3");
+          }
+        } catch (err: any) {
+          toast.error(err.message || "Gagal mengupload tanda tangan ke S3");
+        } finally {
+          setIsUploadingSig(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -625,12 +643,21 @@ function LaporanPage() {
                           </div>
                         </div>
                       ) : (
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, setMakerSigImg)}
-                          className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                        />
+                        <div className="space-y-1.5">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, setMakerSigImg)}
+                            disabled={isUploadingSig}
+                            className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                          />
+                          {isUploadingSig && (
+                            <span className="text-[10px] text-[#0077B6] flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin text-[#0077B6]" />
+                              Mengupload ke S3...
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -703,12 +730,21 @@ function LaporanPage() {
                           </div>
                         </div>
                       ) : (
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, setCheckerSigImg)}
-                          className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                        />
+                        <div className="space-y-1.5">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, setCheckerSigImg)}
+                            disabled={isUploadingSig}
+                            className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                          />
+                          {isUploadingSig && (
+                            <span className="text-[10px] text-[#0077B6] flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin text-[#0077B6]" />
+                              Mengupload ke S3...
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

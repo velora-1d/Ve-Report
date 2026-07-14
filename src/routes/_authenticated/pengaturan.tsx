@@ -30,6 +30,7 @@ import { users as usersTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
 import { Loader2 } from "lucide-react";
+import { uploadToRustFS } from "@/lib/storage";
 
 // ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
 const updateProfile = createServerFn({ method: "POST" })
@@ -132,6 +133,7 @@ function ProfileForm() {
   const [position, setPosition] = useState(user?.position ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl ?? null);
+  const [isUploading, setIsUploading] = useState(false);
 
   if (!user) return null;
 
@@ -184,13 +186,29 @@ function ProfileForm() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      setIsUploading(true);
                       const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setAvatar(reader.result as string);
+                      reader.onloadend = async () => {
+                        try {
+                          const res = await uploadToRustFS({
+                            base64Data: reader.result as string,
+                            fileName: file.name,
+                            contentType: file.type || "image/png",
+                          });
+                          if (res?.url) {
+                            setAvatar(res.url);
+                            toast.success("Foto profil berhasil di-upload ke S3");
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || "Gagal mengupload foto profil ke S3");
+                        } finally {
+                          setIsUploading(false);
+                        }
                       };
                       reader.readAsDataURL(file);
                     }
                   }}
+                  disabled={isUploading}
                   className="h-8 text-[11px] w-full max-w-[200px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
                 />
                 {avatar && (
@@ -200,6 +218,7 @@ function ProfileForm() {
                     size="sm"
                     onClick={() => setAvatar(null)}
                     className="h-8 text-xs text-destructive hover:text-destructive/90"
+                    disabled={isUploading}
                   >
                     Hapus
                   </Button>
@@ -254,9 +273,9 @@ function ProfileForm() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={save.isPending}>
+            <Button type="submit" disabled={save.isPending || isUploading}>
               {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Simpan Perubahan
+              {isUploading ? "Mengupload..." : "Simpan Perubahan"}
             </Button>
           </div>
         </form>

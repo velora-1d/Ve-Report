@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { getAppConfig, saveAppConfig } from "@/lib/app-config";
 import { usePermission } from "@/hooks/use-permission";
+import { uploadToRustFS } from "@/lib/storage";
 
 export function BrandingForm() {
   const qc = useQueryClient();
@@ -34,6 +35,7 @@ export function BrandingForm() {
   });
   const [logoUrl, setLogoUrl] = useState("");
   const [appName, setAppName] = useState("Log Book");
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -105,15 +107,30 @@ export function BrandingForm() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      setIsUploading(true);
                       const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setLogoUrl(reader.result as string);
+                      reader.onloadend = async () => {
+                        try {
+                          const res = await uploadToRustFS({
+                            base64Data: reader.result as string,
+                            fileName: file.name,
+                            contentType: file.type || "image/png",
+                          });
+                          if (res?.url) {
+                            setLogoUrl(res.url);
+                            toast.success("Logo berhasil di-upload ke S3");
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || "Gagal mengupload logo ke S3");
+                        } finally {
+                          setIsUploading(false);
+                        }
                       };
                       reader.readAsDataURL(file);
                     }
                   }}
                   className="max-w-[200px]"
-                  disabled={!canUpdate}
+                  disabled={!canUpdate || isUploading}
                 />
                 {logoUrl && canUpdate && (
                   <Button
@@ -121,6 +138,7 @@ export function BrandingForm() {
                     size="sm"
                     onClick={() => setLogoUrl("")}
                     className="text-destructive border-destructive hover:bg-destructive/10"
+                    disabled={isUploading}
                   >
                     Hapus
                   </Button>
@@ -134,11 +152,11 @@ export function BrandingForm() {
         </div>
         <div className="flex justify-end pt-2">
           {canUpdate && (
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button onClick={() => save.mutate()} disabled={save.isPending || isUploading}>
               {save.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
-              Simpan
+              {isUploading ? "Mengupload..." : "Simpan Perubahan"}
             </Button>
           )}
         </div>
