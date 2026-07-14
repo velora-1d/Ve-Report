@@ -1,0 +1,187 @@
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { todayISO, type TrackerLogRow } from "@/lib/tracker";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing?: TrackerLogRow | null;
+  defaultTaskId?: string | null;
+}
+
+export function TrackerFormDialog({ open, onOpenChange, editing, defaultTaskId }: Props) {
+  const { data: user } = useCurrentUser();
+  const qc = useQueryClient();
+
+  const [taskId, setTaskId] = useState<string>("");
+  const [date, setDate] = useState<string>(todayISO());
+  const [hours, setHours] = useState<string>("0");
+  const [minutes, setMinutes] = useState<string>("30");
+  const [note, setNote] = useState<string>("");
+
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setTaskId(editing.task_id);
+      setDate(editing.logged_date);
+      const total = editing.duration_minutes ?? 0;
+      setHours(String(Math.floor(total / 60)));
+      setMinutes(String(total % 60));
+      setNote(editing.note ?? "");
+    } else {
+      setTaskId(defaultTaskId ?? "");
+      setDate(todayISO());
+      setHours("0");
+      setMinutes("30");
+      setNote("");
+    }
+  }, [open, editing, defaultTaskId]);
+
+  const { data: tasks } = useQuery({
+    queryKey: ["tasks", "assignable", user?.id],
+    enabled: open && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id,title,status")
+        .in("status", ["todo", "in_progress", "review"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Belum masuk");
+      if (!taskId) throw new Error("Pilih tugas terlebih dulu");
+      const totalMin = (parseInt(hours || "0", 10) || 0) * 60 + (parseInt(minutes || "0", 10) || 0);
+      if (totalMin <= 0) throw new Error("Durasi harus lebih dari 0 menit");
+      const payload = {
+        task_id: taskId,
+        user_id: user.id,
+        logged_date: date,
+        duration_minutes: totalMin,
+        note: note.trim() || null,
+      };
+      if (editing) {
+        const { error } = await supabase
+          .from("tracker_logs")
+          .update(payload)
+          .eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("tracker_logs").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(editing ? "Log diperbarui" : "Log tersimpan");
+      qc.invalidateQueries({ queryKey: ["tracker-logs"] });
+      qc.invalidateQueries({ queryKey: ["tracker-summary"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Ubah Log Pelacak" : "Catat Waktu"}</DialogTitle>
+          <DialogDescription>
+            Catat berapa lama Anda mengerjakan sebuah tugas.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Tugas</Label>
+            <Select value={taskId} onValueChange={setTaskId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih tugas aktif" />
+              </SelectTrigger>
+              <SelectContent>
+                {(tasks ?? []).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.title}
+                  </SelectItem>
+                ))}
+                {(!tasks || tasks.length === 0) && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    Belum ada tugas aktif.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Tanggal</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Jam</Label>
+              <Input
+                type="number"
+                min={0}
+                max={24}
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Menit</Label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Catatan (opsional)</Label>
+            <Textarea
+              rows={3}
+              placeholder="Apa yang dikerjakan?"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            {mutation.isPending ? "Menyimpan…" : "Simpan"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
