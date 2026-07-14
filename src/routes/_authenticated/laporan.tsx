@@ -1,11 +1,17 @@
+// ponytail: Mengganti query Supabase client-side untuk laporan dengan Server Functions Drizzle ORM
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { FileText, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { getSession } from "@/lib/session";
+import { db } from "@/db";
+import { reports as reportsTable, users as usersTable } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
 import { generateReportPdf } from "@/lib/pdf-report";
@@ -30,6 +36,66 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// ponytail: Fungsi server untuk mengambil daftar nama pengguna sederhana (untuk filter)
+const getSimpleUsers = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+  const role = session.user.role || "staff";
+  if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+  return db.query.users.findMany({
+    columns: {
+      id: true,
+      name: true,
+    },
+    orderBy: [desc(usersTable.name)],
+  });
+});
+
+// ponytail: Fungsi server untuk mengambil riwayat laporan terbit
+const getReportsHistory = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+  const role = session.user.role || "staff";
+  const canFilterUser = role === "admin" || role === "developer";
+
+  if (canFilterUser) {
+    return db.query.reports.findMany({
+      orderBy: [desc(reportsTable.createdAt)],
+      limit: 20,
+    });
+  } else {
+    return db.query.reports.findMany({
+      where: eq(reportsTable.generatedBy, session.user.id),
+      orderBy: [desc(reportsTable.createdAt)],
+      limit: 20,
+    });
+  }
+});
+
+// ponytail: Fungsi server untuk menyimpan log pembuatan laporan baru
+const saveReportRecord = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      title: z.string(),
+      periodStart: z.string(),
+      periodEnd: z.string(),
+      filterUserId: z.string().nullable().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    await db.insert(reportsTable).values({
+      title: data.title,
+      periodStart: data.periodStart,
+      periodEnd: data.periodEnd,
+      generatedBy: session.user.id,
+      filterUserId: data.filterUserId || null,
+    });
+  });
+
 export const Route = createFileRoute("/_authenticated/laporan")({
   head: () => ({
     meta: [
@@ -48,7 +114,6 @@ function firstOfMonthISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
-// ponytail: gunakan import todayISO dari @/lib/tracker untuk mereduksi boilerplate redundant (YAGNI/Optimasi Baris)
 
 function LaporanPage() {
   const { data: me } = useCurrentUser();
@@ -66,30 +131,13 @@ function LaporanPage() {
   const { data: users } = useQuery({
     queryKey: ["users-simple"],
     enabled: canFilterUser,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,name")
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getSimpleUsers(),
   });
 
   const { data: history, isLoading: histLoading } = useQuery({
     queryKey: ["reports-history", me?.id, canFilterUser],
     enabled: !!me?.id,
-    queryFn: async () => {
-      let q = supabase
-        .from("reports")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (!canFilterUser) q = q.eq("generated_by", me!.id);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getReportsHistory(),
   });
 
   const generate = useMutation({
@@ -132,7 +180,7 @@ function LaporanPage() {
         extension = "pdf";
       }
 
-      // Trigger download
+      // Unduh file secara client-side
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -142,20 +190,15 @@ function LaporanPage() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      // Save record
-      const { error } = await supabase.from("reports").insert({
-        title: title.trim(),
-        period_start: start,
-        period_end: end,
-        generated_by: me.id,
-        filter_user_id: targetUser,
-        filters: {
-          user_filter: userId,
-          report_type: reportType,
-          file_format: fileFormat,
-        },
+      // Simpan log pembuatan laporan ke database
+      await saveReportRecord({
+        data: {
+          title: title.trim(),
+          periodStart: start,
+          periodEnd: end,
+          filterUserId: targetUser,
+        }
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Laporan berhasil dibuat");
@@ -313,17 +356,17 @@ function LaporanPage() {
                       {r.title}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {format(new Date(r.period_start), "d MMM yyyy", {
+                      {r.periodStart ? format(new Date(r.periodStart), "d MMM yyyy", {
                         locale: idLocale,
-                      })}{" "}
-                      —{" "}
-                      {format(new Date(r.period_end), "d MMM yyyy", {
+                      }) : ""}
+                      {" — "}
+                      {r.periodEnd ? format(new Date(r.periodEnd), "d MMM yyyy", {
                         locale: idLocale,
-                      })}
+                      }) : ""}
                       {" • "}
-                      {format(new Date(r.created_at), "d MMM yyyy HH:mm", {
+                      {r.createdAt ? format(new Date(r.createdAt), "d MMM yyyy HH:mm", {
                         locale: idLocale,
-                      })}
+                      }) : ""}
                     </div>
                   </div>
                 </li>
