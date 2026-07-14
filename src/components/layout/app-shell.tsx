@@ -54,7 +54,7 @@ const MAIN_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   {
     to: "/manajemen-pengguna",
-    label: "Manajemen Pengguna",
+    label: "Pengguna",
     icon: Users,
     requiresAdmin: true,
   },
@@ -332,7 +332,7 @@ function titleFromPath(path: string): string {
     "/tugas": "Log Book Meeting",
     "/pelacak": "Log Book Harian",
     "/laporan": "Laporan",
-    "/manajemen-pengguna": "Manajemen Pengguna",
+    "/manajemen-pengguna": "Pengguna",
     "/pengaturan": "Pengaturan",
     "/panel-developer": "Panel Developer",
   };
