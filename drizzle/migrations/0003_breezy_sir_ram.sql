@@ -1,1 +1,0 @@
-ALTER TABLE "app_config" ADD COLUMN "app_name" text DEFAULT 'Log Book';

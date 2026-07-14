@@ -6,7 +6,7 @@ import crypto from "crypto";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "pg",
+    provider: "mysql",
     schema: {
       user: schema.users,
       session: schema.sessions,

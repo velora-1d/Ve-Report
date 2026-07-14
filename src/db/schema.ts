@@ -1,21 +1,21 @@
 import {
-  pgTable,
-  uuid,
+  mysqlTable,
   varchar,
   text,
   timestamp,
   boolean,
-  integer,
+  int,
   date,
-  jsonb,
-} from "drizzle-orm/pg-core";
+  json,
+} from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
+import crypto from "crypto";
 
 // ===== USERS (Better Auth compatible + custom fields) =====
-export const users = pgTable("user", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const users = mysqlTable("user", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -30,23 +30,23 @@ export const users = pgTable("user", {
 });
 
 // ===== SESSIONS (Better Auth standard) =====
-export const sessions = pgTable("session", {
-  id: text("id").primaryKey(),
+export const sessions = mysqlTable("session", {
+  id: varchar("id", { length: 255 }).primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
 });
 
 // ===== ACCOUNTS (Better Auth standard) =====
-export const accounts = pgTable("account", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+export const accounts = mysqlTable("account", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  providerId: varchar("provider_id", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -57,9 +57,9 @@ export const accounts = pgTable("account", {
 });
 
 // ===== VERIFICATIONS (Better Auth standard) =====
-export const verifications = pgTable("verification", {
-  id: text("id").primaryKey(),
-  identifier: text("identifier").notNull(),
+export const verifications = mysqlTable("verification", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  identifier: varchar("identifier", { length: 255 }).notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at"),
@@ -67,14 +67,14 @@ export const verifications = pgTable("verification", {
 });
 
 // ===== TASKS =====
-export const tasks = pgTable("tasks", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const tasks = mysqlTable("tasks", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
   status: varchar("status", { length: 50 }).notNull().default("todo"), // 'todo' | 'in_progress' | 'review' | 'done'
   priority: varchar("priority", { length: 50 }).notNull().default("medium"), // 'low' | 'medium' | 'high' | 'urgent'
-  assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
-  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedTo: varchar("assigned_to", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+  createdBy: varchar("created_by", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   dueDate: timestamp("due_date"),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
@@ -87,25 +87,25 @@ export const tasks = pgTable("tasks", {
 });
 
 // ===== SCHEDULE / CALENDAR =====
-export const schedules = pgTable("schedules", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const schedules = mysqlTable("schedules", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
-  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  taskId: varchar("task_id", { length: 36 }).references(() => tasks.id, { onDelete: "set null" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  reminderMinutesBefore: integer("reminder_minutes_before").default(30),
+  reminderMinutesBefore: int("reminder_minutes_before").default(30),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ===== TRACKER LOGS =====
-export const trackerLogs = pgTable("tracker_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+export const trackerLogs = mysqlTable("tracker_logs", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  taskId: varchar("task_id", { length: 36 }).references(() => tasks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   note: text("note"),
-  durationMinutes: integer("duration_minutes"),
+  durationMinutes: int("duration_minutes"),
   loggedDate: date("logged_date").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   
@@ -114,44 +114,44 @@ export const trackerLogs = pgTable("tracker_logs", {
   endTime: varchar("end_time", { length: 10 }).default("17:00"),
   status: varchar("status", { length: 20 }).default("progress"), // 'progress' | 'done'
   isValidated: boolean("is_validated").default(false),
-  validatedBy: uuid("validated_by").references(() => users.id, { onDelete: "set null" }),
+  validatedBy: varchar("validated_by", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
   remarks: text("remarks"),
 });
 
 // ===== REPORTS =====
-export const reports = pgTable("reports", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const reports = mysqlTable("reports", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
-  generatedBy: uuid("generated_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  generatedBy: varchar("generated_by", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),
-  filterUserId: uuid("filter_user_id").references(() => users.id, { onDelete: "set null" }),
+  filterUserId: varchar("filter_user_id", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
   pdfUrl: text("pdf_url"), // path/key file di RustFS
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ===== APP CONFIG (Branding & PDF Settings) =====
-export const appConfig = pgTable("app_config", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const appConfig = mysqlTable("app_config", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   logoUrl: text("logo_url"),
   appName: text("app_name").default("Log Book"), // ponytail: Menambahkan nama aplikasi dinamis
-  permissions: jsonb("permissions"), // ponytail: Kolom permissions RBAC Matrix dinamis
+  permissions: json("permissions"), // ponytail: Kolom permissions RBAC Matrix dinamis
   pdfPaperSize: varchar("pdf_paper_size", { length: 20 }).default("A4"),
   pdfOrientation: varchar("pdf_orientation", { length: 20 }).default("portrait"),
   pdfHeaderText: text("pdf_header_text"),
   pdfFooterText: text("pdf_footer_text"),
-  logLimit: integer("log_limit").default(200),
+  logLimit: int("log_limit").default(200),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ===== SYSTEM LOGS =====
-export const systemLogs = pgTable("system_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const systemLogs = mysqlTable("system_logs", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   level: varchar("level", { length: 20 }).notNull().default("info"), // 'info' | 'warning' | 'error' | 'critical'
   category: varchar("category", { length: 50 }),
   message: text("message").notNull(),
-  metadata: jsonb("metadata"),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  metadata: json("metadata"),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

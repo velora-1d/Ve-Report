@@ -1,1 +1,0 @@
-ALTER TABLE "app_config" ADD COLUMN "log_limit" integer DEFAULT 200;

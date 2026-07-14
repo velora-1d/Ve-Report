@@ -1,18 +1,23 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import * as schema from "./schema";
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://postgres@localhost:5432/ve_report";
+  "mysql://root:password@localhost:3306/ve_report";
 
 const globalQueryClient = globalThis as unknown as {
-  queryClient: pg.Pool | undefined;
+  queryClient: mysql.Pool | undefined;
 };
 
 if (!globalQueryClient.queryClient) {
-  globalQueryClient.queryClient = new pg.Pool({
-    connectionString,
+  globalQueryClient.queryClient = mysql.createPool({
+    uri: connectionString,
+    waitForConnections: true,
+    connectionLimit: 10,
+    maxIdle: 10,
+    idleTimeout: 60000,
+    queueLimit: 0,
   });
 }
 
