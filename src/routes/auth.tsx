@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Loader2, CheckCircle2, Clock, ShieldCheck, ArrowRight, Sparkles, Eye, EyeOff } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getAppConfig } from "@/lib/app-config";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -43,6 +45,13 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [nameSignup, setNameSignup] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
+  const logoUrl = config?.logoUrl || null;
 
   const { data: session } = authClient.useSession();
 
@@ -101,11 +110,15 @@ function AuthPage() {
         <div className="relative flex flex-col justify-between h-full z-10 max-w-lg mx-auto w-full -left-[20%]">
           {/* Brand Header (30% larger) */}
           <div className="flex items-center gap-4.5">
-            <div className="w-13 h-13 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft">
-              <FileText className="w-7 h-7 text-white" />
+            <div className="w-13 h-13 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-xl shadow-soft overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt={appName} className="w-full h-full object-cover" />
+              ) : (
+                <FileText className="w-7 h-7 text-white" />
+              )}
             </div>
             <div>
-              <span className="font-extrabold text-xl tracking-tight uppercase text-white block">Log Book</span>
+              <span className="font-extrabold text-xl tracking-tight uppercase text-white block">{appName}</span>
               <span className="block text-[10px] text-white/50 tracking-wider uppercase font-bold mt-0.5">Workspace</span>
             </div>
           </div>
@@ -178,10 +191,14 @@ function AuthPage() {
         <div className="w-full max-w-sm mx-auto space-y-8 relative z-10 animate-fade-in-up">
           {/* Logo & Header for Mobile */}
           <div className="flex flex-col items-center mb-2 md:hidden">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 shadow-soft">
-              <FileText className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 shadow-soft overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt={appName} className="w-full h-full object-cover" />
+              ) : (
+                <FileText className="w-6 h-6 text-primary" />
+              )}
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">Log Book</h1>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">{appName}</h1>
             <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">
               Sederhana • Teratur • Tenang
             </p>
@@ -191,7 +208,7 @@ function AuthPage() {
           <div className="space-y-2 md:block">
             <div className="inline-flex items-center gap-1.5 text-primary font-bold text-xs tracking-wider uppercase mb-1 px-3 py-1 rounded-full bg-primary/10">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>Log Book App</span>
+              <span>{appName} App</span>
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Selamat Datang</h2>
             <p className="text-sm text-slate-500">

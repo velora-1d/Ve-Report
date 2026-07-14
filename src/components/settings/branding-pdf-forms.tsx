@@ -30,10 +30,12 @@ export function BrandingForm() {
     queryFn: () => getAppConfig(),
   });
   const [logoUrl, setLogoUrl] = useState("");
+  const [appName, setAppName] = useState("Log Book");
 
   useEffect(() => {
     if (data) {
       setLogoUrl(data.logoUrl ?? "");
+      setAppName(data.appName ?? "Log Book");
     }
   }, [data]);
 
@@ -43,6 +45,7 @@ export function BrandingForm() {
         data: {
           id: data?.id,
           logoUrl: logoUrl || null,
+          appName: appName || "Log Book",
         },
       }),
     onSuccess: () => {
@@ -66,13 +69,19 @@ export function BrandingForm() {
       <CardHeader>
         <CardTitle>Branding & Logo</CardTitle>
         <CardDescription>
-          Nama aplikasi "Log Book" bersifat permanen. Di sini Anda dapat memperbarui URL logo yang tampil di header laporan PDF dan menu.
+          Sesuaikan nama aplikasi dan upload logo kustom untuk mempersonalisasi sidebar, halaman login, serta laporan PDF Anda.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Nama Aplikasi</Label>
-          <Input value="Log Book" disabled />
+          <Label htmlFor="app-name">Nama Aplikasi</Label>
+          <Input
+            id="app-name"
+            value={appName}
+            onChange={(e) => setAppName(e.target.value)}
+            placeholder="Log Book, Ve-Report, dll."
+            required
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-semibold block text-foreground">Upload Logo Aplikasi</Label>
@@ -99,24 +108,26 @@ export function BrandingForm() {
                       reader.readAsDataURL(file);
                     }
                   }}
-                  className="h-8 text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                  className="max-w-[200px]"
                 />
                 {logoUrl && (
                   <Button
-                    type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setLogoUrl("")}
-                    className="h-8 text-xs text-destructive hover:text-destructive/90"
+                    className="text-destructive border-destructive hover:bg-destructive/10"
                   >
                     Hapus
                   </Button>
                 )}
               </div>
+              <p className="text-[10px] text-muted-foreground">
+                Maksimal ukuran file 1MB, format PNG atau JPG.
+              </p>
             </div>
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-2">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending && (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

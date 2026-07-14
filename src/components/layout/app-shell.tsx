@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAppConfig } from "@/lib/app-config";
 import {
   LayoutDashboard,
   ListChecks,
@@ -91,6 +92,13 @@ function AppSidebar() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
+  const { data: config } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => getAppConfig(),
+  });
+  const appName = config?.appName || "Log Book";
+  const logoUrl = config?.logoUrl || null;
+
   const roles = user?.roles ?? [];
   const canAdmin = isAdminOrDev(roles);
   const canDev = isDeveloper(roles);
@@ -122,17 +130,24 @@ function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-gradient-to-b from-sidebar via-sidebar to-background shadow-soft">
-      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5"}>
-        <Link to="/dasbor" className="flex items-center justify-center shrink-0">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.25)] shrink-0 transition-transform duration-300 hover:rotate-6">
-            <FileText className="w-5 h-5 text-primary-foreground" />
+      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-3"}>
+        <Link
+          to="/dasbor"
+          className={isCollapsed ? "flex items-center justify-center w-full" : "flex items-center gap-3 w-full pl-1.5"}
+        >
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.25)] shrink-0 overflow-hidden transition-transform duration-300 hover:rotate-6 relative">
+            {logoUrl ? (
+              <img src={logoUrl} alt={appName} className="w-full h-full object-cover" />
+            ) : (
+              <FileText className="w-5 h-5 text-primary-foreground" />
+            )}
           </div>
           {!isCollapsed && (
-            <div className="ml-3">
-              <div className="font-bold tracking-tight text-foreground text-base">
-                Ve-Report<span className="text-primary font-black">.</span>
+            <div className="flex flex-col justify-center min-w-0">
+              <div className="font-bold tracking-tight text-foreground text-base leading-tight truncate max-w-[120px]" title={appName}>
+                {appName}
               </div>
-              <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
+              <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 leading-none mt-0.5">
                 Workspace
               </div>
             </div>
