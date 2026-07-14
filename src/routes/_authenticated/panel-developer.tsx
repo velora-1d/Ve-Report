@@ -47,7 +47,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAppConfig, saveAppConfig } from "@/lib/app-config";
-import { ShieldAlert, Database, Cloud } from "lucide-react";
+import { ShieldAlert, Database, Cloud, Eye, EyeOff } from "lucide-react";
 import { testRustFSConnection } from "@/lib/storage";
 import {
   AlertDialog,
@@ -332,6 +332,7 @@ function TelegramConfigCard() {
   const [token, setToken] = useState("");
   const [chatId, setChatId] = useState("");
   const [testing, setTesting] = useState(false);
+  const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
     setToken(localStorage.getItem("telegram_bot_token") ?? "");
@@ -395,12 +396,26 @@ function TelegramConfigCard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Bot Token</Label>
-            <Input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="123456:ABC-DEF…"
-            />
+            <div className="relative">
+              <Input
+                type={showToken ? "text" : "password"}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="123456:ABC-DEF…"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(!showToken)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {showToken ? (
+                  <EyeOff className="w-4.5 h-4.5" />
+                ) : (
+                  <Eye className="w-4.5 h-4.5" />
+                )}
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Chat ID</Label>
