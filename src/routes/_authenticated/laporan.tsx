@@ -543,7 +543,7 @@ function LaporanPage() {
   );
 }
 
-// ponytail: Komponen pratinjau grid laporan secara live/real-time untuk melihat struktur data sebelum diekspor
+// ponytail: Komponen pratinjau grid laporan secara live/real-time untuk melihat struktur data dalam format A4/F4 sebelum diekspor
 function ReportPreviewGrid({
   reportType,
   data,
@@ -571,6 +571,10 @@ function ReportPreviewGrid({
       </Card>
     );
   }
+
+  const paperSize = (data.cfg?.pdfPaperSize ?? "A4").toUpperCase();
+  const orientation = data.cfg?.pdfOrientation ?? "portrait";
+  const marginMm = Math.max(5, Math.min(50, parseInt(data.cfg?.pdfMargin ?? "20", 10) || 20));
 
   // Pratinjau Kinerja Standar
   if (reportType === "standard") {
@@ -607,126 +611,255 @@ function ReportPreviewGrid({
   // Pratinjau Log Book Meeting
   if (reportType === "meeting") {
     const tasks = data.tasks ?? [];
+    const employeeName = data.name || "";
+    const employeePosition = data.position || "Staf";
+    const dateStart = new Date(data.periodStart ?? new Date());
+    const monthName = format(dateStart, "MMMM", { locale: idLocale });
+    const yearName = format(dateStart, "yyyy", { locale: idLocale });
+
     return (
-      <Card className="surface-card border-0 p-6 space-y-4 overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h3 className="font-bold text-base">Pratinjau Live: LOG BOOK MEETING</h3>
+      <div className="space-y-4 w-full">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-base">Pratinjau Kertas ({paperSize} - {orientation === "landscape" ? "Landscape" : "Portrait"})</h3>
           <span className="text-xs text-muted-foreground font-mono">
             {tasks.length} Baris Ditemukan
           </span>
         </div>
 
-        <div className="border border-slate-300 rounded-lg overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Hari / Tanggal</th>
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Uraian Tugas</th>
-                <th colSpan={2} className="p-2 border-b border-r border-slate-300 text-center">Pemberi Tugas</th>
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Target Selesai</th>
-                <th rowSpan={2} className="p-2.5 text-center align-middle">Out Put</th>
-              </tr>
-              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
-                <th className="p-1.5 border-r border-slate-300 text-center">Atasan</th>
-                <th className="p-1.5 border-r border-slate-300 text-center">Meeting</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-4 text-center text-muted-foreground">
-                    Tidak ada data tugas meeting pada periode ini.
-                  </td>
-                </tr>
-              ) : (
-                tasks.map((t: any) => {
-                  const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", { locale: idLocale });
-                  const descStr = [t.title, t.description].filter(Boolean).join(" - ");
-                  const sourceLower = (t.taskSource ?? "").toLowerCase();
-                  const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
-                  const targetStr = t.dueDate ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale }) : "—";
-                  const outputStr = t.outputDescription ?? "—";
+        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-start lg:justify-center">
+          <div 
+            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0"
+            style={{ 
+              padding: `${marginMm}mm`,
+              width: orientation === "landscape" 
+                ? (paperSize === "F4" ? "330mm" : "297mm")
+                : (paperSize === "F4" ? "215mm" : "210mm"),
+              minHeight: orientation === "landscape" 
+                ? (paperSize === "F4" ? "215mm" : "210mm")
+                : (paperSize === "F4" ? "330mm" : "297mm"),
+            }}
+          >
+            <div>
+              {/* Title */}
+              <div className="text-center mb-6">
+                <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK MEETING</h2>
+              </div>
 
-                  return (
-                    <tr key={t.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="p-2 border-r border-slate-200 text-black font-medium">{dayDateStr}</td>
-                      <td className="p-2 border-r border-slate-200 whitespace-pre-line text-black">{descStr}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{!isMeeting ? "✓" : ""}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{isMeeting ? "✓" : ""}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-black">{targetStr}</td>
-                      <td className="p-2 text-black">{outputStr}</td>
+              {/* Metadata Info Box */}
+              <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Nama</div>
+                  <div className="col-span-9">: {employeeName}</div>
+                </div>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Divisi</div>
+                  <div className="col-span-9">: {employeePosition}</div>
+                </div>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Bulan dan Tahun</div>
+                  <div className="col-span-9">: {monthName} {yearName}</div>
+                </div>
+              </div>
+
+              {/* Subheading */}
+              <div className="font-bold text-xs mb-3 text-black uppercase">
+                PENUGASAN ATASAN/HASIL MEETING/.......
+              </div>
+
+              {/* Table */}
+              <table className="w-full text-left text-xs border-collapse border border-slate-400">
+                <thead>
+                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Uraian Tugas</th>
+                    <th colSpan={2} className="p-2 border border-slate-400 text-center">Pemberi Tugas</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Target Selesai</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Out Put</th>
+                  </tr>
+                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th className="p-1 border border-slate-400 text-center">Atasan</th>
+                    <th className="p-1 border border-slate-400 text-center">Meeting</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                        Tidak ada data tugas meeting pada periode ini.
+                      </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    tasks.map((t: any) => {
+                      const dayDateStr = format(new Date(t.createdAt), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                      const descStr = [t.title, t.description].filter(Boolean).join(" - ");
+                      const sourceLower = (t.taskSource ?? "").toLowerCase();
+                      const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
+                      const targetStr = t.dueDate ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale }) : "—";
+                      const outputStr = t.outputDescription ?? "—";
+
+                      return (
+                        <tr key={t.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
+                          <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
+                          <td className="p-2 border-slate-400 whitespace-pre-line">{descStr}</td>
+                          <td className="p-2 border-slate-400 text-center text-success font-bold text-sm">{!isMeeting ? "✓" : ""}</td>
+                          <td className="p-2 border-slate-400 text-center text-success font-bold text-sm">{isMeeting ? "✓" : ""}</td>
+                          <td className="p-2 border-slate-400 text-center">{targetStr}</td>
+                          <td className="p-2 border-slate-400">{outputStr}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Signature Block */}
+            <div className="mt-12 text-xs text-black space-y-4">
+              <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <div>Yang Membuat</div>
+                  <div className="h-16" />
+                  <div className="font-bold">( {employeeName} )</div>
+                </div>
+                <div>
+                  <div>Yang Mengetahui</div>
+                  <div className="h-16" />
+                  <div className="font-bold">( .................................... )</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </Card>
+      </div>
     );
   }
 
   // Pratinjau Log Book Harian
   if (reportType === "harian") {
     const logs = data.logs ?? [];
+    const employeeName = data.name || "";
+    const employeePosition = data.position || "Staf";
+    const dateStart = new Date(data.periodStart ?? new Date());
+    const monthName = format(dateStart, "MMMM", { locale: idLocale });
+    const yearName = format(dateStart, "yyyy", { locale: idLocale });
+
     return (
-      <Card className="surface-card border-0 p-6 space-y-4 overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h3 className="font-bold text-base">Pratinjau Live: LOG BOOK KEGIATAN HARIAN</h3>
+      <div className="space-y-4 w-full">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-base">Pratinjau Kertas ({paperSize} - {orientation === "landscape" ? "Landscape" : "Portrait"})</h3>
           <span className="text-xs text-muted-foreground font-mono">
             {logs.length} Baris Ditemukan
           </span>
         </div>
 
-        <div className="border border-slate-300 rounded-lg overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Hari / Tanggal</th>
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Jam</th>
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Implementasi Kegiatan</th>
-                <th colSpan={2} className="p-2 border-b border-r border-slate-300 text-center">Status</th>
-                <th rowSpan={2} className="p-2.5 border-r border-slate-300 text-center align-middle">Validasi Atasan</th>
-                <th rowSpan={2} className="p-2.5 text-center align-middle">Keterangan</th>
-              </tr>
-              <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-300">
-                <th className="p-1.5 border-r border-slate-300 text-center">On Progres</th>
-                <th className="p-1.5 border-r border-slate-300 text-center">Selesai</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-4 text-center text-muted-foreground">
-                    Tidak ada data log harian pada periode ini.
-                  </td>
-                </tr>
-              ) : (
-                logs.map((l: any) => {
-                  const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", { locale: idLocale });
-                  const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-                  const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
-                  const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
-                  const validatedStr = l.isValidated ? "✓" : "";
-                  const remarksStr = l.remarks ?? "—";
+        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-start lg:justify-center">
+          <div 
+            className="bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0"
+            style={{ 
+              padding: `${marginMm}mm`,
+              width: orientation === "landscape" 
+                ? (paperSize === "F4" ? "330mm" : "297mm")
+                : (paperSize === "F4" ? "215mm" : "210mm"),
+              minHeight: orientation === "landscape" 
+                ? (paperSize === "F4" ? "215mm" : "210mm")
+                : (paperSize === "F4" ? "330mm" : "297mm"),
+            }}
+          >
+            <div>
+              {/* Title */}
+              <div className="text-center mb-6">
+                <h2 className="text-lg font-bold tracking-wide text-black uppercase">LOG BOOK KEGIATAN HARIAN</h2>
+              </div>
 
-                  return (
-                    <tr key={l.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="p-2 border-r border-slate-200 text-black font-medium">{dayDateStr}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-black">{timeStr}</td>
-                      <td className="p-2 border-r border-slate-200 whitespace-pre-line text-black">{activityStr}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{!isDone ? "✓" : ""}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{isDone ? "✓" : ""}</td>
-                      <td className="p-2 border-r border-slate-200 text-center text-success font-bold">{validatedStr}</td>
-                      <td className="p-2 text-black">{remarksStr}</td>
+              {/* Metadata Info Box */}
+              <div className="border border-black p-3 mb-6 text-xs text-black space-y-1.5">
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Nama</div>
+                  <div className="col-span-9">: {employeeName}</div>
+                </div>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Divisi</div>
+                  <div className="col-span-9">: {employeePosition}</div>
+                </div>
+                <div className="grid grid-cols-12">
+                  <div className="col-span-3 font-bold">Bulan</div>
+                  <div className="col-span-3">: {monthName}</div>
+                  <div className="col-span-3 font-bold text-right pr-4">Tahun</div>
+                  <div className="col-span-3">: {yearName}</div>
+                </div>
+              </div>
+
+              {/* Table */}
+              <table className="w-full text-left text-xs border-collapse border border-slate-400">
+                <thead>
+                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Hari / Tanggal</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Jam</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Implementasi Kegiatan</th>
+                    <th colSpan={2} className="p-2 border-slate-400 text-center">Status</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Validasi Atasan</th>
+                    <th rowSpan={2} className="p-2 border border-slate-400 text-center align-middle">Keterangan</th>
+                  </tr>
+                  <tr className="bg-[#DADEE5] text-black font-bold border-b border-slate-400">
+                    <th className="p-1 border border-slate-400 text-center">On Progres</th>
+                    <th className="p-1 border border-slate-400 text-center">Selesai</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-4 border border-slate-400 text-center text-muted-foreground bg-white">
+                        Tidak ada data log harian pada periode ini.
+                      </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    logs.map((l: any) => {
+                      const dayDateStr = format(new Date(l.loggedDate), "EEEE, dd MMMM yyyy", { locale: idLocale });
+                      const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+                      const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
+                      const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
+                      const validatedStr = l.isValidated ? "✓" : "";
+                      const remarksStr = l.remarks ?? "—";
+
+                      return (
+                        <tr key={l.id} className="bg-white hover:bg-slate-50 border-b border-slate-400 text-black">
+                          <td className="p-2 border border-slate-400 font-medium">{dayDateStr}</td>
+                          <td className="p-2 border border-slate-400 text-center">{timeStr}</td>
+                          <td className="p-2 border border-slate-400 whitespace-pre-line">{activityStr}</td>
+                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{!isDone ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{isDone ? "✓" : ""}</td>
+                          <td className="p-2 border border-slate-400 text-center text-success font-bold text-sm">{validatedStr}</td>
+                          <td className="p-2 border border-slate-400">{remarksStr}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Signature Block */}
+            <div className="mt-12 text-xs text-black space-y-4">
+              <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <div>Yang Membuat</div>
+                  <div className="h-16" />
+                  <div className="font-bold">( {employeeName} )</div>
+                </div>
+                <div>
+                  <div>Yang Mengetahui</div>
+                  <div className="h-16" />
+                  <div className="font-bold">( .................................... )</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </Card>
+      </div>
     );
   }
 
