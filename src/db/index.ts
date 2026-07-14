@@ -24,4 +24,4 @@ if (!globalQueryClient.queryClient) {
   });
 }
 
-export const db = drizzle(globalQueryClient.queryClient, { schema });
+export const db = drizzle(globalQueryClient.queryClient, { schema, mode: "default" });
