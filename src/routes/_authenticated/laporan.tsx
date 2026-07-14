@@ -1160,7 +1160,7 @@ function ReportPreviewGrid({
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide pl-[24px]">
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide text-center">
                 DAFTAR PENUGASAN / HASIL MEETING
               </div>
 
@@ -1346,7 +1346,7 @@ function ReportPreviewGrid({
               </div>
 
               {/* Subheading */}
-              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide pl-[24px]">
+              <div className="font-bold text-xs mb-3 text-[#0077B6] uppercase tracking-wide text-center">
                 DAFTAR KEGIATAN HARIAN
               </div>
 
