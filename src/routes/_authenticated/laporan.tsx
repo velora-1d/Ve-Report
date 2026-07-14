@@ -46,7 +46,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ponytail: Fungsi server untuk mengambil daftar nama pengguna sederhana (untuk filter)
-const getSimpleUsers = createServerFn({ method: "GET" }).handler(async () => {
+export const getSimpleUsers = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession();
   if (!session || !session.user) throw new Error("Unauthorized");
   const role = session.user.role || "staff";

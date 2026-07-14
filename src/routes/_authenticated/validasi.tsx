@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTrackerLogs, validateTrackerLog, bulkValidateTrackerLogs } from "./pelacak";
+import { getSimpleUsers } from "./laporan";
 
 export const Route = createFileRoute("/_authenticated/validasi")({
   head: () => ({
@@ -67,22 +68,27 @@ function ValidasiPage() {
 
   const isAdminOrDevUser = useMemo(() => isAdminOrDev(user?.roles ?? []), [user?.roles]);
 
-  // Filter logs created by staff (exclude current admin/dev logs)
+  const { data: usersSimple } = useQuery({
+    queryKey: ["users-simple"],
+    enabled: isAdminOrDevUser,
+    queryFn: () => getSimpleUsers(),
+  });
+
+  // Filter logs created by staff (exclude current admin logs, but keep developer logs so they are testable)
   const staffLogs = useMemo(() => {
     if (!logs) return [];
     if (!isAdminOrDevUser) return [];
+    if (user?.role === "developer") return logs; // Developer can see all logs including their own
     return logs.filter((l) => l.userId !== user?.id);
-  }, [logs, isAdminOrDevUser, user?.id]);
+  }, [logs, isAdminOrDevUser, user?.id, user?.role]);
 
   const staffList = useMemo(() => {
-    const listMap = new Map<string, string>();
-    for (const l of staffLogs) {
-      if (l.user?.id) {
-        listMap.set(l.user.id, l.user.name || "Staf Tanpa Nama");
-      }
-    }
-    return Array.from(listMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [staffLogs]);
+    if (!usersSimple) return [];
+    // Only show users that are not the current user, UNLESS the current user is a developer (so they can see themselves for testing)
+    return usersSimple
+      .filter((u) => u.id !== user?.id || user?.role === "developer")
+      .map((u) => ({ id: u.id, name: u.name }));
+  }, [usersSimple, user?.id, user?.role]);
 
   const filteredLogs = useMemo(() => {
     return staffLogs.filter((l) => {
