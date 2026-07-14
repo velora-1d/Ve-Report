@@ -184,7 +184,6 @@ export function TrackerFormDialog({
                 max={24}
                 value={hours}
                 onChange={(e) => setHours(e.target.value)}
-                disabled
               />
             </div>
             <div className="space-y-2">
@@ -195,7 +194,6 @@ export function TrackerFormDialog({
                 max={59}
                 value={minutes}
                 onChange={(e) => setMinutes(e.target.value)}
-                disabled
               />
             </div>
           </div>
