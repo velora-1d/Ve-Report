@@ -50,6 +50,15 @@ export function TrackerFormDialog({
   const [status, setStatus] = useState<string>("progress"); // 'progress' | 'done'
   const [remarks, setRemarks] = useState<string>("—");
 
+  function parseTimeToMinutes(timeStr: string): number | null {
+    const match = timeStr.trim().match(/^(\d{1,2})[:.](\d{2})$/);
+    if (!match) return null;
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  }
+
   useEffect(() => {
     if (!open) return;
     if (editing) {
@@ -73,6 +82,20 @@ export function TrackerFormDialog({
       setRemarks("—");
     }
   }, [open, editing]);
+
+  useEffect(() => {
+    if (!open) return;
+    const startMin = parseTimeToMinutes(startTime);
+    const endMin = parseTimeToMinutes(endTime);
+    if (startMin !== null && endMin !== null) {
+      let diff = endMin - startMin;
+      if (diff < 0) {
+        diff += 24 * 60;
+      }
+      setHours(String(Math.floor(diff / 60)));
+      setMinutes(String(diff % 60));
+    }
+  }, [startTime, endTime, open]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -161,6 +184,7 @@ export function TrackerFormDialog({
                 max={24}
                 value={hours}
                 onChange={(e) => setHours(e.target.value)}
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -171,6 +195,7 @@ export function TrackerFormDialog({
                 max={59}
                 value={minutes}
                 onChange={(e) => setMinutes(e.target.value)}
+                disabled
               />
             </div>
           </div>
