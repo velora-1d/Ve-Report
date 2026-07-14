@@ -25,6 +25,7 @@ export const saveAppConfig = createServerFn({ method: "POST" })
       pdfOrientation: z.string().optional(),
       pdfHeaderText: z.string().nullable().optional(),
       pdfFooterText: z.string().nullable().optional(),
+      logLimit: z.number().optional(),
     })
   )
   .handler(async ({ data }) => {
@@ -35,8 +36,18 @@ export const saveAppConfig = createServerFn({ method: "POST" })
       const currentConfig = await db.query.appConfig.findFirst();
       const perms = currentConfig?.permissions as any;
       const rolePerms = perms?.[role];
-      const hasUpdate = rolePerms?.actions?.["pengaturan"]?.includes("update") ?? (role === "admin");
-      if (!hasUpdate) throw new Error("Forbidden");
+
+      const isSavingBranding = data.logoUrl !== undefined || data.appName !== undefined || data.permissions !== undefined;
+      const isSavingPdf = data.pdfPaperSize !== undefined || data.pdfOrientation !== undefined || data.pdfHeaderText !== undefined || data.pdfFooterText !== undefined || data.logLimit !== undefined;
+
+      if (isSavingBranding) {
+        const hasUpdate = rolePerms?.actions?.["branding"]?.includes("update") ?? (role === "admin");
+        if (!hasUpdate) throw new Error("Forbidden");
+      }
+      if (isSavingPdf) {
+        const hasUpdate = rolePerms?.actions?.["pdf"]?.includes("update") ?? (role === "admin");
+        if (!hasUpdate) throw new Error("Forbidden");
+      }
     }
 
     const payload = {
@@ -47,6 +58,7 @@ export const saveAppConfig = createServerFn({ method: "POST" })
       pdfOrientation: data.pdfOrientation || "portrait",
       pdfHeaderText: data.pdfHeaderText || null,
       pdfFooterText: data.pdfFooterText || null,
+      logLimit: data.logLimit !== undefined ? data.logLimit : 200,
       updatedAt: new Date(),
     };
 

@@ -27,7 +27,7 @@ import { usePermission } from "@/hooks/use-permission";
 export function BrandingForm() {
   const qc = useQueryClient();
   const { hasPermission } = usePermission();
-  const canUpdate = hasPermission("pengaturan", "update");
+  const canUpdate = hasPermission("branding", "update");
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => getAppConfig(),
@@ -150,7 +150,7 @@ export function BrandingForm() {
 export function PdfConfigForm() {
   const qc = useQueryClient();
   const { hasPermission } = usePermission();
-  const canUpdate = hasPermission("pengaturan", "update");
+  const canUpdate = hasPermission("pdf", "update");
   const { data, isLoading } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => getAppConfig(),
@@ -159,6 +159,7 @@ export function PdfConfigForm() {
   const [orientation, setOrientation] = useState("portrait");
   const [header, setHeader] = useState("");
   const [footer, setFooter] = useState("");
+  const [logLimit, setLogLimit] = useState(200);
 
   useEffect(() => {
     if (data) {
@@ -166,6 +167,7 @@ export function PdfConfigForm() {
       setOrientation(data.pdfOrientation ?? "portrait");
       setHeader(data.pdfHeaderText ?? "");
       setFooter(data.pdfFooterText ?? "");
+      setLogLimit(data.logLimit ?? 200);
     }
   }, [data]);
 
@@ -178,6 +180,7 @@ export function PdfConfigForm() {
           pdfOrientation: orientation,
           pdfHeaderText: header || null,
           pdfFooterText: footer || null,
+          logLimit: logLimit,
         },
       }),
     onSuccess: () => {
@@ -244,6 +247,20 @@ export function PdfConfigForm() {
             onChange={(e) => setFooter(e.target.value)}
             disabled={!canUpdate}
           />
+        </div>
+        <div className="space-y-2">
+          <Label>Batas Jumlah Tampilan Log Terbaru</Label>
+          <Input
+            type="number"
+            min={1}
+            max={1000}
+            value={logLimit}
+            onChange={(e) => setLogLimit(Number(e.target.value))}
+            disabled={!canUpdate}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Batas jumlah baris log kegiatan/sistem terbaru yang dimuat dari database ke layar.
+          </p>
         </div>
         <div className="flex justify-end">
           {canUpdate && (

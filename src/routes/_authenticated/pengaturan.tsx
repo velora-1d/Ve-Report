@@ -75,7 +75,8 @@ export const Route = createFileRoute("/_authenticated/pengaturan")({
 function PengaturanPage() {
   const { data: user, isLoading } = useCurrentUser();
   const { hasPermission } = usePermission();
-  const canReadSettings = hasPermission("pengaturan", "read");
+  const canReadBranding = hasPermission("branding", "read");
+  const canReadPdf = hasPermission("pdf", "read");
 
   if (isLoading || !user) {
     return (
@@ -97,23 +98,23 @@ function PengaturanPage() {
       <Tabs defaultValue="profil">
         <TabsList>
           <TabsTrigger value="profil">Profil Saya</TabsTrigger>
-          {canReadSettings && (
+          {canReadBranding && (
             <TabsTrigger value="branding">Branding & Logo</TabsTrigger>
           )}
-          {canReadSettings && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
+          {canReadPdf && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profil" className="mt-4">
           <ProfileForm />
         </TabsContent>
 
-        {canReadSettings && (
+        {canReadBranding && (
           <TabsContent value="branding" className="mt-4">
             <BrandingForm />
           </TabsContent>
         )}
 
-        {canReadSettings && (
+        {canReadPdf && (
           <TabsContent value="pdf" className="mt-4">
             <PdfConfigForm />
           </TabsContent>

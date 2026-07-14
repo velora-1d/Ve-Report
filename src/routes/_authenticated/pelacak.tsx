@@ -57,6 +57,11 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
     ? eq(logsTable.userId, session.user.id)
     : undefined;
 
+  const configs = await db.query.appConfig.findMany({
+    limit: 1,
+  });
+  const limitVal = configs[0]?.logLimit ?? 200;
+
   const logs = await db.query.trackerLogs.findMany({
     where: whereClause,
     with: {
@@ -75,7 +80,7 @@ export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async ()
       }
     },
     orderBy: [desc(logsTable.loggedDate), desc(logsTable.createdAt)],
-    limit: 200,
+    limit: limitVal,
   });
 
   return logs;

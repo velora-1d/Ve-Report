@@ -140,6 +140,7 @@ export const appConfig = pgTable("app_config", {
   pdfOrientation: varchar("pdf_orientation", { length: 20 }).default("portrait"),
   pdfHeaderText: text("pdf_header_text"),
   pdfFooterText: text("pdf_footer_text"),
+  logLimit: integer("log_limit").default(200),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

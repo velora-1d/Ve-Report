@@ -88,10 +88,15 @@ const getSystemLogs = createServerFn({ method: "GET" })
     if (!session || !session.user) throw new Error("Unauthorized");
     if (session.user.role !== "developer") throw new Error("Forbidden");
 
+    const configs = await db.query.appConfig.findMany({
+      limit: 1,
+    });
+    const limitVal = configs[0]?.logLimit ?? 200;
+
     const logs = await db.query.systemLogs.findMany({
       where: levelFilter !== "all" ? eq(systemLogsTable.level, levelFilter) : undefined,
       orderBy: [desc(systemLogsTable.createdAt)],
-      limit: 200,
+      limit: limitVal,
     });
 
     return logs.map(l => ({
@@ -464,6 +469,8 @@ function RbacMatrixCard() {
     { key: "laporan", label: "Laporan" },
     { key: "manajemen-pengguna", label: "Pengguna" },
     { key: "pengaturan", label: "Pengaturan" },
+    { key: "branding", label: "Branding & Logo" },
+    { key: "pdf", label: "Konfigurasi PDF" },
   ];
 
   const MODULES = [
@@ -472,6 +479,8 @@ function RbacMatrixCard() {
     { key: "laporan", label: "Laporan" },
     { key: "pengguna", label: "Pengguna" },
     { key: "pengaturan", label: "Pengaturan" },
+    { key: "branding", label: "Branding & Logo" },
+    { key: "pdf", label: "Konfigurasi PDF" },
   ];
 
   const ACTIONS = [
