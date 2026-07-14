@@ -116,6 +116,7 @@ function AppSidebar() {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleConfirmSwitch = () => {
     if (!selectedRole) return;
@@ -183,6 +184,11 @@ function AppSidebar() {
   }, [user?.name]);
 
   const handleSignOut = async () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const executeSignOut = async () => {
+    setShowLogoutConfirm(false);
     await qc.cancelQueries();
     qc.clear();
     await authClient.signOut();
@@ -400,6 +406,33 @@ function AppSidebar() {
               className="flex-1 rounded-xl bg-gradient-to-r from-[#0077B6] to-[#0077B6]/90 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
             >
               Ya, Switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
+          <AlertDialogHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-red-500 scale-110">
+              <LogOut className="w-5 h-5 animate-bounce-slow" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+              Konfirmasi Keluar
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Apakah Anda yakin ingin keluar dari aplikasi VeReport? Sesi Anda akan diakhiri.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2">
+            <AlertDialogCancel className="flex-1 rounded-xl border border-slate-100 dark:border-slate-850 font-semibold text-xs py-2">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => executeSignOut()}
+              className="flex-1 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"
+            >
+              Ya, Keluar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
