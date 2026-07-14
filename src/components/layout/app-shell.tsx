@@ -258,7 +258,7 @@ function TopBar() {
   );
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 backdrop-blur px-4 md:px-6 sticky top-0 z-10">
-      <SidebarTrigger className="md:hidden">
+      <SidebarTrigger>
         <Menu className="w-4 h-4" />
       </SidebarTrigger>
       <h1 className="text-base font-semibold tracking-tight">{title}</h1>

@@ -38,6 +38,7 @@ const updateProfile = createServerFn({ method: "POST" })
       phone: z.string().optional(),
       position: z.string().optional(),
       bio: z.string().optional(),
+      image: z.string().nullable().optional(),
     })
   )
   .handler(async ({ data }) => {
@@ -50,6 +51,7 @@ const updateProfile = createServerFn({ method: "POST" })
         phone: data.phone || null,
         position: data.position || null,
         bio: data.bio || null,
+        image: data.image === undefined ? undefined : data.image,
         updatedAt: new Date(),
       })
       .where(eq(usersTable.id, session.user.id));
@@ -126,6 +128,7 @@ function ProfileForm() {
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [position, setPosition] = useState(user?.position ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl ?? null);
 
   if (!user) return null;
 
@@ -136,7 +139,7 @@ function ProfileForm() {
     .join("");
 
   const save = useMutation({
-    mutationFn: () => updateProfile({ data: { name, phone, position, bio } }),
+    mutationFn: () => updateProfile({ data: { name, phone, position, bio, image: avatar } }),
     onSuccess: () => {
       toast.success("Profil berhasil diperbarui");
       qc.invalidateQueries({ queryKey: ["current-user"] });
@@ -161,17 +164,45 @@ function ProfileForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSave} className="space-y-5">
-          <div className="flex items-center gap-4">
-            <Avatar className="w-16 h-16">
-              {user.avatarUrl && (
-                <AvatarImage src={user.avatarUrl} alt={user.name} />
+          <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60">
+            <Avatar className="w-16 h-16 border-2 border-primary/20">
+              {avatar && (
+                <AvatarImage src={avatar} alt={name} className="object-cover" />
               )}
               <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                 {initials || "?"}
               </AvatarFallback>
             </Avatar>
-            <div className="text-sm text-muted-foreground">
-              Upload foto profil akan tersedia pada fase berikutnya.
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold block text-foreground">Foto Profil</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setAvatar(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="h-8 text-[11px] w-full max-w-[200px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                />
+                {avatar && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAvatar(null)}
+                    className="h-8 text-xs text-destructive hover:text-destructive/90"
+                  >
+                    Hapus
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
