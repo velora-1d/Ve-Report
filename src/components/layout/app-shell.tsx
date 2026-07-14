@@ -14,6 +14,9 @@ import {
   Menu,
   ShieldAlert,
   CheckSquare,
+  ClipboardList,
+  FileBarChart,
+  BadgeCheck,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -59,16 +62,16 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { to: "/dasbor", label: "Dasbor", icon: LayoutDashboard },
-  { to: "/tugas", label: "Log Book Meeting", icon: FileText },
+  { to: "/tugas", label: "Log Book Meeting", icon: ClipboardList },
   { to: "/pelacak", label: "Log Book Harian", icon: Timer },
-  { to: "/laporan", label: "Laporan", icon: FileText },
+  { to: "/laporan", label: "Laporan", icon: FileBarChart },
 ];
 
 const ADMIN_NAV: NavItem[] = [
   {
     to: "/validasi",
     label: "Validasi Log",
-    icon: CheckSquare,
+    icon: BadgeCheck,
     requiresAdmin: true,
   },
   {
