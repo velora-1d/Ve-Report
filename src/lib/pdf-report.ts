@@ -306,8 +306,8 @@ async function generateMeetingPdf(
   doc.rect(marginMm, metadataY - 3, 2.5, 14, "F");
 
   // Draw card border
-  doc.setDrawColor(226, 232, 240); // Slate 200
-  doc.setLineWidth(0.15);
+  doc.setDrawColor(148, 163, 184); // Slate 400
+  doc.setLineWidth(0.3);
   doc.rect(marginMm, metadataY - 3, boxW, 14, "D");
   
   doc.setFontSize(9.5);
@@ -390,13 +390,13 @@ async function generateMeetingPdf(
       textColor: [255, 255, 255], 
       fontStyle: "bold", 
       fontSize: 9, 
-      lineColor: [255, 255, 255], 
-      lineWidth: 0.15 
+      lineColor: [148, 163, 184], 
+      lineWidth: 0.3 
     },
     bodyStyles: { 
       fontSize: 8.5, 
-      lineColor: [226, 232, 240], 
-      lineWidth: 0.15,
+      lineColor: [148, 163, 184], 
+      lineWidth: 0.3,
       textColor: [51, 65, 85]
     },
     alternateRowStyles: {
@@ -552,8 +552,8 @@ async function generateHarianPdf(
   doc.rect(marginMm, metadataY - 3, 2.5, 14, "F");
 
   // Draw card border
-  doc.setDrawColor(226, 232, 240); // Slate 200
-  doc.setLineWidth(0.15);
+  doc.setDrawColor(148, 163, 184); // Slate 400
+  doc.setLineWidth(0.3);
   doc.rect(marginMm, metadataY - 3, boxW, 14, "D");
 
   doc.setFontSize(9.5);
@@ -645,13 +645,13 @@ async function generateHarianPdf(
       textColor: [255, 255, 255], 
       fontStyle: "bold", 
       fontSize: 9, 
-      lineColor: [255, 255, 255], 
-      lineWidth: 0.15 
+      lineColor: [148, 163, 184], 
+      lineWidth: 0.3 
     },
     bodyStyles: { 
       fontSize: 8.5, 
-      lineColor: [226, 232, 240], 
-      lineWidth: 0.15,
+      lineColor: [148, 163, 184], 
+      lineWidth: 0.3,
       textColor: [51, 65, 85]
     },
     alternateRowStyles: {
