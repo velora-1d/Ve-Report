@@ -13,6 +13,7 @@ export interface ReportInput {
   userId?: string | null;
   generatedByName: string;
   reportType?: "standard" | "meeting" | "harian";
+  checkerName?: string | null;
 }
 
 export async function generateReportPdf(
@@ -301,11 +302,27 @@ function generateMeetingPdf(
     sigY,
   );
 
+  const formatSig = (name: string | null | undefined, fallback: string) => {
+    if (!name) return fallback;
+    const clean = name.trim();
+    if (clean.startsWith("(") && clean.endsWith(")")) return clean;
+    return `( ${clean} )`;
+  };
+
   doc.text("Yang Membuat", marginMm, sigY + 6);
   doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
 
-  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 28);
-  doc.text("( .................................... )", pageW - marginMm - 50, sigY + 28);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), marginMm, sigY + 28);
+  
+  const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
+  if (hasChecker) {
+    doc.setFont("helvetica", "bold");
+  } else {
+    doc.setFont("helvetica", "normal");
+  }
+  doc.text(formatSig(input.checkerName, "( .................................... )"), pageW - marginMm - 50, sigY + 28);
+  doc.setFont("helvetica", "normal");
 
   // Global page numbers
   const pages = doc.getNumberOfPages();
@@ -450,11 +467,27 @@ function generateHarianPdf(
     sigY,
   );
 
+  const formatSig = (name: string | null | undefined, fallback: string) => {
+    if (!name) return fallback;
+    const clean = name.trim();
+    if (clean.startsWith("(") && clean.endsWith(")")) return clean;
+    return `( ${clean} )`;
+  };
+
   doc.text("Yang Membuat", marginMm, sigY + 6);
   doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
 
-  doc.text(`( ${input.generatedByName} )`, marginMm, sigY + 28);
-  doc.text("( .................................... )", pageW - marginMm - 50, sigY + 28);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), marginMm, sigY + 28);
+  
+  const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
+  if (hasChecker) {
+    doc.setFont("helvetica", "bold");
+  } else {
+    doc.setFont("helvetica", "normal");
+  }
+  doc.text(formatSig(input.checkerName, "( .................................... )"), pageW - marginMm - 50, sigY + 28);
+  doc.setFont("helvetica", "normal");
 
   // Global page numbers
   const pages = doc.getNumberOfPages();

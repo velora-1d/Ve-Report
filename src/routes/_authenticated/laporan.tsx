@@ -1,5 +1,5 @@
 // ponytail: Mengganti query Supabase client-side untuk laporan dengan Server Functions Drizzle ORM
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
@@ -234,6 +234,10 @@ function LaporanPage() {
   const [start, setStart] = useState(firstOfMonthISO());
   const [end, setEnd] = useState(todayISO());
   const [userId, setUserId] = useState<string>("me");
+  const [paperSize, setPaperSize] = useState<"A4" | "F4">("A4");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [makerName, setMakerName] = useState("");
+  const [checkerName, setCheckerName] = useState("");
 
   const { data: users } = useQuery({
     queryKey: ["users-simple"],
@@ -268,6 +272,21 @@ function LaporanPage() {
       }),
   });
 
+  // ponytail: Sinkronisasi nama pembuat dan konfigurasi kertas saat data pratinjau berhasil dimuat
+  useEffect(() => {
+    if (previewData?.name) {
+      setMakerName(previewData.name);
+    }
+    if (previewData?.cfg) {
+      if (previewData.cfg.pdfPaperSize) {
+        setPaperSize(previewData.cfg.pdfPaperSize.toUpperCase() === "F4" ? "F4" : "A4");
+      }
+      if (previewData.cfg.pdfOrientation) {
+        setOrientation(previewData.cfg.pdfOrientation === "landscape" ? "landscape" : "portrait");
+      }
+    }
+  }, [previewData?.name, previewData?.cfg]);
+
   const generate = useMutation({
     mutationFn: async (fileFormat: "pdf" | "excel") => {
       if (!me) throw new Error("Belum masuk");
@@ -300,17 +319,19 @@ function LaporanPage() {
       if (fileFormat === "excel") {
         blob = await generateReportExcel(
           {
-            reportType: "harian", // fallback, ignored by generator
+            reportType: reportType === "meeting" ? "meeting" : "harian",
             periodStart: start,
             periodEnd: end,
-            generatedByName: me.name,
-            userPosition: me.position,
+            generatedByName: makerName || me.name,
+            userPosition: reportData.position,
+            checkerName: checkerName || null,
           },
           {
-            employeeName: reportData.name,
+            employeeName: makerName || reportData.name,
             employeePosition: reportData.position,
             tasks: reportData.tasks,
             logs: reportData.logs,
+            checkerName: checkerName || null,
           }
         );
         extension = "xlsx";
@@ -320,11 +341,16 @@ function LaporanPage() {
             title: title.trim(),
             periodStart: start,
             periodEnd: end,
-            generatedByName: me.name,
+            generatedByName: makerName || me.name,
             reportType,
+            checkerName: checkerName || null,
           },
           {
-            cfg: reportData.cfg,
+            cfg: {
+              ...reportData.cfg,
+              pdfPaperSize: paperSize,
+              pdfOrientation: orientation,
+            },
             position: reportData.position,
             tasks: reportData.tasks,
             logs: reportData.logs,
@@ -371,174 +397,243 @@ function LaporanPage() {
         </p>
       </div>
 
-      <Card className="surface-card border-0">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="w-4 h-4 text-primary" /> Buat Laporan Baru
-          </CardTitle>
-          <CardDescription>
-            Dokumen akan dibuat di sisi klien dan otomatis terunduh.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Judul Laporan</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Format Laporan</Label>
-              <Select
-                value={reportType}
-                onValueChange={(v) => {
-                  const type = v as "standard" | "meeting" | "harian";
-                  setReportType(type);
-                  if (type === "standard") {
-                    setTitle("Laporan Kinerja");
-                  } else {
-                    if (type === "meeting") setTitle("Log Book Meeting");
-                    else if (type === "harian") setTitle("Log Book Harian");
-                    if (userId === "all") setUserId("me");
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">
-                    Laporan Kinerja (Standar)
-                  </SelectItem>
-                  <SelectItem value="meeting">
-                    Log Book Meeting (Excel / PDF)
-                  </SelectItem>
-                  <SelectItem value="harian">
-                    Log Book Harian (Excel / PDF)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Dari</Label>
-              <Input
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Sampai</Label>
-              <Input
-                type="date"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </div>
-            {canFilterUser && (
+      <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
+        {/* Kolom Kiri: Form & Riwayat */}
+        <div className="w-full lg:w-[450px] space-y-6 shrink-0">
+          <Card className="surface-card border-0">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" /> Buat Laporan Baru
+              </CardTitle>
+              <CardDescription>
+                Dokumen akan dibuat di sisi klien dan otomatis terunduh.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Filter Pengguna</Label>
-                <Select value={userId} onValueChange={setUserId}>
+                <Label>Judul Laporan</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Format Laporan</Label>
+                <Select
+                  value={reportType}
+                  onValueChange={(v) => {
+                    const type = v as "standard" | "meeting" | "harian";
+                    setReportType(type);
+                    if (type === "standard") {
+                      setTitle("Laporan Kinerja");
+                    } else {
+                      if (type === "meeting") setTitle("Log Book Meeting");
+                      else if (type === "harian") setTitle("Log Book Harian");
+                      if (userId === "all") setUserId("me");
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="me">Saya sendiri</SelectItem>
-                    {reportType === "standard" && (
-                      <SelectItem value="all">Semua pengguna</SelectItem>
-                    )}
-                    {(users ?? []).map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="standard">
+                      Laporan Kinerja (Standar)
+                    </SelectItem>
+                    <SelectItem value="meeting">
+                      Log Book Meeting (Excel / PDF)
+                    </SelectItem>
+                    <SelectItem value="harian">
+                      Log Book Harian (Excel / PDF)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => generate.mutate("excel")}
-              disabled={generate.isPending}
-            >
-              {generate.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat…
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" /> Buat & Unduh Excel
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={() => generate.mutate("pdf")}
-              disabled={generate.isPending}
-            >
-              {generate.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat…
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" /> Buat & Unduh PDF
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* ponytail: Render pratinjau grid laporan secara live/real-time */}
-      <ReportPreviewGrid
-        reportType={reportType}
-        data={previewData}
-        isLoading={previewLoading}
-      />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Dari</Label>
+                  <Input
+                    type="date"
+                    value={start}
+                    onChange={(e) => setStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sampai</Label>
+                  <Input
+                    type="date"
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                  />
+                </div>
+              </div>
 
-      <Card className="surface-card border-0">
-        <CardHeader>
-          <CardTitle className="text-base">Riwayat Laporan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {histLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (history ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada laporan.</p>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {history!.map((r) => (
-                <li
-                  key={r.id}
-                  className="py-2.5 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {r.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.periodStart ? format(new Date(r.periodStart), "d MMM yyyy", {
-                        locale: idLocale,
-                      }) : ""}
-                      {" — "}
-                      {r.periodEnd ? format(new Date(r.periodEnd), "d MMM yyyy", {
-                        locale: idLocale,
-                      }) : ""}
-                      {" • "}
-                      {r.createdAt ? format(new Date(r.createdAt), "d MMM yyyy HH:mm", {
-                        locale: idLocale,
-                      }) : ""}
-                    </div>
+              {canFilterUser && (
+                <div className="space-y-2">
+                  <Label>Filter Pengguna</Label>
+                  <Select value={userId} onValueChange={setUserId}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="me">Saya sendiri</SelectItem>
+                      {reportType === "standard" && (
+                        <SelectItem value="all">Semua pengguna</SelectItem>
+                      )}
+                      {(users ?? []).map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* ponytail: Ukuran kertas dan orientasi khusus logbook */}
+              {(reportType === "meeting" || reportType === "harian") && (
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                  <div className="space-y-2">
+                    <Label>Ukuran Kertas</Label>
+                    <Select value={paperSize} onValueChange={(v: any) => setPaperSize(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A4">A4</SelectItem>
+                        <SelectItem value="F4">F4</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="space-y-2">
+                    <Label>Orientasi</Label>
+                    <Select value={orientation} onValueChange={(v: any) => setOrientation(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="portrait">Portrait</SelectItem>
+                        <SelectItem value="landscape">Landscape</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* ponytail: Form nama tanda tangan custom */}
+              {(reportType === "meeting" || reportType === "harian") && (
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tanda Tangan Laporan</h4>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nama Yang Membuat</Label>
+                    <Input
+                      value={makerName}
+                      onChange={(e) => setMakerName(e.target.value)}
+                      placeholder="Nama Karyawan..."
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nama Yang Mengetahui (Atasan)</Label>
+                    <Input
+                      value={checkerName}
+                      onChange={(e) => setCheckerName(e.target.value)}
+                      placeholder="Kosongkan untuk titik-titik"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  onClick={() => generate.mutate("pdf")}
+                  disabled={generate.isPending}
+                  className="w-full"
+                >
+                  {generate.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat PDF…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" /> Buat & Unduh PDF
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => generate.mutate("excel")}
+                  disabled={generate.isPending}
+                  className="w-full"
+                >
+                  {generate.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat Excel…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" /> Buat & Unduh Excel
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="surface-card border-0">
+            <CardHeader>
+              <CardTitle className="text-base">Riwayat Laporan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {histLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (history ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada laporan.</p>
+              ) : (
+                <ul className="divide-y divide-border/60">
+                  {history!.map((r) => (
+                    <li
+                      key={r.id}
+                      className="py-2.5 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {r.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {r.periodStart ? format(new Date(r.periodStart), "d MMM yyyy", {
+                            locale: idLocale,
+                          }) : ""}
+                          {" — "}
+                          {r.periodEnd ? format(new Date(r.periodEnd), "d MMM yyyy", {
+                            locale: idLocale,
+                          }) : ""}
+                          {" • "}
+                          {r.createdAt ? format(new Date(r.createdAt), "d MMM yyyy HH:mm", {
+                            locale: idLocale,
+                          }) : ""}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Kolom Kanan: Pratinjau Kertas A4/F4 */}
+        <div className="flex-1 w-full min-w-0">
+          <ReportPreviewGrid
+            reportType={reportType}
+            data={previewData}
+            isLoading={previewLoading}
+            paperSize={paperSize}
+            orientation={orientation}
+            makerName={makerName}
+            checkerName={checkerName}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -548,10 +643,18 @@ function ReportPreviewGrid({
   reportType,
   data,
   isLoading,
+  paperSize,
+  orientation,
+  makerName,
+  checkerName,
 }: {
   reportType: "standard" | "meeting" | "harian";
   data: any;
   isLoading: boolean;
+  paperSize: "A4" | "F4";
+  orientation: "portrait" | "landscape";
+  makerName: string;
+  checkerName: string;
 }) {
   if (isLoading) {
     return (
@@ -572,9 +675,14 @@ function ReportPreviewGrid({
     );
   }
 
-  const paperSize = (data.cfg?.pdfPaperSize ?? "A4").toUpperCase();
-  const orientation = data.cfg?.pdfOrientation ?? "portrait";
   const marginMm = Math.max(5, Math.min(50, parseInt(data.cfg?.pdfMargin ?? "20", 10) || 20));
+
+  const formatSigText = (name: string | null | undefined, fallback: string) => {
+    if (!name) return fallback;
+    const clean = name.trim();
+    if (clean.startsWith("(") && clean.endsWith(")")) return clean;
+    return `( ${clean} )`;
+  };
 
   // Pratinjau Kinerja Standar
   if (reportType === "standard") {
@@ -611,7 +719,7 @@ function ReportPreviewGrid({
   // Pratinjau Log Book Meeting
   if (reportType === "meeting") {
     const tasks = data.tasks ?? [];
-    const employeeName = data.name || "";
+    const employeeName = makerName || data.name || "";
     const employeePosition = data.position || "Staf";
     const dateStart = new Date(data.periodStart ?? new Date());
     const monthName = format(dateStart, "MMMM", { locale: idLocale });
@@ -720,12 +828,12 @@ function ReportPreviewGrid({
                 <div>
                   <div>Yang Membuat</div>
                   <div className="h-16" />
-                  <div className="font-bold">( {employeeName} )</div>
+                  <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
                 <div>
                   <div>Yang Mengetahui</div>
                   <div className="h-16" />
-                  <div className="font-bold">( .................................... )</div>
+                  <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>
             </div>
@@ -739,7 +847,7 @@ function ReportPreviewGrid({
   // Pratinjau Log Book Harian
   if (reportType === "harian") {
     const logs = data.logs ?? [];
-    const employeeName = data.name || "";
+    const employeeName = makerName || data.name || "";
     const employeePosition = data.position || "Staf";
     const dateStart = new Date(data.periodStart ?? new Date());
     const monthName = format(dateStart, "MMMM", { locale: idLocale });
@@ -847,12 +955,12 @@ function ReportPreviewGrid({
                 <div>
                   <div>Yang Membuat</div>
                   <div className="h-16" />
-                  <div className="font-bold">( {employeeName} )</div>
+                  <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
                 <div>
                   <div>Yang Mengetahui</div>
                   <div className="h-16" />
-                  <div className="font-bold">( .................................... )</div>
+                  <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>
             </div>

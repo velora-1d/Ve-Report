@@ -9,6 +9,7 @@ export interface ExcelReportInput {
   periodEnd: string;
   generatedByName: string;
   userPosition?: string | null;
+  checkerName?: string | null;
 }
 
 export async function generateReportExcel(
@@ -18,10 +19,20 @@ export async function generateReportExcel(
     employeePosition: string;
     tasks: any[];
     logs: any[];
+    checkerName?: string | null;
   }
 ): Promise<Blob> {
   const employeeName = data.employeeName || input.generatedByName;
   const employeePosition = data.employeePosition || "Staf";
+  const checkerName = data.checkerName || input.checkerName || "";
+
+  const formatSig = (name: string, fallback: string) => {
+    if (!name) return fallback;
+    const clean = name.trim();
+    if (clean.startsWith("(") && clean.endsWith(")")) return clean;
+    return `(${clean})`;
+  };
+  const checkerSig = formatSig(checkerName, "( Atasan / Supervisor )");
 
   const dateStart = new Date(input.periodStart);
   const monthName = format(dateStart, "MMMM", { locale: idLocale });
@@ -115,7 +126,7 @@ export async function generateReportExcel(
       "",
       "",
       "",
-      "( Atasan / Supervisor )",
+      checkerSig,
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -188,11 +199,9 @@ export async function generateReportExcel(
           locale: idLocale,
         });
         const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-        const activityStr = [l.task?.title, l.note]
-          .filter(Boolean)
-          .join(" - ");
+        const activityStr = l.note || l.task?.title || "-";
 
-        const isDone = l.task?.status === "done";
+        const isDone = l.status === "done";
         const isOnProgress = !isDone;
 
         const progressCheck = isOnProgress ? "V" : "";
@@ -244,7 +253,7 @@ export async function generateReportExcel(
       "",
       "",
       "",
-      "( Atasan / Supervisor )",
+      checkerSig,
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
