@@ -121,18 +121,6 @@ export function TrackerFormDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="progress">On Progres</SelectItem>
-                <SelectItem value="done">Selesai</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
             <Label>Hari / Tanggal</Label>
             <Input
               type="date"
@@ -140,38 +128,7 @@ export function TrackerFormDialog({
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Jam</Label>
-              <Input
-                type="number"
-                min={0}
-                max={24}
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Menit</Label>
-              <Input
-                type="number"
-                min={0}
-                max={59}
-                value={minutes}
-                onChange={(e) => setMinutes(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="note">Judul Tugas / Kegiatan</Label>
-            <Textarea
-              id="note"
-              rows={3}
-              placeholder="Contoh: Pembuatan laporan bulanan"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
+          
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="start_time">Jam Mulai</Label>
@@ -194,6 +151,54 @@ export function TrackerFormDialog({
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Durasi (Jam)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={24}
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Durasi (Menit)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="note">Judul Tugas / Kegiatan</Label>
+            <Textarea
+              id="note"
+              rows={3}
+              placeholder="Contoh: Pembuatan laporan bulanan"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="progress">On Progres</SelectItem>
+                <SelectItem value="done">Selesai</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="remarks">Deskripsi / Keterangan</Label>
             <Input
