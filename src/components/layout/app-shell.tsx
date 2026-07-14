@@ -122,13 +122,13 @@ function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
-        <Link to="/dasbor" className="flex items-center gap-2.5">
+      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-4"}>
+        <Link to="/dasbor" className="flex items-center justify-center shrink-0">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-soft-sm shrink-0">
             <FileText className="w-5 h-5 text-primary" />
           </div>
           {!isCollapsed && (
-            <div>
+            <div className="ml-2.5">
               <div className="font-semibold tracking-tight">Log Book</div>
               <div className="text-xs text-muted-foreground">Manajemen Tim</div>
             </div>
@@ -136,7 +136,7 @@ function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className={isCollapsed ? "px-1" : "px-2"}>
         <SidebarGroup>
           {!isCollapsed && <SidebarGroupLabel>Utama</SidebarGroupLabel>}
           <SidebarGroupContent>
@@ -185,55 +185,61 @@ function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        <div className="flex items-center gap-3 p-2 rounded-xl surface-panel overflow-hidden">
-          <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-primary text-[10px] font-bold">{initials}</span>
-            )}
-          </div>
-          {!isCollapsed && (
-            <>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">
-                  {user?.name ?? "…"}
-                </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  {roles.map((r) => (
-                    <Badge
-                      key={r}
-                      variant="secondary"
-                      className="text-[10px] px-1.5 py-0 h-4"
-                    >
-                      {ROLE_LABEL[r]}
-                    </Badge>
-                  ))}
-                </div>
+      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3"}>
+        {!isCollapsed ? (
+          <div className="flex items-center gap-3 p-2 rounded-xl surface-panel overflow-hidden w-full">
+            <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-primary text-[10px] font-bold">{initials}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">
+                {user?.name ?? "…"}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                title="Keluar"
-                className="shrink-0"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </>
-          )}
-        </div>
-        {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSignOut}
-            title="Keluar"
-            className="w-full mt-2 hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
+              <div className="flex flex-wrap items-center gap-1">
+                {roles.map((r) => (
+                  <Badge
+                    key={r}
+                    variant="secondary"
+                    className="text-[10px] px-1.5 py-0 h-4"
+                  >
+                    {ROLE_LABEL[r]}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              title="Keluar"
+              className="shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="w-[27px] h-[36px] border border-primary/20 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden relative" title={user?.name}>
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-primary text-[10px] font-bold">{initials}</span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              title="Keluar"
+              className="w-8 h-8 rounded-lg hover:bg-destructive/10 hover:text-destructive flex items-center justify-center"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         )}
       </SidebarFooter>
     </Sidebar>
@@ -248,20 +254,24 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <SidebarMenuItem className="relative">
       {active && (
-        <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r" />
+        <div className={`absolute bg-primary rounded-full transition-all duration-200 ${
+          isCollapsed ? "left-1.5 w-1 top-2 bottom-2" : "left-0 w-[3px] top-1.5 bottom-1.5 rounded-r"
+        }`} />
       )}
       <SidebarMenuButton
         asChild
         isActive={active}
-        className={`rounded-lg transition-all duration-200 pl-3.5 ${
+        className={`rounded-lg transition-all duration-200 ${
+          isCollapsed ? "justify-center px-0 mx-auto" : "pl-3.5"
+        } ${
           active
             ? "bg-primary/8 text-primary hover:bg-primary/12 hover:text-primary font-medium"
             : "text-foreground/80 hover:bg-muted hover:text-foreground"
         }`}
       >
-        <Link to={item.to}>
+        <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-2.5 w-full"}>
           <Icon
-            className={`w-4 h-4 transition-colors duration-200 ${
+            className={`w-4 h-4 transition-colors duration-200 shrink-0 ${
               active ? "text-primary" : "text-foreground/60"
             }`}
           />
