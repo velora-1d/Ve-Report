@@ -24,8 +24,8 @@ export async function generateReportExcel(
   const employeeName = profile?.name ?? input.generatedByName;
   const employeePosition = profile?.position ?? input.userPosition ?? "Staf";
 
+  // ponytail: hapus variabel dateEnd yang tidak digunakan (YAGNI)
   const dateStart = new Date(input.periodStart);
-  const dateEnd = new Date(input.periodEnd);
 
   const monthName = format(dateStart, "MMMM", { locale: idLocale });
   const yearName = format(dateStart, "yyyy", { locale: idLocale });

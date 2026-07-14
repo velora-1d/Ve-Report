@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { generateReportExcel } from "@/lib/excel-report";
+import { todayISO } from "@/lib/tracker";
 import {
   Card,
   CardContent,
@@ -47,10 +48,7 @@ function firstOfMonthISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
-function todayISO() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
+// ponytail: gunakan import todayISO dari @/lib/tracker untuk mereduksi boilerplate redundant (YAGNI/Optimasi Baris)
 
 function LaporanPage() {
   const { data: me } = useCurrentUser();
