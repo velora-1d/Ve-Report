@@ -1,3 +1,4 @@
+// ponytail: Cast user as any untuk menopang custom columns Better Auth (YAGNI)
 import { authClient } from "@/lib/auth-client";
 import type { AppRole } from "@/lib/roles";
 
@@ -15,7 +16,7 @@ export interface CurrentUser {
 export function useCurrentUser() {
   const { data, isPending, error } = authClient.useSession();
 
-  const user = data?.user;
+  const user = data?.user as any;
   const currentUser: CurrentUser | null = user
     ? {
         id: user.id,

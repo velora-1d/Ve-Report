@@ -78,7 +78,6 @@ const getDeveloperStats = createServerFn({ method: "GET" }).handler(async () => 
   ];
 });
 
-// ponytail: Fungsi server untuk mengambil log sistem
 const getSystemLogs = createServerFn({ method: "GET" })
   .validator(z.string())
   .handler(async ({ data: levelFilter }) => {
@@ -86,11 +85,20 @@ const getSystemLogs = createServerFn({ method: "GET" })
     if (!session || !session.user) throw new Error("Unauthorized");
     if (session.user.role !== "developer") throw new Error("Forbidden");
 
-    return db.query.systemLogs.findMany({
+    const logs = await db.query.systemLogs.findMany({
       where: levelFilter !== "all" ? eq(systemLogsTable.level, levelFilter) : undefined,
       orderBy: [desc(systemLogsTable.createdAt)],
       limit: 200,
     });
+
+    return logs.map(l => ({
+      id: l.id,
+      level: l.level,
+      category: l.category,
+      message: l.message,
+      createdAt: l.createdAt,
+      userId: l.userId,
+    }));
   });
 
 // ponytail: Fungsi server untuk membersihkan log sistem lama

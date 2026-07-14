@@ -13,4 +13,4 @@ export const Route = createFileRoute("/api/auth/$")({
     },
   },
 });
-export type { Route };
+

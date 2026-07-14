@@ -204,7 +204,7 @@ export function TaskListTab() {
                       }
                     >
                       <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                        <StatusBadge status={t.status} />
+                        <StatusBadge status={t.status as any} />
                       </SelectTrigger>
                       <SelectContent>
                         {TASK_STATUSES.map((s) => (
@@ -216,7 +216,7 @@ export function TaskListTab() {
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <PriorityBadge priority={t.priority} />
+                    <PriorityBadge priority={t.priority as any} />
                   </TableCell>
                   <TableCell className="text-sm">
                     {t.assignee ? (

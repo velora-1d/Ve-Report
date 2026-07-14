@@ -238,7 +238,7 @@ function DasborPage() {
                         {t.title}
                       </Link>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <PriorityBadge priority={t.priority} />
+                        <PriorityBadge priority={t.priority as any} />
                         <span className="text-xs text-muted-foreground">
                           {t.days === 0
                             ? "Hari ini"
@@ -318,8 +318,8 @@ function DasborPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <PriorityBadge priority={t.priority} />
-                    <StatusBadge status={t.status} />
+                    <PriorityBadge priority={t.priority as any} />
+                    <StatusBadge status={t.status as any} />
                   </div>
                 </li>
               ))}

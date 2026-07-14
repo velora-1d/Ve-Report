@@ -200,7 +200,7 @@ function generateMeetingPdf(
   orientation: "portrait" | "landscape",
   marginMm: number,
   footerText: string,
-): Promise<Blob> {
+): Blob {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -312,7 +312,7 @@ function generateHarianPdf(
   orientation: "portrait" | "landscape",
   marginMm: number,
   footerText: string,
-): Promise<Blob> {
+): Blob {
   const doc = new jsPDF({ orientation, unit: "mm", format: paper });
   const pageW = doc.internal.pageSize.getWidth();
 
