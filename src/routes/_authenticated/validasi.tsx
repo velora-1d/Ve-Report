@@ -170,7 +170,7 @@ function ValidasiPage() {
       </div>
 
       {/* Stats Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card className="surface-card border-0">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between mb-2">

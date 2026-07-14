@@ -1003,6 +1003,34 @@ function ReportPreviewGrid({
   checkerSigOffsetX: number;
   checkerSigOffsetY: number;
 }) {
+  const [scale, setScale] = useState(1);
+  
+  const paperWidth = orientation === "landscape"
+    ? (paperSize === "F4" ? 1247 : 1122)
+    : (paperSize === "F4" ? 812 : 794);
+  const paperHeight = orientation === "landscape"
+    ? (paperSize === "F4" ? 812 : 794)
+    : (paperSize === "F4" ? 1247 : 1122);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== "undefined") {
+        const width = window.innerWidth;
+        if (width < 1024) { // on screens smaller than large desktop (e.g. tablet & mobile)
+          const pad = width < 640 ? 32 : 48; // padding margin
+          setScale(Math.max(0.2, Math.min(1, (width - pad) / paperWidth)));
+        } else {
+          // even on desktop, fit container width if desktop screen is smaller than paper width
+          const colWidth = 600; // estimated available right column space
+          setScale(1);
+        }
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, [paperSize, orientation, paperWidth]);
+
   if (isLoading) {
     return (
       <Card className="surface-card border-0 p-6">
@@ -1083,17 +1111,18 @@ function ReportPreviewGrid({
           </span>
         </div>
 
-        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
+        <div 
+          className="w-full bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-start justify-center p-4 md:p-8 overflow-hidden"
+          style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
+        >
           <div 
             className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
-              width: orientation === "landscape" 
-                ? (paperSize === "F4" ? "330mm" : "297mm")
-                : (paperSize === "F4" ? "215mm" : "210mm"),
-              minHeight: orientation === "landscape" 
-                ? (paperSize === "F4" ? "215mm" : "210mm")
-                : (paperSize === "F4" ? "330mm" : "297mm"),
+              width: `${paperWidth}px`,
+              height: `${paperHeight}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
             }}
           >
             {/* Watermark Background */}
@@ -1270,17 +1299,18 @@ function ReportPreviewGrid({
           </span>
         </div>
 
-        <div className="w-full overflow-x-auto p-4 md:p-8 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
+        <div 
+          className="w-full bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-start justify-center p-4 md:p-8 overflow-hidden"
+          style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
+        >
           <div 
             className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col justify-between font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
             style={{ 
               padding: `${marginMm}mm`,
-              width: orientation === "landscape" 
-                ? (paperSize === "F4" ? "330mm" : "297mm")
-                : (paperSize === "F4" ? "215mm" : "210mm"),
-              minHeight: orientation === "landscape" 
-                ? (paperSize === "F4" ? "215mm" : "210mm")
-                : (paperSize === "F4" ? "330mm" : "297mm"),
+              width: `${paperWidth}px`,
+              height: `${paperHeight}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
             }}
           >
             {/* Watermark Background */}
