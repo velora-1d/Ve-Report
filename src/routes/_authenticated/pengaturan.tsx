@@ -26,10 +26,10 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { users as usersTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users as usersTable, accounts as accountsTable } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
 import { uploadToRustFS } from "@/lib/storage";
 
 // ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
@@ -57,6 +57,107 @@ const updateProfile = createServerFn({ method: "POST" })
         updatedAt: new Date(),
       })
       .where(eq(usersTable.id, session.user.id));
+  });
+
+const updateCredentials = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      currentPassword: z.string(),
+      newEmail: z.string().email().optional().or(z.literal("")),
+      newPassword: z.string().min(6).optional().or(z.literal("")),
+    })
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    const emailToSet = data.newEmail && data.newEmail.trim() !== "" ? data.newEmail.trim() : null;
+    const passwordToSet = data.newPassword && data.newPassword.trim() !== "" ? data.newPassword.trim() : null;
+
+    if (!emailToSet && !passwordToSet) {
+      throw new Error("Tidak ada data kredensial baru yang diisi");
+    }
+
+    // 1. Ambil akun kredensial user saat ini
+    const existingAccounts = await db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, session.user.id),
+          eq(accountsTable.providerId, "email")
+        )
+      )
+      .limit(1);
+
+    const account = existingAccounts[0];
+    if (!account || !account.password) {
+      throw new Error("Akun kredensial tidak ditemukan");
+    }
+
+    // 2. Verifikasi kata sandi saat ini
+    const { verifyPassword } = await import("better-auth/crypto");
+    const isPasswordValid = await verifyPassword({
+      password: data.currentPassword,
+      hash: account.password,
+    });
+
+    if (!isPasswordValid) {
+      throw new Error("Kata sandi saat ini salah");
+    }
+
+    // 3. Perbarui email jika diisi
+    if (emailToSet) {
+      const duplicateUsers = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, emailToSet))
+        .limit(1);
+
+      if (duplicateUsers.length > 0) {
+        throw new Error("Email baru sudah digunakan oleh pengguna lain");
+      }
+
+      await db
+        .update(usersTable)
+        .set({
+          email: emailToSet,
+          updatedAt: new Date(),
+        })
+        .where(eq(usersTable.id, session.user.id));
+
+      await db
+        .update(accountsTable)
+        .set({
+          accountId: emailToSet,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(accountsTable.userId, session.user.id),
+            eq(accountsTable.providerId, "email")
+          )
+        );
+    }
+
+    // 4. Perbarui password jika diisi
+    if (passwordToSet) {
+      const { hashPassword } = await import("better-auth/crypto");
+      const hashedPassword = await hashPassword(passwordToSet);
+
+      await db
+        .update(accountsTable)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(accountsTable.userId, session.user.id),
+            eq(accountsTable.providerId, "email")
+          )
+        );
+    }
   });
 
 export const Route = createFileRoute("/_authenticated/pengaturan")({
@@ -105,8 +206,9 @@ function PengaturanPage() {
           {canReadPdf && <TabsTrigger value="pdf">Konfigurasi PDF</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="profil" className="mt-4">
+        <TabsContent value="profil" className="mt-4 space-y-6">
           <ProfileForm />
+          <SecurityForm />
         </TabsContent>
 
         {canReadBranding && (
@@ -276,6 +378,166 @@ function ProfileForm() {
             <Button type="submit" disabled={save.isPending || isUploading}>
               {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isUploading ? "Mengupload..." : "Simpan Perubahan"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SecurityForm() {
+  const qc = useQueryClient();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const update = useMutation({
+    mutationFn: () =>
+      updateCredentials({
+        data: {
+          currentPassword,
+          newEmail: newEmail || undefined,
+          newPassword: newPassword || undefined,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Kredensial keamanan berhasil diperbarui");
+      setCurrentPassword("");
+      setNewEmail("");
+      setNewPassword("");
+      setConfirmPassword("");
+      qc.invalidateQueries({ queryKey: ["current-user"] });
+    },
+    onError: (e: Error) => {
+      toast.error("Gagal memperbarui kredensial", { description: e.message });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      toast.error("Kata sandi saat ini wajib diisi untuk verifikasi keamanan");
+      return;
+    }
+    if (newPassword && newPassword !== confirmPassword) {
+      toast.error("Konfirmasi kata sandi baru tidak cocok");
+      return;
+    }
+    update.mutate();
+  };
+
+  return (
+    <Card className="surface-card border-0">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2 text-slate-800 dark:text-white">
+          <Lock className="w-4 h-4 text-primary" /> Keamanan Akun
+        </CardTitle>
+        <CardDescription>
+          Perbarui alamat email atau kata sandi Anda. Anda harus memasukkan kata sandi saat ini untuk memverifikasi tindakan ini.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Email Baru (Opsional)</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="emailbaru@domain.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Kata Sandi Saat Ini (Wajib)</Label>
+              <div className="relative">
+                <Input
+                  id="current-password"
+                  type={showCurrent ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Masukkan kata sandi lama Anda"
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  {showCurrent ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Kata Sandi Baru (Opsional)</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showNew ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  {showNew ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ulangi kata sandi baru"
+                  className="pr-10"
+                  required={!!newPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  {showConfirm ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={update.isPending} className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 text-white font-semibold rounded-xl text-xs py-2 shadow-sm">
+              {update.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Perbarui Kredensial
             </Button>
           </div>
         </form>
