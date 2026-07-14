@@ -1,6 +1,6 @@
-// ponytail: Menggunakan Server Functions dari tugas.tsx dengan Drizzle ORM
+// ponytail: Menyederhanakan CRUD tugas dengan menghapus dropdown penugasan user dan merubahnya menjadi manual Pemberi Tugas
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -29,9 +29,8 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/tasks";
-import { getAssignableUsers, saveTask } from "@/routes/_authenticated/tugas";
+import { saveTask } from "@/routes/_authenticated/tugas";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { isAdminOrDev } from "@/lib/roles";
 
 interface Props {
   open: boolean;
@@ -47,18 +46,13 @@ export function TaskFormDialog({
   currentUserId,
 }: Props) {
   const qc = useQueryClient();
-  const { data: currentUser } = useCurrentUser();
-  const isEdit = !!task;
-
-  const canAssign = currentUser ? isAdminOrDev(currentUser.roles) : false;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
-  const [assignedTo, setAssignedTo] = useState<string>("__none__");
-  const [taskSource, setTaskSource] = useState<string>("atasan");
+  const [taskSource, setTaskSource] = useState<string>("");
   const [outputDescription, setOutputDescription] = useState("");
 
   useEffect(() => {
@@ -68,17 +62,9 @@ export function TaskFormDialog({
     setStatus(task?.status ?? "todo");
     setPriority(task?.priority ?? "medium");
     setDueDate(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
-    setAssignedTo(task?.assignedTo ?? (canAssign ? "__none__" : currentUserId));
-    setTaskSource(task?.taskSource ?? "atasan");
+    setTaskSource(task?.taskSource ?? "");
     setOutputDescription(task?.outputDescription ?? "");
-  }, [open, task, canAssign, currentUserId]);
-
-  const { data: users } = useQuery({
-    queryKey: ["assignable-users"],
-    queryFn: () => getAssignableUsers(),
-    enabled: open,
-    staleTime: 60_000,
-  });
+  }, [open, task]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -90,28 +76,29 @@ export function TaskFormDialog({
           status,
           priority,
           dueDate: dueDate || null,
-          assignedTo: assignedTo === "__none__" ? null : assignedTo,
-          taskSource,
+          assignedTo: currentUserId,
+          taskSource: taskSource.trim() || null,
           outputDescription: outputDescription.trim() || null,
         }
       }),
     onSuccess: () => {
-      toast.success(isEdit ? "Tugas diperbarui." : "Tugas dibuat.");
+      toast.success(task ? "Tugas diperbarui." : "Tugas dibuat.");
       qc.invalidateQueries({ queryKey: ["tasks"] });
       onOpenChange(false);
     },
-    onError: (e: Error) => toast.error(e.message || "Gagal menyimpan tugas."),
+    onError: (e: Error) =>
+      toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Ubah Tugas" : "Tugas Baru"}</DialogTitle>
+          <DialogTitle>
+            {task ? "Ubah Log Meeting / Tugas" : "Tambah Log Meeting / Tugas"}
+          </DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Perbarui detail tugas ini."
-              : "Buat tugas baru dan tetapkan kepada anggota tim."}
+            Isi rincian detail tugas/meeting yang ditugaskan.
           </DialogDescription>
         </DialogHeader>
 
@@ -187,45 +174,25 @@ export function TaskFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Ditugaskan kepada</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo} disabled={!canAssign}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih pengguna" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Belum ditugaskan</SelectItem>
-                  {users?.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="taskSource">Pemberi Tugas</Label>
+              <Input
+                id="taskSource"
+                value={taskSource}
+                onChange={(e) => setTaskSource(e.target.value)}
+                placeholder="Contoh: Atasan / Rapat Kerja"
+                maxLength={20}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Sumber Tugas (Atasan / Rapat)</Label>
-              <Select value={taskSource} onValueChange={setTaskSource}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="atasan">Penugasan Atasan</SelectItem>
-                  <SelectItem value="meeting">Hasil Meeting</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="output">Out Put (Hasil Kerja)</Label>
-              <Input
-                id="output"
-                value={outputDescription}
-                onChange={(e) => setOutputDescription(e.target.value)}
-                placeholder="Contoh: Dokumen PDF Laporan"
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="output">Out Put (Hasil Kerja)</Label>
+            <Input
+              id="output"
+              value={outputDescription}
+              onChange={(e) => setOutputDescription(e.target.value)}
+              placeholder="Contoh: Dokumen PDF Laporan"
+            />
           </div>
         </div>
 

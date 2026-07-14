@@ -174,7 +174,7 @@ export function TaskListTab() {
               <TableRow>
                 <TableHead>Hari / Tanggal</TableHead>
                 <TableHead>Uraian Tugas</TableHead>
-                <TableHead>Sumber</TableHead>
+                <TableHead>Pemberi Tugas</TableHead>
                 <TableHead>Target Selesai</TableHead>
                 <TableHead>Out Put</TableHead>
                 <TableHead>Status</TableHead>
@@ -197,10 +197,8 @@ export function TaskListTab() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-semibold capitalize text-slate-800">
-                      {t.taskSource === "atasan" ? "Penugasan Atasan" : "Hasil Meeting"}
-                    </span>
+                  <TableCell className="text-sm font-semibold text-slate-800">
+                    {t.taskSource || "—"}
                   </TableCell>
                   <TableCell className="text-sm">
                     {t.dueDate ? (
