@@ -4,5 +4,7 @@ node_modules
 dist
 .git
 .github
-*.lock
+# Exclude lockfile manager lain (project ini pnpm)
+package-lock.json
+yarn.lock
 npm-debug.log

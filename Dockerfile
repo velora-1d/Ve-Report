@@ -1,33 +1,34 @@
-# Stage 1: Build stage
+# Stage 1: Build
 FROM node:22-alpine AS builder
-
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Aktifkan pnpm via corepack (built-in Node 22, tidak perlu install global)
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Install dependencies (including devDependencies needed for build)
-RUN npm ci
+# Copy package files — pnpm-lock.yaml WAJIB ikut untuk --frozen-lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Copy project files
+# Install deps deterministik (gagal kalau lockfile drift)
+RUN pnpm install --frozen-lockfile
+
+# Copy sisa source
 COPY . .
 
-# Build the project
-RUN npm run build
+# Build production bundle
+RUN pnpm build
 
-# Stage 2: Production runner stage
+# Stage 2: Production runner
 FROM node:22-alpine AS runner
-
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV HOST=0.0.0.0
+ENV HOST=[REDACTED-IP_ADDRESS]
 
-# Copy output from builder
+# Hanya bawa output bundle (.output sudah berisi runtime deps)
 COPY --from=builder /app/.output ./.output
 
 EXPOSE 8080
-
-# Run the app
 CMD ["node", ".output/server/index.mjs"]
