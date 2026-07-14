@@ -823,16 +823,21 @@ function ReportPreviewGrid({
 
             {/* Signature Block */}
             <div className="mt-12 text-xs text-black space-y-4">
-              <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <div>Yang Membuat</div>
-                  <div className="h-16" />
+              <div className="grid grid-cols-2 gap-8 text-center">
+                <div className="space-y-4">
+                  <div>
+                    <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="mt-1">Yang Membuat</div>
+                  </div>
+                  <div className="h-12" />
                   <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
-                <div>
-                  <div>Yang Mengetahui</div>
-                  <div className="h-16" />
+                <div className="space-y-4">
+                  <div>
+                    <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="mt-1">Yang Mengetahui</div>
+                  </div>
+                  <div className="h-12" />
                   <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>
@@ -950,16 +955,21 @@ function ReportPreviewGrid({
 
             {/* Signature Block */}
             <div className="mt-12 text-xs text-black space-y-4">
-              <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <div>Yang Membuat</div>
-                  <div className="h-16" />
+              <div className="grid grid-cols-2 gap-8 text-center">
+                <div className="space-y-4">
+                  <div>
+                    <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="mt-1">Yang Membuat</div>
+                  </div>
+                  <div className="h-12" />
                   <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
                 </div>
-                <div>
-                  <div>Yang Mengetahui</div>
-                  <div className="h-16" />
+                <div className="space-y-4">
+                  <div>
+                    <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="mt-1">Yang Mengetahui</div>
+                  </div>
+                  <div className="h-12" />
                   <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
                 </div>
               </div>

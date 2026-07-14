@@ -294,12 +294,16 @@ function generateMeetingPdf(
     sigY = marginMm + 10;
   }
 
+  const sigLeftX = marginMm + 30;
+  const sigRightX = pageW - marginMm - 30;
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(
     `Jonggol, ${format(new Date(), "dd MMMM yyyy", { locale: idLocale })}`,
-    marginMm,
+    sigLeftX,
     sigY,
+    { align: "center" }
   );
 
   const formatSig = (name: string | null | undefined, fallback: string) => {
@@ -309,11 +313,11 @@ function generateMeetingPdf(
     return `( ${clean} )`;
   };
 
-  doc.text("Yang Membuat", marginMm, sigY + 6);
-  doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
+  doc.text("Yang Membuat", sigLeftX, sigY + 6, { align: "center" });
+  doc.text("Yang Mengetahui", sigRightX, sigY + 6, { align: "center" });
 
   doc.setFont("helvetica", "bold");
-  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), marginMm, sigY + 28);
+  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), sigLeftX, sigY + 28, { align: "center" });
   
   const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
   if (hasChecker) {
@@ -321,7 +325,7 @@ function generateMeetingPdf(
   } else {
     doc.setFont("helvetica", "normal");
   }
-  doc.text(formatSig(input.checkerName, "( .................................... )"), pageW - marginMm - 50, sigY + 28);
+  doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
   doc.setFont("helvetica", "normal");
 
   // Global page numbers
@@ -459,12 +463,16 @@ function generateHarianPdf(
     sigY = marginMm + 10;
   }
 
+  const sigLeftX = marginMm + 30;
+  const sigRightX = pageW - marginMm - 30;
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(
     `Jonggol, ${format(new Date(), "dd MMMM yyyy", { locale: idLocale })}`,
-    marginMm,
+    sigLeftX,
     sigY,
+    { align: "center" }
   );
 
   const formatSig = (name: string | null | undefined, fallback: string) => {
@@ -474,11 +482,11 @@ function generateHarianPdf(
     return `( ${clean} )`;
   };
 
-  doc.text("Yang Membuat", marginMm, sigY + 6);
-  doc.text("Yang Mengetahui", pageW - marginMm - 50, sigY + 6);
+  doc.text("Yang Membuat", sigLeftX, sigY + 6, { align: "center" });
+  doc.text("Yang Mengetahui", sigRightX, sigY + 6, { align: "center" });
 
   doc.setFont("helvetica", "bold");
-  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), marginMm, sigY + 28);
+  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), sigLeftX, sigY + 28, { align: "center" });
   
   const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
   if (hasChecker) {
@@ -486,7 +494,7 @@ function generateHarianPdf(
   } else {
     doc.setFont("helvetica", "normal");
   }
-  doc.text(formatSig(input.checkerName, "( .................................... )"), pageW - marginMm - 50, sigY + 28);
+  doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
   doc.setFont("helvetica", "normal");
 
   // Global page numbers
