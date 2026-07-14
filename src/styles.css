@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..850;1,200..850&family=Fira+Code:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:ital,wght@0,100..700;1,100..700&display=swap');
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -60,18 +60,18 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-soft-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-soft: 0 2px 6px rgba(28, 25, 23, 0.05);
-  --shadow-soft-lg: 0 4px 16px rgba(28, 25, 23, 0.06);
-  --shadow-modal: 0 24px 48px rgba(28, 25, 23, 0.12);
-  --shadow-glow: 0 4px 12px rgba(194, 65, 12, 0.25);
+  --shadow-soft-sm: 0 1px 3px rgba(0, 77, 182, 0.06), 0 1px 2px rgba(0, 77, 182, 0.04);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-soft-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 4px 12px rgba(0, 119, 182, 0.25);
 }
 
 :root {
-  --radius: 0.75rem; /* 12px */
+  --radius: 0.5rem; /* 8px default radius */
 
-  /* Ve-Report Professional Design System Palette */
-  --background: #F8FAFC;
+  /* MediCare+ Calming Blue Sterile Theme Palette */
+  --background: #FAFCFF;
   --foreground: #0F172A;
   --card: #FFFFFF;
   --card-foreground: #0F172A;
@@ -79,94 +79,94 @@
   --popover-foreground: #0F172A;
   
   --surface: #FFFFFF;
-  --surface-raised: #F1F5FD;
-  --surface-sunken: #F8FAFC;
+  --surface-raised: #F0F7FF;
+  --surface-sunken: #FAFCFF;
 
-  --primary: #2563EB;
+  --primary: #0077B6;
   --primary-foreground: #FFFFFF;
-  --primary-hover: #1D4ED8;
+  --primary-hover: #006399;
 
-  --secondary: #3B82F6;
-  --secondary-foreground: #FFFFFF;
+  --secondary: #48CAE4;
+  --secondary-foreground: #0F172A;
 
-  --muted: #F8FAFC;
-  --muted-foreground: #000000; /* pitch black! */
+  --muted: #F0F7FF;
+  --muted-foreground: #475569;
 
-  --accent: #059669;
-  --accent-foreground: #FFFFFF;
+  --accent: #48CAE4;
+  --accent-foreground: #0F172A;
 
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
 
-  --success: #16A34A;
+  --success: #059669;
   --success-foreground: #FFFFFF;
   --warning: #D97706;
   --warning-foreground: #FFFFFF;
-  --info: #2563EB;
+  --info: #0077B6;
   --info-foreground: #FFFFFF;
 
-  --border: #E4ECFC;
-  --input: #E4ECFC;
-  --ring: #2563EB;
+  --border: #E2E8F0;
+  --input: #CBD5E1;
+  --ring: #0077B6;
 
-  --sidebar: #F8FAFC;
-  --sidebar-foreground: #000000; /* pitch black! */
-  --sidebar-primary: #2563EB;
+  --sidebar: #FAFCFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #0077B6;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #E4ECFC;
-  --sidebar-accent-foreground: #0F172A;
-  --sidebar-border: #E4ECFC;
-  --sidebar-ring: #2563EB;
+  --sidebar-accent: #F0F7FF;
+  --sidebar-accent-foreground: #0077B6;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #0077B6;
 }
 
 .dark {
-  /* Intentional Dark Mode Palette matching the professional blue theme */
-  --background: #0B0F19;
-  --foreground: #F8FAFC;
-  --card: #1E293B;
+  /* MediCare+ Dark Calming Blue Palette */
+  --background: #070F1E;
+  --foreground: #E2E8F0;
+  --card: #0F172A;
   --card-foreground: #F8FAFC;
-  --popover: #1E293B;
+  --popover: #0F172A;
   --popover-foreground: #F8FAFC;
 
-  --surface: #1E293B;
-  --surface-raised: #334155;
-  --surface-sunken: #0B0F19;
+  --surface: #0F172A;
+  --surface-raised: #1E293B;
+  --surface-sunken: #070F1E;
 
-  --primary: #3B82F6;
+  --primary: #0096C7;
   --primary-foreground: #FFFFFF;
-  --primary-hover: #2563EB;
+  --primary-hover: #0077B6;
 
-  --secondary: #334155;
-  --secondary-foreground: #F8FAFC;
+  --secondary: #48CAE4;
+  --secondary-foreground: #0F172A;
 
-  --muted: #0B0F19;
+  --muted: #0F172A;
   --muted-foreground: #94A3B8;
 
-  --accent: #10B981;
-  --accent-foreground: #0B0F19;
+  --accent: #48CAE4;
+  --accent-foreground: #0F172A;
 
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
 
   --success: #10B981;
-  --success-foreground: #0B0F19;
+  --success-foreground: #070F1E;
   --warning: #F59E0B;
-  --warning-foreground: #0B0F19;
-  --info: #3B82F6;
-  --info-foreground: #0B0F19;
+  --warning-foreground: #070F1E;
+  --info: #0096C7;
+  --info-foreground: #070F1E;
 
   --border: #1E293B;
   --input: #1E293B;
-  --ring: #3B82F6;
+  --ring: #0096C7;
 
-  --sidebar: #0B0F19;
+  --sidebar: #070F1E;
   --sidebar-foreground: #94A3B8;
-  --sidebar-primary: #3B82F6;
+  --sidebar-primary: #0096C7;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-accent-foreground: #FAFCFF;
   --sidebar-border: #1E293B;
-  --sidebar-ring: #3B82F6;
+  --sidebar-ring: #0096C7;
 }
 
 @layer base {
@@ -179,7 +179,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family:
-      "Plus Jakarta Sans",
+      "Open Sans",
       ui-sans-serif,
       system-ui,
       sans-serif;
@@ -193,13 +193,13 @@
   h4,
   h5,
   h6 {
-    font-family: "Plus Jakarta Sans", sans-serif;
-    letter-spacing: -0.02em;
+    font-family: "Figtree", sans-serif;
+    letter-spacing: -0.01em;
     font-weight: 700;
   }
 
   code, pre {
-    font-family: "Fira Code", monospace;
+    font-family: "IBM Plex Mono", monospace;
   }
 }
 
