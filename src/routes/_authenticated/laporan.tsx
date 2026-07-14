@@ -1040,22 +1040,22 @@ function ReportPreviewGrid({
               <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Nama</div>
-                    <div className="truncate font-semibold text-slate-800">: {employeeName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Nama</div>
+                    <div className="truncate font-semibold text-black">: {employeeName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Divisi</div>
-                    <div className="truncate font-semibold text-slate-800">: {employeePosition}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Divisi</div>
+                    <div className="truncate font-semibold text-black">: {employeePosition}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Bulan</div>
-                    <div className="truncate font-semibold text-slate-800">: {monthName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Bulan</div>
+                    <div className="truncate font-semibold text-black">: {monthName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Tahun</div>
-                    <div className="truncate font-semibold text-slate-800">: {yearName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Tahun</div>
+                    <div className="truncate font-semibold text-black">: {yearName}</div>
                   </div>
                 </div>
               </div>
@@ -1227,22 +1227,22 @@ function ReportPreviewGrid({
               <div className="border border-slate-200 bg-slate-50/50 p-4 rounded-xl mb-6 text-xs text-black space-y-1.5 relative overflow-hidden pl-5 border-l-4 border-l-[#0077B6]">
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Nama</div>
-                    <div className="truncate font-semibold text-slate-800">: {employeeName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Nama</div>
+                    <div className="truncate font-semibold text-black">: {employeeName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Divisi</div>
-                    <div className="truncate font-semibold text-slate-800">: {employeePosition}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Divisi</div>
+                    <div className="truncate font-semibold text-black">: {employeePosition}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Bulan</div>
-                    <div className="truncate font-semibold text-slate-800">: {monthName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Bulan</div>
+                    <div className="truncate font-semibold text-black">: {monthName}</div>
                   </div>
                   <div className="col-span-6 flex">
-                    <div className="w-16 font-bold shrink-0 text-slate-500">Tahun</div>
-                    <div className="truncate font-semibold text-slate-800">: {yearName}</div>
+                    <div className="w-16 font-bold shrink-0 text-black">Tahun</div>
+                    <div className="truncate font-semibold text-black">: {yearName}</div>
                   </div>
                 </div>
               </div>

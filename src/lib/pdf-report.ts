@@ -397,7 +397,7 @@ async function generateMeetingPdf(
       fontSize: 8.5, 
       lineColor: [148, 163, 184], 
       lineWidth: 0.3,
-      textColor: [51, 65, 85]
+      textColor: [0, 0, 0]
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252]
@@ -652,7 +652,7 @@ async function generateHarianPdf(
       fontSize: 8.5, 
       lineColor: [148, 163, 184], 
       lineWidth: 0.3,
-      textColor: [51, 65, 85]
+      textColor: [0, 0, 0]
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252]
