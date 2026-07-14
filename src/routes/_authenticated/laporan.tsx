@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { FileText, Download, Loader2 } from "lucide-react";
+import { FileText, Download, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
@@ -297,6 +297,49 @@ function LaporanPage() {
   const [checkerSigOffsetY, setCheckerSigOffsetY] = useState<number>(0);
 
   const [isUploadingSig, setIsUploadingSig] = useState(false);
+
+  // ponytail: Membaca konfigurasi tanda tangan & kertas yang tersimpan di localStorage agar tetap persisten saat reload
+  useEffect(() => {
+    try {
+      const savedMakerName = localStorage.getItem("pdf_maker_name");
+      if (savedMakerName) setMakerName(savedMakerName);
+      
+      const savedCheckerName = localStorage.getItem("pdf_checker_name");
+      if (savedCheckerName) setCheckerName(savedCheckerName);
+
+      const savedMakerSig = localStorage.getItem("pdf_maker_sig");
+      if (savedMakerSig) setMakerSigImg(savedMakerSig);
+
+      const savedCheckerSig = localStorage.getItem("pdf_checker_sig");
+      if (savedCheckerSig) setCheckerSigImg(savedCheckerSig);
+
+      const savedPaperSize = localStorage.getItem("pdf_paper_size");
+      if (savedPaperSize === "A4" || savedPaperSize === "F4") setPaperSize(savedPaperSize as "A4" | "F4");
+
+      const savedOrientation = localStorage.getItem("pdf_orientation");
+      if (savedOrientation === "portrait" || savedOrientation === "landscape") setOrientation(savedOrientation as "portrait" | "landscape");
+
+      const savedMakerSigScale = localStorage.getItem("pdf_maker_sig_scale");
+      if (savedMakerSigScale) setMakerSigScale(Number(savedMakerSigScale));
+
+      const savedMakerSigOffsetX = localStorage.getItem("pdf_maker_sig_offset_x");
+      if (savedMakerSigOffsetX) setMakerSigOffsetX(Number(savedMakerSigOffsetX));
+
+      const savedMakerSigOffsetY = localStorage.getItem("pdf_maker_sig_offset_y");
+      if (savedMakerSigOffsetY) setMakerSigOffsetY(Number(savedMakerSigOffsetY));
+
+      const savedCheckerSigScale = localStorage.getItem("pdf_checker_sig_scale");
+      if (savedCheckerSigScale) setCheckerSigScale(Number(savedCheckerSigScale));
+
+      const savedCheckerSigOffsetX = localStorage.getItem("pdf_checker_sig_offset_x");
+      if (savedCheckerSigOffsetX) setCheckerSigOffsetX(Number(savedCheckerSigOffsetX));
+
+      const savedCheckerSigOffsetY = localStorage.getItem("pdf_checker_sig_offset_y");
+      if (savedCheckerSigOffsetY) setCheckerSigOffsetY(Number(savedCheckerSigOffsetY));
+    } catch (e) {
+      console.error("Failed to load PDF config from localStorage", e);
+    }
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
     const file = e.target.files?.[0];
@@ -795,6 +838,37 @@ function LaporanPage() {
               )}
 
               <div className="flex flex-col gap-2 pt-2">
+                {(reportType === "meeting" || reportType === "harian") && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem("pdf_maker_name", makerName);
+                        localStorage.setItem("pdf_checker_name", checkerName);
+                        if (makerSigImg) localStorage.setItem("pdf_maker_sig", makerSigImg);
+                        else localStorage.removeItem("pdf_maker_sig");
+                        if (checkerSigImg) localStorage.setItem("pdf_checker_sig", checkerSigImg);
+                        else localStorage.removeItem("pdf_checker_sig");
+                        localStorage.setItem("pdf_paper_size", paperSize);
+                        localStorage.setItem("pdf_orientation", orientation);
+                        localStorage.setItem("pdf_maker_sig_scale", String(makerSigScale));
+                        localStorage.setItem("pdf_maker_sig_offset_x", String(makerSigOffsetX));
+                        localStorage.setItem("pdf_maker_sig_offset_y", String(makerSigOffsetY));
+                        localStorage.setItem("pdf_checker_sig_scale", String(checkerSigScale));
+                        localStorage.setItem("pdf_checker_sig_offset_x", String(checkerSigOffsetX));
+                        localStorage.setItem("pdf_checker_sig_offset_y", String(checkerSigOffsetY));
+                        toast.success("Konfigurasi & tanda tangan berhasil disimpan!");
+                      } catch (e) {
+                        toast.error("Gagal menyimpan konfigurasi");
+                      }
+                    }}
+                    className="w-full text-xs font-semibold border-primary/20 text-[#0077B6] hover:bg-[#0077B6]/5 flex items-center justify-center gap-2 rounded-xl h-10 mb-2 cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Simpan Konfigurasi & Ttd
+                  </Button>
+                )}
                 <Button
                   onClick={() => generate.mutate("pdf")}
                   disabled={generate.isPending || !hasPermission("laporan", "create")}
