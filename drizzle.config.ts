@@ -14,13 +14,13 @@ const dbCredentials = match
       port: parseInt(match[4], 10),
       database: match[5],
       ssl: {
-        rejectUnauthorized: true,
+        rejectUnauthorized: false,
       },
     }
   : {
       url: databaseUrl,
       ssl: {
-        rejectUnauthorized: true,
+        rejectUnauthorized: false,
       },
     };
 
