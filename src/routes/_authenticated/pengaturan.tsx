@@ -1,10 +1,10 @@
-// ponytail: Mengganti query Supabase client-side untuk memperbarui profil dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -26,10 +26,23 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { users as usersTable, accounts as accountsTable } from "@/db/schema";
+import {
+  users as usersTable,
+  accounts as accountsTable,
+  divisions,
+  userDivisions,
+} from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isAdminOrDev } from "@/lib/roles";
-import { Loader2, Eye, EyeOff, Lock, User, Palette, FileText } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  Palette,
+  FileText,
+} from "lucide-react";
 import { uploadToRustFS } from "@/lib/storage";
 
 // ponytail: Fungsi server untuk memperbarui profil pengguna saat ini
@@ -41,13 +54,14 @@ const updateProfile = createServerFn({ method: "POST" })
       position: z.string().optional(),
       bio: z.string().optional(),
       image: z.string().nullable().optional(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
 
-    await db.update(usersTable)
+    await db
+      .update(usersTable)
       .set({
         name: data.name,
         phone: data.phone || null,
@@ -59,20 +73,41 @@ const updateProfile = createServerFn({ method: "POST" })
       .where(eq(usersTable.id, session.user.id));
   });
 
+// ponytail: Fungsi server untuk mengambil daftar divisi milik user saat ini
+const getUserDivisions = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  return await db
+    .select({
+      id: divisions.id,
+      name: divisions.name,
+    })
+    .from(userDivisions)
+    .innerJoin(divisions, eq(userDivisions.divisionId, divisions.id))
+    .where(eq(userDivisions.userId, session.user.id));
+});
+
 const updateCredentials = createServerFn({ method: "POST" })
   .validator(
     z.object({
       currentPassword: z.string(),
       newEmail: z.string().email().optional().or(z.literal("")),
       newPassword: z.string().min(6).optional().or(z.literal("")),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
 
-    const emailToSet = data.newEmail && data.newEmail.trim() !== "" ? data.newEmail.trim() : null;
-    const passwordToSet = data.newPassword && data.newPassword.trim() !== "" ? data.newPassword.trim() : null;
+    const emailToSet =
+      data.newEmail && data.newEmail.trim() !== ""
+        ? data.newEmail.trim()
+        : null;
+    const passwordToSet =
+      data.newPassword && data.newPassword.trim() !== ""
+        ? data.newPassword.trim()
+        : null;
 
     if (!emailToSet && !passwordToSet) {
       throw new Error("Tidak ada data kredensial baru yang diisi");
@@ -85,8 +120,8 @@ const updateCredentials = createServerFn({ method: "POST" })
       .where(
         and(
           eq(accountsTable.userId, session.user.id),
-          eq(accountsTable.providerId, "email")
-        )
+          eq(accountsTable.providerId, "email"),
+        ),
       )
       .limit(1);
 
@@ -135,8 +170,8 @@ const updateCredentials = createServerFn({ method: "POST" })
         .where(
           and(
             eq(accountsTable.userId, session.user.id),
-            eq(accountsTable.providerId, "email")
-          )
+            eq(accountsTable.providerId, "email"),
+          ),
         );
     }
 
@@ -154,8 +189,8 @@ const updateCredentials = createServerFn({ method: "POST" })
         .where(
           and(
             eq(accountsTable.userId, session.user.id),
-            eq(accountsTable.providerId, "email")
-          )
+            eq(accountsTable.providerId, "email"),
+          ),
         );
     }
   });
@@ -257,16 +292,15 @@ function ProfileForm() {
   const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl ?? null);
   const [isUploading, setIsUploading] = useState(false);
 
-  if (!user) return null;
-
-  const initials = user.name
-    .split(" ")
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? "")
-    .join("");
+  const { data: myDivisions } = useQuery({
+    queryKey: ["my-divisions", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => getUserDivisions(),
+  });
 
   const save = useMutation({
-    mutationFn: () => updateProfile({ data: { name, phone, position, bio, image: avatar } }),
+    mutationFn: () =>
+      updateProfile({ data: { name, phone, position, bio, image: avatar } }),
     onSuccess: () => {
       toast.success("Profil berhasil diperbarui");
       qc.invalidateQueries({ queryKey: ["current-user"] });
@@ -275,6 +309,14 @@ function ProfileForm() {
       toast.error("Gagal menyimpan profil", { description: e.message });
     },
   });
+
+  if (!user) return null;
+
+  const initials = user.name
+    .split(" ")
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,7 +336,11 @@ function ProfileForm() {
           <div className="flex items-center gap-4 bg-muted/20 p-3 rounded-lg border border-border/60">
             <div className="w-24 h-32 border-2 border-primary/20 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 relative">
               {avatar ? (
-                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                <img
+                  src={avatar}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
                   <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
@@ -302,7 +348,9 @@ function ProfileForm() {
               )}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs font-semibold block text-foreground">Foto Profil</Label>
+              <Label className="text-xs font-semibold block text-foreground">
+                Foto Profil
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="file"
@@ -319,14 +367,21 @@ function ProfileForm() {
                               base64Data: reader.result as string,
                               fileName: file.name,
                               contentType: file.type || "image/png",
-                            }
+                            },
                           });
                           if (res?.url) {
                             setAvatar(res.url);
-                            toast.success("Foto profil berhasil di-upload ke S3");
+                            toast.success(
+                              "Foto profil berhasil di-upload ke S3",
+                            );
                           }
-                        } catch (err: any) {
-                          toast.error(err.message || "Gagal mengupload foto profil ke S3");
+                        } catch (err) {
+                          const error =
+                            err instanceof Error ? err : new Error(String(err));
+                          toast.error(
+                            error.message ||
+                              "Gagal mengupload foto profil ke S3",
+                          );
                         } finally {
                           setIsUploading(false);
                         }
@@ -387,6 +442,32 @@ function ProfileForm() {
             </div>
           </div>
 
+          {/* Divisi Kerja Aktif */}
+          <div className="space-y-2 bg-slate-50 dark:bg-slate-900/40 p-4 border border-slate-100 dark:border-slate-800 rounded-2xl">
+            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Divisi Kerja Aktif
+            </Label>
+            {myDivisions && myDivisions.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {myDivisions.map((div) => (
+                  <Badge
+                    key={div.id}
+                    variant="secondary"
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-none"
+                  >
+                    {div.name}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic mt-1">
+                {user.role === "developer"
+                  ? "Developer memiliki akses penuh ke seluruh divisi."
+                  : "Belum terdaftar di divisi manapun. Hubungi admin."}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="bio">Bio Singkat</Label>
             <Textarea
@@ -400,7 +481,9 @@ function ProfileForm() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={save.isPending || isUploading}>
-              {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {save.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
               {isUploading ? "Mengupload..." : "Simpan Perubahan"}
             </Button>
           </div>
@@ -463,7 +546,8 @@ function SecurityForm() {
           <Lock className="w-4 h-4 text-primary" /> Keamanan Akun
         </CardTitle>
         <CardDescription>
-          Perbarui alamat email atau kata sandi Anda. Anda harus memasukkan kata sandi saat ini untuk memverifikasi tindakan ini.
+          Perbarui alamat email atau kata sandi Anda. Anda harus memasukkan kata
+          sandi saat ini untuk memverifikasi tindakan ini.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -480,7 +564,9 @@ function SecurityForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="current-password">Kata Sandi Saat Ini (Wajib)</Label>
+              <Label htmlFor="current-password">
+                Kata Sandi Saat Ini (Wajib)
+              </Label>
               <div className="relative">
                 <Input
                   id="current-password"
@@ -532,7 +618,9 @@ function SecurityForm() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
+              <Label htmlFor="confirm-password">
+                Konfirmasi Kata Sandi Baru
+              </Label>
               <div className="relative">
                 <Input
                   id="confirm-password"
@@ -559,8 +647,14 @@ function SecurityForm() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={update.isPending} className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 text-white font-semibold rounded-xl text-xs py-2 shadow-sm">
-              {update.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <Button
+              type="submit"
+              disabled={update.isPending}
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 text-white font-semibold rounded-xl text-xs py-2 shadow-sm"
+            >
+              {update.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
               Perbarui Kredensial
             </Button>
           </div>

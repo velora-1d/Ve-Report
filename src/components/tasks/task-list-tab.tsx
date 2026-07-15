@@ -49,7 +49,7 @@ import { StatusBadge, PriorityBadge } from "./status-badges";
 import { TaskFormDialog } from "./task-form-dialog";
 import { getTasksList, updateTaskStatus, deleteTask } from "@/routes/_authenticated/tugas";
 
-export function TaskListTab() {
+export function TaskListTab({ divisionId }: { divisionId: string | null }) {
   const { data: user } = useCurrentUser();
   const { hasPermission } = usePermission();
   const qc = useQueryClient();
@@ -63,9 +63,9 @@ export function TaskListTab() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", "list"],
-    queryFn: () => getTasksList(),
-    enabled: !!user,
+    queryKey: ["tasks", "list", divisionId],
+    queryFn: () => getTasksList({ data: { divisionId } }),
+    enabled: !!user && !!divisionId,
   });
 
   const filtered = useMemo(() => {
@@ -292,6 +292,7 @@ export function TaskListTab() {
           onOpenChange={setFormOpen}
           task={editing}
           currentUserId={user.id}
+          divisionId={divisionId}
         />
       )}
 

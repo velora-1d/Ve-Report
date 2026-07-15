@@ -32,11 +32,26 @@ import {
 import { saveTask } from "@/routes/_authenticated/tugas";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
+export interface TaskFormData {
+  id?: string;
+  title?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  description?: string | null;
+  startedAt?: Date | string | null;
+  dueDate?: Date | string | null;
+  assignedTo?: string | null;
+  taskSource?: string | null;
+  outputDescription?: string | null;
+  divisionId?: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  task: any | null;
+  task: TaskFormData | null;
   currentUserId: string;
+  divisionId?: string | null;
 }
 
 export function TaskFormDialog({
@@ -44,6 +59,7 @@ export function TaskFormDialog({
   onOpenChange,
   task,
   currentUserId,
+  divisionId,
 }: Props) {
   const qc = useQueryClient();
 
@@ -62,8 +78,14 @@ export function TaskFormDialog({
     setDescription(task?.description ?? "");
     setStatus(task?.status ?? "todo");
     setPriority(task?.priority ?? "medium");
-    setStartedAt(task?.startedAt ? new Date(task.startedAt).toISOString().slice(0, 10) : "");
-    setDueDate(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
+    setStartedAt(
+      task?.startedAt
+        ? new Date(task.startedAt).toISOString().slice(0, 10)
+        : "",
+    );
+    setDueDate(
+      task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "",
+    );
     setTaskSource(task?.taskSource ?? "");
     setOutputDescription(task?.outputDescription ?? "");
   }, [open, task]);
@@ -80,9 +102,10 @@ export function TaskFormDialog({
           startedAt: startedAt || null,
           dueDate: dueDate || null,
           assignedTo: currentUserId,
-          taskSource: taskSource.trim() || null,
+          taskSource: taskSource.trim() || undefined,
           outputDescription: outputDescription.trim() || null,
-        }
+          divisionId: task?.divisionId ?? divisionId,
+        },
       }),
     onSuccess: () => {
       toast.success(task ? "Tugas diperbarui." : "Tugas dibuat.");

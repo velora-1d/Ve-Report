@@ -16,10 +16,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Loader2, CheckCircle2, Clock, ShieldCheck, ArrowRight, Sparkles, Eye, EyeOff } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getAppConfig } from "@/lib/app-config";
+import { createServerFn } from "@tanstack/react-start";
+import { Checkbox } from "@/components/ui/checkbox";
+import { db } from "@/db";
+import { divisions, userDivisions } from "@/db/schema";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
 });
+
+// ponytail: Mengambil daftar divisi aktif untuk pendaftaran
+export const getActiveDivisionsList = createServerFn({ method: "GET" }).handler(async () => {
+  return await db.select().from(divisions).orderBy(divisions.name);
+});
+
+// ponytail: Mengaitkan divisi dengan user setelah signup berhasil
+export const assignUserDivisions = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      userId: z.string(),
+      divisionIds: z.array(z.string()),
+    })
+  )
+  .handler(async ({ data }) => {
+    if (data.divisionIds.length === 0) return;
+    const values = data.divisionIds.map((divId) => ({
+      userId: data.userId,
+      divisionId: divId,
+    }));
+    await db.insert(userDivisions).values(values);
+  });
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -45,6 +71,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [nameSignup, setNameSignup] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
 
   const { data: config } = useQuery({
     queryKey: ["app-config"],
@@ -52,6 +79,11 @@ function AuthPage() {
   });
   const appName = config?.appName || "Log Book";
   const logoUrl = config?.logoUrl || null;
+
+  const { data: divisionsList } = useQuery({
+    queryKey: ["divisions-list"],
+    queryFn: () => getActiveDivisionsList(),
+  });
 
   const { data: session } = authClient.useSession();
 
@@ -81,22 +113,45 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (selectedDivisions.length === 0) {
+      toast.error("Gagal mendaftar", {
+        description: "Harap pilih minimal satu divisi kerja Anda.",
+      });
+      return;
+    }
     setLoading(true);
-    const { error } = await authClient.signUp.email({
+    const { data: signupData, error } = await authClient.signUp.email({
       email,
       password,
       name: nameSignup || email.split("@")[0],
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error("Gagal mendaftar", {
         description: translateAuthError(error.message || "Gagal membuat akun"),
       });
       return;
     }
-    toast.success("Akun berhasil dibuat", {
-      description: "Silakan masuk dengan email dan kata sandi Anda.",
-    });
+    
+    try {
+      if (signupData?.user?.id) {
+        await assignUserDivisions({
+          data: {
+            userId: signupData.user.id,
+            divisionIds: selectedDivisions,
+          },
+        });
+      }
+      setLoading(false);
+      toast.success("Akun berhasil dibuat", {
+        description: "Silakan masuk dengan email dan kata sandi Anda.",
+      });
+    } catch (err: any) {
+      setLoading(false);
+      toast.error("Gagal mengaitkan divisi", {
+        description: err.message,
+      });
+    }
   };
 
   return (
@@ -329,6 +384,34 @@ function AuthPage() {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                    </div>
+                    {/* Checkbox Divisi */}
+                    <div className="space-y-2 mt-2">
+                      <Label className="text-xs font-bold text-slate-700 block">Pilih Divisi Kerja Anda</Label>
+                      {divisionsList && divisionsList.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2 border border-slate-100 bg-slate-50/20 p-3.5 rounded-2xl">
+                          {divisionsList.map((div) => (
+                            <label key={div.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors duration-150">
+                              <Checkbox
+                                id={`signup-div-${div.id}`}
+                                checked={selectedDivisions.includes(div.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedDivisions([...selectedDivisions, div.id]);
+                                  } else {
+                                    setSelectedDivisions(selectedDivisions.filter((id) => id !== div.id));
+                                  }
+                                }}
+                              />
+                              <span className="text-xs font-bold text-slate-600 truncate">{div.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 italic p-3 bg-slate-50 rounded-2xl">
+                          Tidak ada divisi aktif. Silakan hubungi developer.
+                        </div>
+                      )}
                     </div>
                     <Button type="submit" className="w-full rounded-2xl py-6 font-bold text-sm bg-primary hover:bg-primary/95 text-white shadow-[0_8px_20px_rgba(0,102,204,0.15)] hover:shadow-[0_10px_25px_rgba(0,102,204,0.25)] transition-all duration-300 mt-2 flex items-center justify-center gap-2 group" disabled={loading}>
                       {loading ? (

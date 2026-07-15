@@ -56,7 +56,7 @@ import { toast } from "sonner";
 interface NavItem {
   to: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   requiresAdmin?: boolean;
   requiresDev?: boolean;
 }
@@ -136,14 +136,16 @@ function AppSidebar() {
   });
   const appName = config?.appName || "Log Book";
   const logoUrl = config?.logoUrl || null;
-  const permissions = config?.permissions as any || null;
+  const permissions =
+    (config?.permissions as Record<string, { menus?: string[] }>) || null;
 
   const isMenuAllowed = (to: string) => {
     if (user?.role === "developer") return true;
     const userRole = user?.role || "staff";
 
     if (!permissions || !permissions[userRole]) {
-      if (to === "/manajemen-pengguna" || to === "/validasi") return userRole === "admin";
+      if (to === "/manajemen-pengguna" || to === "/validasi")
+        return userRole === "admin";
       if (to === "/panel-developer") return false;
       return true;
     }
@@ -200,22 +202,40 @@ function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-slate-100 dark:border-slate-800 bg-gradient-to-b from-[#FAFCFF] via-white to-[#F0F4FA] dark:from-slate-900 dark:to-slate-950 shadow-[1px_0_24px_rgba(0,119,182,0.025)] transition-all duration-300">
-      <SidebarHeader className={isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-4"}>
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-slate-100 dark:border-slate-800 bg-gradient-to-b from-[#FAFCFF] via-white to-[#F0F4FA] dark:from-slate-900 dark:to-slate-950 shadow-[1px_0_24px_rgba(0,119,182,0.025)] transition-all duration-300"
+    >
+      <SidebarHeader
+        className={
+          isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-4"
+        }
+      >
         <Link
           to="/dasbor"
-          className={isCollapsed ? "flex items-center justify-center w-full" : "flex items-center gap-3.5 w-full pl-1.5"}
+          className={
+            isCollapsed
+              ? "flex items-center justify-center w-full"
+              : "flex items-center gap-3.5 w-full pl-1.5"
+          }
         >
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0077B6] to-[#48CAE4] flex items-center justify-center shadow-[0_8px_16px_rgba(0,119,182,0.22)] shrink-0 overflow-hidden transition-all duration-500 hover:scale-105 hover:rotate-6 ring-4 ring-[#90E0EF]/15 relative">
             {logoUrl ? (
-              <img src={logoUrl} alt={appName} className="w-full h-full object-cover" />
+              <img
+                src={logoUrl}
+                alt={appName}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <FileText className="w-5 h-5 text-white" strokeWidth={2.5} />
             )}
           </div>
           {!isCollapsed && (
             <div className="flex flex-col justify-center min-w-0">
-              <div className="font-extrabold tracking-tight text-slate-850 dark:text-white text-base leading-tight truncate max-w-[130px]" title={appName}>
+              <div
+                className="font-extrabold tracking-tight text-slate-850 dark:text-white text-base leading-tight truncate max-w-[130px]"
+                title={appName}
+              >
                 {appName}
               </div>
               <div className="text-[9px] uppercase font-bold tracking-widest text-[#0077B6] dark:text-[#48CAE4] leading-none mt-1">
@@ -238,7 +258,11 @@ function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
                 {allowedMain.map((item) => (
-                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
+                  <NavLink
+                    key={item.to}
+                    item={item}
+                    active={isActive(item.to)}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -278,7 +302,11 @@ function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
                 {allowedSettings.map((item) => (
-                  <NavLink key={item.to} item={item} active={isActive(item.to)} />
+                  <NavLink
+                    key={item.to}
+                    item={item}
+                    active={isActive(item.to)}
+                  />
                 ))}
                 {canDev &&
                   DEV_NAV.map((item) => (
@@ -294,7 +322,11 @@ function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className={isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4 gap-4"}>
+      <SidebarFooter
+        className={
+          isCollapsed ? "p-2 flex flex-col items-center gap-3" : "p-4 gap-4"
+        }
+      >
         {user?.originalRole === "developer" && !isCollapsed && (
           <div className="px-1 py-1 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
             <div className="text-[9px] uppercase font-extrabold tracking-widest text-[#0077B6] dark:text-slate-400 pl-1">
@@ -315,7 +347,11 @@ function AppSidebar() {
                       : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-800/40"
                   }`}
                 >
-                  {r === "developer" ? "Dev" : r === "admin" ? "Admin" : "Staff"}
+                  {r === "developer"
+                    ? "Dev"
+                    : r === "admin"
+                      ? "Admin"
+                      : "Staff"}
                 </button>
               ))}
             </div>
@@ -326,7 +362,11 @@ function AppSidebar() {
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-white via-[#FAFCFF] to-transparent dark:from-slate-900 dark:via-slate-900/50 dark:to-transparent border border-slate-100 dark:border-slate-800 shadow-[0_4px_12px_rgba(0,119,182,0.01)] backdrop-blur-md overflow-hidden w-full transition-all duration-300 hover:border-[#0077B6]/25 hover:shadow-[0_8px_24px_rgba(0,119,182,0.06)] hover:-translate-y-0.5">
             <div className="w-[36px] h-[48px] border border-[#0077B6]/20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all">
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
                   <User className="w-3.5 h-3.5" />
@@ -361,9 +401,16 @@ function AppSidebar() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2.5 w-full">
-            <div className="w-[36px] h-[48px] border border-[#0077B6]/20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all" title={user?.name}>
+            <div
+              className="w-[36px] h-[48px] border border-[#0077B6]/20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-[0_2px_8px_rgba(0,119,182,0.06)] ring-2 ring-[#0077B6]/5 transition-all"
+              title={user?.name}
+            >
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400">
                   <User className="w-3.5 h-3.5" />
@@ -393,8 +440,12 @@ function AppSidebar() {
               Konfirmasi Switch Peran
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Apakah Anda yakin ingin meninjau workspace ini sebagai peran <strong className="text-slate-800 dark:text-slate-200 uppercase">{selectedRole === "staff" ? "staff / user biasa" : selectedRole}</strong>?
-              Tampilan menu, tombol aksi, dan izin CRUD akan otomatis menyesuaikan peran tersebut.
+              Apakah Anda yakin ingin meninjau workspace ini sebagai peran{" "}
+              <strong className="text-slate-800 dark:text-slate-200 uppercase">
+                {selectedRole === "staff" ? "staff / user biasa" : selectedRole}
+              </strong>
+              ? Tampilan menu, tombol aksi, dan izin CRUD akan otomatis
+              menyesuaikan peran tersebut.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex gap-2">
@@ -421,7 +472,8 @@ function AppSidebar() {
               Konfirmasi Keluar
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Apakah Anda yakin ingin keluar dari aplikasi VeReport? Sesi Anda akan diakhiri.
+              Apakah Anda yakin ingin keluar dari aplikasi VeReport? Sesi Anda
+              akan diakhiri.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex gap-2">
@@ -464,7 +516,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
               : "text-slate-700 dark:text-slate-350 font-bold hover:bg-[#0077B6]/5 hover:text-[#0077B6] hover:translate-x-1 pl-4"
         }`}
       >
-        <Link to={item.to} className={isCollapsed ? "flex items-center justify-center w-full h-full" : "flex items-center gap-3 w-full"}>
+        <Link
+          to={item.to}
+          className={
+            isCollapsed
+              ? "flex items-center justify-center w-full h-full"
+              : "flex items-center gap-3 w-full"
+          }
+        >
           <Icon
             strokeWidth={3.0}
             className={`w-[18px] h-[18px] transition-all duration-300 shrink-0 ${

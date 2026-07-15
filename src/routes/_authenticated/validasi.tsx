@@ -3,10 +3,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Check, Clock, Users, CheckSquare, ListChecks, AlertCircle } from "lucide-react";
+import {
+  Check,
+  Clock,
+  Users,
+  CheckSquare,
+  ListChecks,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
+import { db } from "@/db";
+import {
+  divisions as divisionsTable,
+  divisionValidators as validatorTable,
+} from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { getSession } from "@/lib/session";
+import { createServerFn } from "@tanstack/react-start";
 import { formatDuration } from "@/lib/tracker";
 import { getAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
@@ -30,8 +45,41 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTrackerLogs, validateTrackerLog, bulkValidateTrackerLogs } from "./pelacak";
-import { getSimpleUsers } from "./laporan";
+import {
+  getTrackerLogs,
+  validateTrackerLog,
+  bulkValidateTrackerLogs,
+} from "./pelacak";
+import { getSimpleUsers } from "@/lib/server-fns";
+
+// ponytail: Fungsi server untuk mengambil daftar divisi yang divalidasi oleh admin validator
+export const getValidatorDivisions = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+
+    const role = session.user.role || "staff";
+    if (role === "developer") {
+      return await db
+        .select()
+        .from(divisionsTable)
+        .orderBy(divisionsTable.name);
+    }
+
+    return await db
+      .select({
+        id: divisionsTable.id,
+        name: divisionsTable.name,
+      })
+      .from(validatorTable)
+      .innerJoin(
+        divisionsTable,
+        eq(validatorTable.divisionId, divisionsTable.id),
+      )
+      .where(eq(validatorTable.userId, session.user.id))
+      .orderBy(divisionsTable.name);
+  },
+);
 
 export const Route = createFileRoute("/_authenticated/validasi")({
   head: () => ({
@@ -57,21 +105,33 @@ function ValidasiPage() {
   const appName = config?.appName || "Log Book";
 
   const [filterStaffId, setFilterStaffId] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "validated">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "validated"
+  >("all");
+  const [selectedDivId, setSelectedDivId] = useState<string>("all");
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ["tracker-logs", user?.id],
+    queryKey: ["tracker-logs", user?.id, selectedDivId],
     enabled: !!user?.id,
-    queryFn: () => getTrackerLogs(),
+    queryFn: () => getTrackerLogs({ data: { divisionId: selectedDivId } }),
   });
 
-  const isAdminOrDevUser = useMemo(() => isAdminOrDev(user?.roles ?? []), [user?.roles]);
+  const isAdminOrDevUser = useMemo(
+    () => isAdminOrDev(user?.roles ?? []),
+    [user?.roles],
+  );
 
   const { data: usersSimple } = useQuery({
     queryKey: ["users-simple"],
     enabled: isAdminOrDevUser,
     queryFn: () => getSimpleUsers(),
+  });
+
+  const { data: validatorDivisions } = useQuery({
+    queryKey: ["validator-divisions", user?.id],
+    enabled: !!user?.id && isAdminOrDevUser,
+    queryFn: () => getValidatorDivisions(),
   });
 
   // Filter logs created by staff (exclude current admin logs, but keep developer logs so they are testable)
@@ -86,8 +146,14 @@ function ValidasiPage() {
     if (!usersSimple) return [];
     // Only show users that are not the current user, UNLESS the current user is a developer (so they can see themselves for testing)
     return usersSimple
-      .filter((u) => u.id !== user?.id || user?.role === "developer")
-      .map((u) => ({ id: u.id, name: u.name }));
+      .filter(
+        (u: { id: string; name: string | null }) =>
+          u.id !== user?.id || user?.role === "developer",
+      )
+      .map((u: { id: string; name: string | null }) => ({
+        id: u.id,
+        name: u.name,
+      }));
   }, [usersSimple, user?.id, user?.role]);
 
   const filteredLogs = useMemo(() => {
@@ -154,7 +220,8 @@ function ValidasiPage() {
         <AlertCircle className="w-10 h-10 text-red-500" />
         <h3 className="text-lg font-bold text-slate-800">Akses Ditolak</h3>
         <p className="text-sm text-slate-500 max-w-xs">
-          Hanya Administrator atau Developer yang dapat mengakses halaman validasi ini.
+          Hanya Administrator atau Developer yang dapat mengakses halaman
+          validasi ini.
         </p>
       </div>
     );
@@ -163,9 +230,12 @@ function ValidasiPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Validasi Harian Staff</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Validasi Harian Staff
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Setujui dan validasi log pengerjaan tugas harian yang dikirimkan oleh staff.
+          Setujui dan validasi log pengerjaan tugas harian yang dikirimkan oleh
+          staff.
         </p>
       </div>
 
@@ -174,28 +244,40 @@ function ValidasiPage() {
         <Card className="surface-card border-0">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">Total Log Staff</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                Total Log Staff
+              </span>
               <Users className="w-4 h-4 text-slate-500" />
             </div>
-            <div className="text-2xl font-semibold tracking-tight">{stats.total} Log</div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {stats.total} Log
+            </div>
           </CardContent>
         </Card>
         <Card className="surface-card border-0">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">Belum Validasi</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                Belum Validasi
+              </span>
               <Clock className="w-4 h-4 text-amber-500" />
             </div>
-            <div className="text-2xl font-semibold tracking-tight text-amber-600">{stats.pending} Log</div>
+            <div className="text-2xl font-semibold tracking-tight text-amber-600">
+              {stats.pending} Log
+            </div>
           </CardContent>
         </Card>
         <Card className="surface-card border-0">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">Tervalidasi</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                Tervalidasi
+              </span>
               <ListChecks className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="text-2xl font-semibold tracking-tight text-emerald-600">{stats.validated} Log</div>
+            <div className="text-2xl font-semibold tracking-tight text-emerald-600">
+              {stats.validated} Log
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -203,22 +285,48 @@ function ValidasiPage() {
       {/* Filters and Actions Box */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white border border-border/60 rounded-2xl shadow-sm dark:bg-slate-900">
         <div className="flex flex-wrap items-center gap-4">
+          {isAdminOrDevUser && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Divisi
+              </span>
+              <select
+                value={selectedDivId}
+                onChange={(e) => setSelectedDivId(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent min-w-[150px] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+              >
+                <option value="all">Semua Divisi Saya</option>
+                {validatorDivisions?.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter Staff</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Filter Staff
+            </span>
             <select
               value={filterStaffId}
               onChange={(e) => setFilterStaffId(e.target.value)}
               className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent min-w-[160px] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
             >
               <option value="all">Semua Staff</option>
-              {staffList.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+              {staffList.map((s: { id: string; name: string | null }) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Validasi</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Status Validasi
+            </span>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -287,9 +395,15 @@ function ValidasiPage() {
                     return (
                       <TableRow key={l.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {l.loggedDate ? format(new Date(l.loggedDate), "EEE, d MMM yyyy", {
-                            locale: idLocale,
-                          }) : "—"}
+                          {l.loggedDate
+                            ? format(
+                                new Date(l.loggedDate),
+                                "EEE, d MMM yyyy",
+                                {
+                                  locale: idLocale,
+                                },
+                              )
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                           <div>{l.user?.name ?? "—"}</div>
@@ -313,7 +427,9 @@ function ValidasiPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800' : 'bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-800'}`}>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800" : "bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-800"}`}
+                          >
                             {statusStr}
                           </span>
                         </TableCell>
@@ -321,14 +437,22 @@ function ValidasiPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={`px-2 py-0.5 h-auto text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}
-                            onClick={() => validateMutation.mutate({ id: l.id, isValidated: !l.isValidated })}
+                            className={`px-2 py-0.5 h-auto text-xs font-bold ${l.isValidated ? "bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-800" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"}`}
+                            onClick={() =>
+                              validateMutation.mutate({
+                                id: l.id,
+                                isValidated: !l.isValidated,
+                              })
+                            }
                           >
                             {validatedStr}
                           </Button>
                           {l.isValidated && l.validator && (
                             <div className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
-                              Oleh: {l.validator.name} {l.validator.position ? `(${l.validator.position})` : ""}
+                              Oleh: {l.validator.name}{" "}
+                              {l.validator.position
+                                ? `(${l.validator.position})`
+                                : ""}
                             </div>
                           )}
                         </TableCell>
@@ -356,7 +480,9 @@ function ValidasiPage() {
               Setujui Masal Log Harian?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
-              Apakah Anda yakin ingin menyetujui sekaligus <b>{pendingCountFiltered} log harian</b> terpilih yang belum divalidasi?
+              Apakah Anda yakin ingin menyetujui sekaligus{" "}
+              <b>{pendingCountFiltered} log harian</b> terpilih yang belum
+              divalidasi?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex gap-2">
@@ -365,8 +491,13 @@ function ValidasiPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                const pendingIds = filteredLogs.filter(l => !l.isValidated).map(l => l.id);
-                bulkValidateMutation.mutate({ ids: pendingIds, isValidated: true });
+                const pendingIds = filteredLogs
+                  .filter((l) => !l.isValidated)
+                  .map((l) => l.id);
+                bulkValidateMutation.mutate({
+                  ids: pendingIds,
+                  isValidated: true,
+                });
                 setBulkConfirmOpen(false);
               }}
               className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold text-xs py-2 shadow-md hover:shadow-lg transition-all"

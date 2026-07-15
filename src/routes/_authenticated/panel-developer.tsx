@@ -12,9 +12,14 @@ import {
   Database as DbIcon,
   Trash2,
   Loader2,
+  Plus,
+  Pencil,
+  Settings,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
 import {
@@ -24,8 +29,11 @@ import {
   trackerLogs as logsTable,
   reports as reportsTable,
   systemLogs as systemLogsTable,
+  divisions as divisionsTable,
+  userDivisions as userDivisionsTable,
+  divisionValidators as divisionValidatorsTable,
 } from "@/db/schema";
-import { eq, desc, lt, count } from "drizzle-orm";
+import { eq, desc, lt, count, inArray } from "drizzle-orm";
 import {
   Card,
   CardContent,
@@ -68,6 +76,112 @@ const LEVEL_TONE: Record<LogLevel, string> = {
   error: "bg-rose-500/15 text-rose-700 dark:text-rose-400",
   critical: "bg-red-600/20 text-red-700 dark:text-red-400",
 };
+
+// ponytail: Server function untuk mengambil daftar admin dan developer
+const getAdminsList = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+  if (session.user.role !== "developer") throw new Error("Forbidden");
+
+  return await db
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+    })
+    .from(usersTable)
+    .where(inArray(usersTable.role, ["admin", "developer"]))
+    .orderBy(usersTable.name);
+});
+
+// ponytail: Server function untuk mengambil data divisi & verifikatornya
+const getDivisionsData = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+  if (session.user.role !== "developer") throw new Error("Forbidden");
+
+  const divisionsList = await db.select().from(divisionsTable).orderBy(divisionsTable.name);
+  
+  const result = [];
+  for (const div of divisionsList) {
+    const userCountRes = await db
+      .select({ value: count() })
+      .from(userDivisionsTable)
+      .where(eq(userDivisionsTable.divisionId, div.id));
+      
+    const validatorsList = await db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+      })
+      .from(divisionValidatorsTable)
+      .innerJoin(usersTable, eq(divisionValidatorsTable.userId, usersTable.id))
+      .where(eq(divisionValidatorsTable.divisionId, div.id));
+
+    result.push({
+      id: div.id,
+      name: div.name,
+      userCount: userCountRes[0]?.value ?? 0,
+      validators: validatorsList,
+    });
+  }
+  return result;
+});
+
+// ponytail: Server function untuk menambah divisi baru
+const createDivision = createServerFn({ method: "POST" })
+  .validator(z.object({ name: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    if (session.user.role !== "developer") throw new Error("Forbidden");
+
+    await db.insert(divisionsTable).values({ name: data.name });
+  });
+
+// ponytail: Server function untuk mengubah nama divisi
+const updateDivisionName = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string(), name: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    if (session.user.role !== "developer") throw new Error("Forbidden");
+
+    await db
+      .update(divisionsTable)
+      .set({ name: data.name, updatedAt: new Date() })
+      .where(eq(divisionsTable.id, data.id));
+  });
+
+// ponytail: Server function untuk menghapus divisi
+const deleteDivisionData = createServerFn({ method: "POST" })
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    if (session.user.role !== "developer") throw new Error("Forbidden");
+
+    await db.delete(divisionsTable).where(eq(divisionsTable.id, id));
+  });
+
+// ponytail: Server function untuk mengupdate verifikator divisi
+const updateDivisionValidators = createServerFn({ method: "POST" })
+  .validator(z.object({ divisionId: z.string(), validatorIds: z.array(z.string()) }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    if (session.user.role !== "developer") throw new Error("Forbidden");
+
+    await db.delete(divisionValidatorsTable).where(eq(divisionValidatorsTable.divisionId, data.divisionId));
+
+    if (data.validatorIds.length > 0) {
+      const values = data.validatorIds.map((uId) => ({
+        divisionId: data.divisionId,
+        userId: uId,
+      }));
+      await db.insert(divisionValidatorsTable).values(values);
+    }
+  });
 
 // ponytail: Fungsi server untuk mengambil total row dari tabel utama untuk kesehatan DB
 const getDeveloperStats = createServerFn({ method: "GET" }).handler(async () => {
@@ -226,6 +340,8 @@ function PanelDeveloperPage() {
         <TelegramConfigCard />
         <RustFsConfigCard />
       </div>
+
+      <DivisionCrudCard />
 
       <RbacMatrixCard />
 
@@ -718,6 +834,278 @@ function RustFsConfigCard() {
           </Button>
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+// ===== CARD CRUD DIVISI & VALIDATOR =====
+// ponytail: Komponen untuk mengelola divisi dan menugaskan validator divisi
+function DivisionCrudCard() {
+  const qc = useQueryClient();
+  const [newDivName, setNewDivName] = useState("");
+  const [editingDiv, setEditingDiv] = useState<any | null>(null);
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [validatorsOpen, setValidatorsOpen] = useState(false);
+  const [activeDivId, setActiveDivId] = useState<string | null>(null);
+  const [selectedValidatorIds, setSelectedValidatorIds] = useState<string[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const { data: divisionsList, isLoading: divLoading } = useQuery({
+    queryKey: ["divisions-data"],
+    queryFn: () => getDivisionsData(),
+  });
+
+  const { data: adminsList } = useQuery({
+    queryKey: ["admins-list"],
+    queryFn: () => getAdminsList(),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (name: string) => createDivision({ data: { name } }),
+    onSuccess: () => {
+      toast.success("Divisi baru berhasil dibuat");
+      setNewDivName("");
+      qc.invalidateQueries({ queryKey: ["divisions-data"] });
+    },
+    onError: (e: Error) => toast.error("Gagal membuat divisi", { description: e.message }),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (v: { id: string; name: string }) => updateDivisionName({ data: v }),
+    onSuccess: () => {
+      toast.success("Nama divisi diperbarui");
+      setEditNameOpen(false);
+      qc.invalidateQueries({ queryKey: ["divisions-data"] });
+    },
+    onError: (e: Error) => toast.error("Gagal memperbarui", { description: e.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteDivisionData({ data: id }),
+    onSuccess: () => {
+      toast.success("Divisi berhasil dihapus");
+      setDeletingId(null);
+      qc.invalidateQueries({ queryKey: ["divisions-data"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menghapus", { description: e.message }),
+  });
+
+  const saveValidatorsMutation = useMutation({
+    mutationFn: (v: { divisionId: string; validatorIds: string[] }) => updateDivisionValidators({ data: v }),
+    onSuccess: () => {
+      toast.success("Verifikator divisi berhasil diperbarui");
+      setValidatorsOpen(false);
+      qc.invalidateQueries({ queryKey: ["divisions-data"] });
+    },
+    onError: (e: Error) => toast.error("Gagal memperbarui verifikator", { description: e.message }),
+  });
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDivName.trim()) return;
+    addMutation.mutate(newDivName.trim());
+  };
+
+  const openEditName = (div: any) => {
+    setEditingDiv(div);
+    setNewDivName(div.name);
+    setEditNameOpen(true);
+  };
+
+  const openValidators = (div: any) => {
+    setActiveDivId(div.id);
+    setSelectedValidatorIds(div.validators.map((v: any) => v.id));
+    setValidatorsOpen(true);
+  };
+
+  return (
+    <Card className="surface-card border-0">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Settings className="w-4 h-4 text-primary" /> Manajemen Divisi & Validator
+        </CardTitle>
+        <CardDescription>
+          Kelola divisi perusahaan dan tunjuk admin/validator khusus untuk tiap divisi.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <form onSubmit={handleAdd} className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              value={newDivName}
+              onChange={(e) => setNewDivName(e.target.value)}
+              placeholder="Nama Divisi Baru (misal: Kepesantrenan)"
+              className="h-10 rounded-2xl bg-slate-50/50"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={addMutation.isPending} className="px-5 rounded-2xl h-10 bg-primary text-white">
+            {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            Tambah Divisi
+          </Button>
+        </form>
+
+        {divLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          <div className="border border-slate-100 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100">
+                <tr>
+                  <th className="p-3.5 text-left font-bold text-slate-700 dark:text-slate-300">Nama Divisi</th>
+                  <th className="p-3.5 text-left font-bold text-slate-700 dark:text-slate-300">Jumlah Staff</th>
+                  <th className="p-3.5 text-left font-bold text-slate-700 dark:text-slate-300">Validator (Atasan)</th>
+                  <th className="p-3.5 text-right font-bold text-slate-700 dark:text-slate-300">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {divisionsList && divisionsList.length > 0 ? (
+                  divisionsList.map((div) => (
+                    <tr key={div.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors duration-150">
+                      <td className="p-3.5 font-bold text-slate-800 dark:text-slate-150">{div.name}</td>
+                      <td className="p-3.5">
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-none font-bold py-1">
+                          <Users className="w-3.5 h-3.5 mr-1" /> {div.userCount} Orang
+                        </Badge>
+                      </td>
+                      <td className="p-3.5">
+                        {div.validators.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {div.validators.map((v: any) => (
+                              <Badge key={v.id} className="bg-primary/10 text-primary hover:bg-primary/15 border-none text-[11px] font-bold py-0.5 px-2 rounded-lg">
+                                {v.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Belum ada validator</span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-right space-x-1.5">
+                        <Button variant="outline" size="sm" onClick={() => openValidators(div)} className="h-8 rounded-xl text-xs font-bold">
+                          Validator
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEditName(div)} className="h-8 rounded-xl">
+                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeletingId(div.id)} className="h-8 rounded-xl text-destructive hover:bg-destructive/10">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-slate-400 italic">Belum ada divisi kerja</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+
+      {/* Dialog Edit Nama Divisi */}
+      <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="font-extrabold text-lg text-slate-900">Edit Nama Divisi</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">Masukkan nama baru untuk divisi ini.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Nama Divisi</Label>
+              <Input
+                value={newDivName}
+                onChange={(e) => setNewDivName(e.target.value)}
+                placeholder="misal: Ngajar/Fasilitator"
+                className="rounded-2xl"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditNameOpen(false)} className="rounded-2xl">Batal</Button>
+            <Button
+              disabled={editMutation.isPending}
+              onClick={() => editMutation.mutate({ id: editingDiv.id, name: newDivName.trim() })}
+              className="rounded-2xl bg-primary text-white"
+            >
+              {editMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Kelola Validator */}
+      <Dialog open={validatorsOpen} onOpenChange={setValidatorsOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="font-extrabold text-lg text-slate-900">Kelola Validator Divisi</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">Pilih siapa saja admin yang menjadi penanggung jawab validasi divisi ini.</DialogDescription>
+          </DialogHeader>
+          <div className="py-3 max-h-[300px] overflow-y-auto space-y-1.5 pr-1">
+            {adminsList && adminsList.length > 0 ? (
+              adminsList.map((admin) => (
+                <label key={admin.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-900/40 cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all duration-150">
+                  <Checkbox
+                    id={`val-${admin.id}`}
+                    checked={selectedValidatorIds.includes(admin.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedValidatorIds([...selectedValidatorIds, admin.id]);
+                      } else {
+                        setSelectedValidatorIds(selectedValidatorIds.filter((id) => id !== admin.id));
+                      }
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-slate-800 truncate">{admin.name}</div>
+                    <div className="text-xs text-slate-400 truncate mt-0.5">{admin.email}</div>
+                  </div>
+                </label>
+              ))
+            ) : (
+              <p className="text-sm text-slate-400 italic text-center py-4">Tidak ada admin/developer tersedia</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setValidatorsOpen(false)} className="rounded-2xl">Batal</Button>
+            <Button
+              disabled={saveValidatorsMutation.isPending}
+              onClick={() => saveValidatorsMutation.mutate({ divisionId: activeDivId!, validatorIds: selectedValidatorIds })}
+              className="rounded-2xl bg-primary text-white"
+            >
+              {saveValidatorsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Simpan Validator
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Konfirmasi Hapus */}
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-extrabold text-lg text-slate-900">Hapus Divisi?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-500">
+              Tindakan ini permanen. Seluruh penugasan divisi staf pada divisi ini akan dihapus. Logbook yang terkait divisi ini tidak akan terhapus namun asosiasi divisinya akan menjadi kosong.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-2xl">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/95 text-white rounded-2xl"
+              onClick={() => deleteMutation.mutate(deletingId!)}
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

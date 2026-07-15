@@ -1,4 +1,3 @@
-// ponytail: Mengganti query Supabase client-side untuk tugas dan jadwal dengan Server Functions Drizzle ORM
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAppConfig } from "@/lib/app-config";
@@ -12,53 +11,70 @@ import { db } from "@/db";
 import { tasks as tasksTable, users as usersTable, schedules as schedulesTable } from "@/db/schema";
 import { eq, desc, and, gte, lt, ne, inArray, or } from "drizzle-orm";
 import { sendTelegramNotification } from "@/lib/telegram";
+import { useEffect, useState, useMemo } from "react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { getUserDivisionsList } from "./pelacak";
+import { DivisionSelectDialog } from "@/components/tracker/division-select-dialog";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRightLeft } from "lucide-react";
 
-// ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee)
-export const getTasksList = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
+// ponytail: Fungsi server untuk mengambil semua daftar tugas (berikut nama assignee) dengan filter divisi
+export const getTasksList = createServerFn({ method: "GET" })
+  .validator(z.object({ divisionId: z.string().nullable().optional() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
 
-  const role = session.user.role || "staff";
-  const whereClause = role === "staff"
-    ? or(
-        eq(tasksTable.assignedTo, session.user.id),
-        eq(tasksTable.createdBy, session.user.id)
-      )
-    : undefined;
+    const role = session.user.role || "staff";
+    let whereClause = role === "staff"
+      ? or(
+          eq(tasksTable.assignedTo, session.user.id),
+          eq(tasksTable.createdBy, session.user.id)
+        )
+      : undefined;
 
-  const rawTasks = await db
-    .select({
-      id: tasksTable.id,
-      title: tasksTable.title,
-      description: tasksTable.description,
-      status: tasksTable.status,
-      priority: tasksTable.priority,
-      assignedTo: tasksTable.assignedTo,
-      createdBy: tasksTable.createdBy,
-      dueDate: tasksTable.dueDate,
-      startedAt: tasksTable.startedAt,
-      completedAt: tasksTable.completedAt,
-      createdAt: tasksTable.createdAt,
-      updatedAt: tasksTable.updatedAt,
-      taskSource: tasksTable.taskSource,
-      outputDescription: tasksTable.outputDescription,
-      assignee: {
-        id: usersTable.id,
-        name: usersTable.name,
-      },
-    })
-    .from(tasksTable)
-    .leftJoin(usersTable, eq(tasksTable.assignedTo, usersTable.id))
-    .where(whereClause)
-    .orderBy(desc(tasksTable.createdAt));
+    if (data.divisionId) {
+      if (whereClause) {
+        whereClause = and(whereClause, eq(tasksTable.divisionId, data.divisionId));
+      } else {
+        whereClause = eq(tasksTable.divisionId, data.divisionId);
+      }
+    }
 
-  const tasks = rawTasks.map((t) => ({
-    ...t,
-    assignee: t.assignee?.id ? t.assignee : null,
-  }));
+    const rawTasks = await db
+      .select({
+        id: tasksTable.id,
+        title: tasksTable.title,
+        description: tasksTable.description,
+        status: tasksTable.status,
+        priority: tasksTable.priority,
+        assignedTo: tasksTable.assignedTo,
+        createdBy: tasksTable.createdBy,
+        dueDate: tasksTable.dueDate,
+        startedAt: tasksTable.startedAt,
+        completedAt: tasksTable.completedAt,
+        createdAt: tasksTable.createdAt,
+        updatedAt: tasksTable.updatedAt,
+        taskSource: tasksTable.taskSource,
+        outputDescription: tasksTable.outputDescription,
+        divisionId: tasksTable.divisionId,
+        assignee: {
+          id: usersTable.id,
+          name: usersTable.name,
+        },
+      })
+      .from(tasksTable)
+      .leftJoin(usersTable, eq(tasksTable.assignedTo, usersTable.id))
+      .where(whereClause)
+      .orderBy(desc(tasksTable.createdAt));
 
-  return tasks;
-});
+    const tasks = rawTasks.map((t) => ({
+      ...t,
+      assignee: t.assignee?.id ? t.assignee : null,
+    }));
+
+    return tasks;
+  });
 
 // ponytail: Fungsi server untuk mengambil daftar pengguna aktif yang dapat ditugaskan
 export const getAssignableUsers = createServerFn({ method: "GET" }).handler(async () => {
@@ -90,6 +106,7 @@ export const saveTask = createServerFn({ method: "POST" })
       assignedTo: z.string().nullable().optional(),
       taskSource: z.string().optional(),
       outputDescription: z.string().nullable().optional(),
+      divisionId: z.string().nullable().optional(),
     })
   )
   .handler(async ({ data }) => {
@@ -286,21 +303,70 @@ export const Route = createFileRoute("/_authenticated/tugas")({
 });
 
 function TugasPage() {
+  const { data: user } = useCurrentUser();
   const { data: config } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => getAppConfig(),
   });
   const appName = config?.appName || "Log Book";
 
+  // States untuk multi-divisi
+  const [activeDivId, setActiveDivId] = useState<string | null>(null);
+  const [divDialogOpen, setDivDialogOpen] = useState(false);
+
+  const { data: userDivs } = useQuery({
+    queryKey: ["user-divisions-list", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => getUserDivisionsList(),
+  });
+
+  const activeDivName = useMemo(() => {
+    if (!userDivs || !activeDivId) return null;
+    return userDivs.find((d) => d.id === activeDivId)?.name || null;
+  }, [userDivs, activeDivId]);
+
+  useEffect(() => {
+    // Selalu tampilkan pemilih divisi setiap kali masuk menu
+    setDivDialogOpen(true);
+    const cached = sessionStorage.getItem("active_division_id");
+    if (cached) {
+      setActiveDivId(cached);
+    }
+  }, []);
+
+  const handleSelectDivision = (id: string) => {
+    setActiveDivId(id);
+    sessionStorage.setItem("active_division_id", id);
+    setDivDialogOpen(false);
+  };
+
   return (
     <div className="w-full space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">
-          {appName} Meeting
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Daftar penugasan dari atasan dan hasil meeting harian.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+            {appName} Meeting
+            {activeDivName && (
+              <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white font-extrabold text-[11px] rounded-xl px-2.5 py-0.5 border-none shadow-sm ml-2">
+                {activeDivName}
+              </Badge>
+            )}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <p className="text-sm text-muted-foreground">
+              Daftar penugasan dari atasan dan hasil meeting harian.
+            </p>
+            {userDivs && userDivs.length > 0 && (
+              <button
+                onClick={() => setDivDialogOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-extrabold text-primary bg-primary/10 hover:bg-primary/15 transition-all shadow-none cursor-pointer border border-primary/5"
+              >
+                <ArrowRightLeft className="w-3 h-3 stroke-[2.5px]" />
+                Ubah Divisi
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="daftar">
@@ -309,12 +375,21 @@ function TugasPage() {
           <TabsTrigger value="kalender" className="rounded-lg">Kalender Rapat</TabsTrigger>
         </TabsList>
         <TabsContent value="daftar" className="mt-4">
-          <TaskListTab />
+          <TaskListTab divisionId={activeDivId} />
         </TabsContent>
         <TabsContent value="kalender" className="mt-4">
           <CalendarTab />
         </TabsContent>
       </Tabs>
+
+      <DivisionSelectDialog
+        open={divDialogOpen}
+        onOpenChange={setDivDialogOpen}
+        divisions={userDivs ?? []}
+        selectedId={activeDivId}
+        onSelect={handleSelectDivision}
+        isMandatory={true}
+      />
     </div>
   );
 }

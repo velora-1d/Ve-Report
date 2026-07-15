@@ -30,6 +30,7 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   editing: any | null;
   defaultTaskId?: string;
+  divisionId?: string | null;
 }
 
 export function TrackerFormDialog({
@@ -37,6 +38,7 @@ export function TrackerFormDialog({
   onOpenChange,
   editing,
   defaultTaskId,
+  divisionId,
 }: Props) {
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
@@ -117,6 +119,7 @@ export function TrackerFormDialog({
           endTime,
           status,
           remarks: remarks.trim() || null,
+          divisionId: editing?.divisionId ?? divisionId,
         }
       });
     },

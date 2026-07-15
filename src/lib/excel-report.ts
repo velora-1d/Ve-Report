@@ -10,6 +10,7 @@ export interface ExcelReportInput {
   generatedByName: string;
   userPosition?: string | null;
   checkerName?: string | null;
+  divisionName?: string | null;
 }
 
 export async function generateReportExcel(
@@ -20,6 +21,7 @@ export async function generateReportExcel(
     tasks: any[];
     logs: any[];
     checkerName?: string | null;
+    divisionName?: string | null;
   }
 ): Promise<Blob> {
   const employeeName = data.employeeName || input.generatedByName;
@@ -48,7 +50,7 @@ export async function generateReportExcel(
     rows.push(["LOG BOOK MEETING"]);
     rows.push([]);
     rows.push(["Nama", ":", employeeName]);
-    rows.push(["Divisi", ":", employeePosition]);
+    rows.push(["Divisi", ":", input.divisionName || data.divisionName || employeePosition]);
     rows.push(["Bulan dan Tahun", ":", `${monthName} ${yearName}`]);
     rows.push([]);
     rows.push(["PENUGASAN ATASAN/HASIL MEETING/......."]);
@@ -176,7 +178,7 @@ export async function generateReportExcel(
     rows.push(["LOG BOOK KEGIATAN HARIAN"]);
     rows.push([]);
     rows.push(["Nama", ":", employeeName]);
-    rows.push(["Divisi", ":", employeePosition]);
+    rows.push(["Divisi", ":", input.divisionName || data.divisionName || employeePosition]);
     rows.push(["Bulan", ":", monthName, "", "Tahun", ":", yearName]);
     rows.push([]);
     rows.push([

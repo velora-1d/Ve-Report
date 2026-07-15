@@ -1,5 +1,5 @@
 // ponytail: Mengganti query Supabase client-side dengan TanStack Start Server Functions dan Drizzle ORM
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
@@ -19,12 +19,15 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { getAppConfig } from "@/lib/app-config";
 import { db } from "@/db";
-import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable } from "@/db/schema";
+import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable, divisions, userDivisions, divisionValidators as divisionValidatorsTable } from "@/db/schema";
 import { eq, desc, and, gte, inArray, or, aliasedTable } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
+import { ArrowRightLeft } from "lucide-react";
+import { DivisionSelectDialog } from "@/components/tracker/division-select-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -49,97 +52,134 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrackerFormDialog } from "@/components/tracker/tracker-form-dialog";
 import { formatDuration, todayISO } from "@/lib/tracker";
 
-// ponytail: Fungsi server untuk mengambil log pelacak milik user saat ini / semua user (jika admin)
-export const getTrackerLogs = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
+// ponytail: Fungsi server untuk mengambil log pelacak milik user saat ini / semua user (jika admin) dengan filter divisi
+export const getTrackerLogs = createServerFn({ method: "GET" })
+  .validator(z.object({ divisionId: z.string().nullable().optional() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
 
-  const role = session.user.role || "staff";
-  const whereClause = role === "staff"
-    ? eq(logsTable.userId, session.user.id)
-    : undefined;
+    const role = session.user.role || "staff";
+    let whereClause = role === "staff"
+      ? eq(logsTable.userId, session.user.id)
+      : undefined;
 
-  const configs = await db.query.appConfig.findMany({
-    limit: 1,
+    if (data.divisionId && data.divisionId !== "all") {
+      if (whereClause) {
+        whereClause = and(whereClause, eq(logsTable.divisionId, data.divisionId));
+      } else {
+        whereClause = eq(logsTable.divisionId, data.divisionId);
+      }
+    } else if (role === "admin") {
+      const validDivs = await db
+        .select({ id: divisionValidatorsTable.divisionId })
+        .from(divisionValidatorsTable)
+        .where(eq(divisionValidatorsTable.userId, session.user.id));
+      const validIds = validDivs.map((d) => d.id);
+      
+      if (validIds.length > 0) {
+        if (whereClause) {
+          whereClause = and(whereClause, inArray(logsTable.divisionId, validIds));
+        } else {
+          whereClause = inArray(logsTable.divisionId, validIds);
+        }
+      } else {
+        if (whereClause) {
+          whereClause = and(whereClause, eq(logsTable.id, "none"));
+        } else {
+          whereClause = eq(logsTable.id, "none");
+        }
+      }
+    }
+
+    const configs = await db.query.appConfig.findMany({
+      limit: 1,
+    });
+    const limitVal = configs[0]?.logLimit ?? 200;
+
+    const validatorsTable = aliasedTable(usersTable, "validators");
+
+    const rawLogs = await db
+      .select({
+        id: logsTable.id,
+        taskId: logsTable.taskId,
+        userId: logsTable.userId,
+        note: logsTable.note,
+        durationMinutes: logsTable.durationMinutes,
+        loggedDate: logsTable.loggedDate,
+        createdAt: logsTable.createdAt,
+        startTime: logsTable.startTime,
+        endTime: logsTable.endTime,
+        status: logsTable.status,
+        isValidated: logsTable.isValidated,
+        validatedBy: logsTable.validatedBy,
+        remarks: logsTable.remarks,
+        divisionId: logsTable.divisionId,
+        task: {
+          id: tasksTable.id,
+          title: tasksTable.title,
+          status: tasksTable.status,
+        },
+        user: {
+          id: usersTable.id,
+          name: usersTable.name,
+          position: usersTable.position,
+        },
+        validator: {
+          id: validatorsTable.id,
+          name: validatorsTable.name,
+          position: validatorsTable.position,
+        },
+      })
+      .from(logsTable)
+      .leftJoin(tasksTable, eq(logsTable.taskId, tasksTable.id))
+      .leftJoin(usersTable, eq(logsTable.userId, usersTable.id))
+      .leftJoin(validatorsTable, eq(logsTable.validatedBy, validatorsTable.id))
+      .where(whereClause)
+      .orderBy(desc(logsTable.loggedDate), desc(logsTable.createdAt))
+      .limit(limitVal);
+
+    const logs = rawLogs.map((l) => ({
+      ...l,
+      task: l.task?.id ? l.task : null,
+      user: l.user?.id ? l.user : null,
+      validator: l.validator?.id ? l.validator : null,
+    }));
+
+    return logs;
   });
-  const limitVal = configs[0]?.logLimit ?? 200;
 
-  const validatorsTable = aliasedTable(usersTable, "validators");
+// ponytail: Fungsi server untuk mengambil tugas aktif berdasarkan divisi
+export const getAssignableTasks = createServerFn({ method: "GET" })
+  .validator(z.object({ divisionId: z.string().nullable().optional() }))
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
 
-  const rawLogs = await db
-    .select({
-      id: logsTable.id,
-      taskId: logsTable.taskId,
-      userId: logsTable.userId,
-      note: logsTable.note,
-      durationMinutes: logsTable.durationMinutes,
-      loggedDate: logsTable.loggedDate,
-      createdAt: logsTable.createdAt,
-      startTime: logsTable.startTime,
-      endTime: logsTable.endTime,
-      status: logsTable.status,
-      isValidated: logsTable.isValidated,
-      validatedBy: logsTable.validatedBy,
-      remarks: logsTable.remarks,
-      task: {
-        id: tasksTable.id,
-        title: tasksTable.title,
-        status: tasksTable.status,
+    const role = session.user.role || "staff";
+    let whereClause = role === "staff"
+      ? and(
+          inArray(tasksTable.status, ["todo", "in_progress", "review"]),
+          eq(tasksTable.assignedTo, session.user.id)
+        )
+      : inArray(tasksTable.status, ["todo", "in_progress", "review"]);
+
+    if (data.divisionId) {
+      whereClause = and(whereClause, eq(tasksTable.divisionId, data.divisionId));
+    }
+
+    const tasksList = await db.query.tasks.findMany({
+      where: whereClause,
+      columns: {
+        id: true,
+        title: true,
+        status: true,
       },
-      user: {
-        id: usersTable.id,
-        name: usersTable.name,
-        position: usersTable.position,
-      },
-      validator: {
-        id: validatorsTable.id,
-        name: validatorsTable.name,
-        position: validatorsTable.position,
-      },
-    })
-    .from(logsTable)
-    .leftJoin(tasksTable, eq(logsTable.taskId, tasksTable.id))
-    .leftJoin(usersTable, eq(logsTable.userId, usersTable.id))
-    .leftJoin(validatorsTable, eq(logsTable.validatedBy, validatorsTable.id))
-    .where(whereClause)
-    .orderBy(desc(logsTable.loggedDate), desc(logsTable.createdAt))
-    .limit(limitVal);
+      orderBy: [desc(tasksTable.createdAt)],
+    });
 
-  const logs = rawLogs.map((l) => ({
-    ...l,
-    task: l.task?.id ? l.task : null,
-    user: l.user?.id ? l.user : null,
-    validator: l.validator?.id ? l.validator : null,
-  }));
-
-  return logs;
-});
-
-// ponytail: Fungsi server untuk mengambil tugas aktif yang dapat dicatat waktunya
-export const getAssignableTasks = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
-
-  const role = session.user.role || "staff";
-  const whereClause = role === "staff"
-    ? and(
-        inArray(tasksTable.status, ["todo", "in_progress", "review"]),
-        eq(tasksTable.assignedTo, session.user.id)
-      )
-    : inArray(tasksTable.status, ["todo", "in_progress", "review"]);
-
-  const tasksList = await db.query.tasks.findMany({
-    where: whereClause,
-    columns: {
-      id: true,
-      title: true,
-      status: true,
-    },
-    orderBy: [desc(tasksTable.createdAt)],
+    return tasksList;
   });
-
-  return tasksList;
-});
 
 // ponytail: Fungsi server untuk menyimpan/memperbarui log pelacak waktu
 export const saveTrackerLog = createServerFn({ method: "POST" })
@@ -154,6 +194,7 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       endTime: z.string().optional(),
       status: z.string().optional(),
       remarks: z.string().nullable().optional(),
+      divisionId: z.string().nullable().optional(),
     })
   )
   .handler(async ({ data }) => {
@@ -163,13 +204,14 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
     const payload = {
       taskId: data.taskId || null,
       userId: session.user.id,
-      loggedDate: data.loggedDate,
+      loggedDate: new Date(data.loggedDate),
       durationMinutes: data.durationMinutes,
       note: data.note || null,
       startTime: data.startTime || "08:00",
       endTime: data.endTime || "17:00",
       status: data.status || "progress",
       remarks: data.remarks || null,
+      divisionId: data.divisionId || null,
     };
 
     if (data.id) {
@@ -198,6 +240,27 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       );
     }
   });
+
+// ponytail: Fungsi server untuk mengambil daftar divisi milik user saat ini
+export const getUserDivisionsList = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSession();
+  if (!session || !session.user) throw new Error("Unauthorized");
+
+  const role = session.user.role || "staff";
+  if (role === "admin" || role === "developer") {
+    return await db.select().from(divisions).orderBy(divisions.name);
+  }
+
+  return await db
+    .select({
+      id: divisions.id,
+      name: divisions.name,
+    })
+    .from(userDivisions)
+    .innerJoin(divisions, eq(userDivisions.divisionId, divisions.id))
+    .where(eq(userDivisions.userId, session.user.id))
+    .orderBy(divisions.name);
+});
 
 // ponytail: Fungsi server untuk menghapus log pelacak waktu
 export const deleteTrackerLog = createServerFn({ method: "POST" })
@@ -287,10 +350,40 @@ function PelacakPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ["tracker-logs", user?.id],
+  // States untuk multi-divisi
+  const [activeDivId, setActiveDivId] = useState<string | null>(null);
+  const [divDialogOpen, setDivDialogOpen] = useState(false);
+
+  const { data: userDivs } = useQuery({
+    queryKey: ["user-divisions-list", user?.id],
     enabled: !!user?.id,
-    queryFn: () => getTrackerLogs(),
+    queryFn: () => getUserDivisionsList(),
+  });
+
+  const activeDivName = useMemo(() => {
+    if (!userDivs || !activeDivId) return null;
+    return userDivs.find((d) => d.id === activeDivId)?.name || null;
+  }, [userDivs, activeDivId]);
+
+  useEffect(() => {
+    // Selalu tampilkan pemilih divisi setiap kali masuk menu
+    setDivDialogOpen(true);
+    const cached = sessionStorage.getItem("active_division_id");
+    if (cached) {
+      setActiveDivId(cached);
+    }
+  }, []);
+
+  const handleSelectDivision = (id: string) => {
+    setActiveDivId(id);
+    sessionStorage.setItem("active_division_id", id);
+    setDivDialogOpen(false);
+  };
+
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["tracker-logs", user?.id, activeDivId],
+    enabled: !!user?.id && !!activeDivId,
+    queryFn: () => getTrackerLogs({ data: { divisionId: activeDivId } }),
   });
 
   const summary = useMemo(() => {
@@ -309,8 +402,13 @@ function PelacakPage() {
     for (const l of logs ?? []) {
       const m = l.durationMinutes ?? 0;
       totalMin += m;
-      if (l.loggedDate === today) todayMin += m;
-      if (l.loggedDate >= weekStartISO) weekMin += m;
+      const logDateStr = l.loggedDate instanceof Date
+        ? l.loggedDate.toISOString().slice(0, 10)
+        : typeof l.loggedDate === "string"
+          ? (l.loggedDate as string).slice(0, 10)
+          : "";
+      if (logDateStr === today) todayMin += m;
+      if (logDateStr >= weekStartISO) weekMin += m;
       const key = l.task?.id ?? l.taskId ?? "manual";
       const title = l.note ?? l.task?.title ?? "Aktivitas Manual";
       const cur = perTask.get(key);
@@ -375,15 +473,31 @@ function PelacakPage() {
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             {appName} Harian
+            {activeDivName && (
+              <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white font-extrabold text-[11px] rounded-xl px-2.5 py-0.5 border-none shadow-sm ml-2">
+                {activeDivName}
+              </Badge>
+            )}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Catat aktivitas kegiatan harian dan log pengerjaan tugas.
-          </p>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <p className="text-sm text-muted-foreground">
+              Catat aktivitas kegiatan harian dan log pengerjaan tugas.
+            </p>
+            {userDivs && userDivs.length > 0 && (
+              <button
+                onClick={() => setDivDialogOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[11px] font-extrabold text-primary bg-primary/10 hover:bg-primary/15 transition-all shadow-none cursor-pointer border border-primary/5"
+              >
+                <ArrowRightLeft className="w-3 h-3 stroke-[2.5px]" />
+                Ubah Divisi
+              </button>
+            )}
+          </div>
         </div>
-        {hasPermission("pelacak", "create") && (
+        {hasPermission("pelacak", "create") && activeDivId && (
           <Button
             onClick={() => {
               setEditing(null);
@@ -593,6 +707,16 @@ function PelacakPage() {
           if (!v) setEditing(null);
         }}
         editing={editing}
+        divisionId={activeDivId}
+      />
+
+      <DivisionSelectDialog
+        open={divDialogOpen}
+        onOpenChange={setDivDialogOpen}
+        divisions={userDivs ?? []}
+        selectedId={activeDivId}
+        onSelect={handleSelectDivision}
+        isMandatory={true}
       />
 
       <AlertDialog

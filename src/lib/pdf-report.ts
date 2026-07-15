@@ -30,7 +30,7 @@ async function addWatermarkToAllPages(doc: jsPDF, watermarkUrl: string) {
     ctx.drawImage(img, 0, 0);
     const base64Png = canvas.toDataURL("image/png");
 
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.getNumberOfPages();
     const imgAspect = img.height / img.width;
 
     for (let i = 1; i <= pageCount; i++) {
@@ -44,6 +44,7 @@ async function addWatermarkToAllPages(doc: jsPDF, watermarkUrl: string) {
       const y = (pageH - h) / 2;
 
       doc.saveGraphicsState();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const gState = new (doc as any).GState({ opacity: 0.12 });
       doc.setGState(gState);
       doc.addImage(base64Png, "PNG", x, y, w, h);
@@ -62,6 +63,7 @@ export interface ReportInput {
   generatedByName: string;
   reportType?: "standard" | "meeting" | "harian";
   checkerName?: string | null;
+  divisionName?: string | null;
   makerSigImg?: string | null;
   makerSigScale?: number;
   makerSigOffsetX?: number;
@@ -72,7 +74,27 @@ export interface ReportInput {
   checkerSigOffsetY?: number;
 }
 
-function drawAestheticCheckmark(doc: jsPDF, cellData: any, colorRgb: [number, number, number] = [59, 130, 246]) {
+interface CellData {
+  cell: {
+    text: string[];
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  column: {
+    index: number;
+  };
+  row: {
+    section: string;
+  };
+}
+
+function drawAestheticCheckmark(
+  doc: jsPDF,
+  cellData: CellData,
+  colorRgb: [number, number, number] = [59, 130, 246],
+) {
   if (cellData.cell.text[0] === "✓") {
     cellData.cell.text = [""];
     const x = cellData.cell.x + cellData.cell.width / 2;
@@ -84,24 +106,64 @@ function drawAestheticCheckmark(doc: jsPDF, cellData: any, colorRgb: [number, nu
   }
 }
 
+export interface TaskReportItem {
+  id?: string;
+  title: string;
+  status: string;
+  priority: string;
+  createdAt: string | Date;
+  completedAt?: string | Date | null;
+  dueDate?: string | Date | null;
+  description?: string | null;
+  taskSource?: string | null;
+  outputDescription?: string | null;
+}
+
+export interface LogReportItem {
+  id: string;
+  loggedDate: string | Date;
+  startTime?: string | null;
+  endTime?: string | null;
+  note?: string | null;
+  status?: string | null;
+  durationMinutes?: number | null;
+  isValidated?: boolean | null;
+  remarks?: string | null;
+  task?: { title: string; status: string } | null;
+}
+
+export interface PdfConfig {
+  pdfMargin?: string | null;
+  pdfOrientation?: string | null;
+  logoUrl?: string | null;
+  pdfPaperSize?: string | null;
+  pdfHeaderText?: string | null;
+  pdfFooterText?: string | null;
+  appName?: string | null;
+}
+
 export async function generateReportPdf(
   input: ReportInput,
   data: {
-    cfg: any;
+    cfg: PdfConfig | null;
     position: string;
-    tasks: any[];
-    logs: any[];
-  }
+    tasks: TaskReportItem[];
+    logs: LogReportItem[];
+  },
 ): Promise<Blob> {
   const cfg = data.cfg;
   const orientation =
     cfg?.pdfOrientation === "landscape" ? "landscape" : "portrait";
   const paper = (cfg?.pdfPaperSize ?? "A4").toLowerCase();
-  const isLogbook = input.reportType === "meeting" || input.reportType === "harian";
+  const isLogbook =
+    input.reportType === "meeting" || input.reportType === "harian";
   const defaultMargin = isLogbook ? 10 : 20;
   const marginMm = Math.max(
     5,
-    Math.min(50, parseInt(cfg?.pdfMargin ?? String(defaultMargin), 10) || defaultMargin),
+    Math.min(
+      50,
+      parseInt(cfg?.pdfMargin ?? String(defaultMargin), 10) || defaultMargin,
+    ),
   );
 
   const employeePosition = data.position || "Staf";
@@ -162,7 +224,8 @@ export async function generateReportPdf(
   // Summary
   const total = data.tasks?.length ?? 0;
   const done = data.tasks?.filter((t) => t.status === "done").length ?? 0;
-  const inProg = data.tasks?.filter((t) => t.status === "in_progress").length ?? 0;
+  const inProg =
+    data.tasks?.filter((t) => t.status === "in_progress").length ?? 0;
   const todo = data.tasks?.filter((t) => t.status === "todo").length ?? 0;
   const totalMin = (data.logs ?? []).reduce(
     (s, l) => s + (l.durationMinutes ?? 0),
@@ -210,7 +273,8 @@ export async function generateReportPdf(
       String(i + 1),
       t.title,
       TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] || t.status,
-      TASK_PRIORITY_LABEL[t.priority as keyof typeof TASK_PRIORITY_LABEL] || t.priority,
+      TASK_PRIORITY_LABEL[t.priority as keyof typeof TASK_PRIORITY_LABEL] ||
+        t.priority,
       t.dueDate
         ? format(new Date(t.dueDate), "d MMM yyyy", { locale: idLocale })
         : "—",
@@ -267,7 +331,7 @@ export async function generateReportPdf(
 // ponytail: Mengubah desain PDF Log Book Meeting agar persis dengan template Excel yang diminta (split header, kotak info, tandatangan, dan abu-abu)
 async function generateMeetingPdf(
   input: ReportInput,
-  tasks: any[],
+  tasks: TaskReportItem[],
   position: string,
   paper: string,
   orientation: "portrait" | "landscape",
@@ -295,8 +359,8 @@ async function generateMeetingPdf(
 
   // 2. Metadata Info Box (2 rows)
   const metadataY = marginMm + 16;
-  const boxW = pageW - (marginMm * 2);
-  
+  const boxW = pageW - marginMm * 2;
+
   // Draw card background
   doc.setFillColor(248, 250, 252); // Slate 50
   doc.rect(marginMm, metadataY - 3, boxW, 14, "F");
@@ -309,7 +373,7 @@ async function generateMeetingPdf(
   doc.setDrawColor(148, 163, 184); // Slate 400
   doc.setLineWidth(0.3);
   doc.rect(marginMm, metadataY - 3, boxW, 14, "D");
-  
+
   doc.setFontSize(9.5);
   // Row 1: Nama & Divisi
   doc.setFont("helvetica", "bold");
@@ -320,7 +384,11 @@ async function generateMeetingPdf(
   doc.setFont("helvetica", "bold");
   doc.text("Divisi", marginMm + 100, metadataY + 2);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${position}`, marginMm + 115, metadataY + 2);
+  doc.text(
+    `: ${input.divisionName || position || "—"}`,
+    marginMm + 115,
+    metadataY + 2,
+  );
 
   // Row 2: Bulan & Tahun
   doc.setFont("helvetica", "bold");
@@ -342,65 +410,101 @@ async function generateMeetingPdf(
 
   // Table
   autoTable(doc, {
-    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
+    startY: doc.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
     head: [
       [
-        { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Uraian Tugas", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        {
+          content: "No",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Hari / Tanggal",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Uraian Tugas",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
         { content: "Pemberi Tugas", colSpan: 2, styles: { halign: "center" } },
-        { content: "Target Selesai", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Out Put", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        {
+          content: "Target Selesai",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Out Put",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
       ],
       [
         { content: "Atasan", styles: { halign: "center" } },
         { content: "Meeting", styles: { halign: "center" } },
-      ]
+      ],
     ],
-    body: (tasks ?? []).length === 0
-      ? Array.from({ length: 5 }).map((_, index) => [
-          String(index + 1), // No
-          "", // Hari / Tanggal
-          "", // Uraian Tugas
-          "", // Atasan
-          "", // Meeting
-          "", // Target Selesai
-          ""  // Out Put
-        ])
-      : (tasks ?? []).map((t, index) => {
-          const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", {
-            locale: idLocale,
-          });
-          const descStr = [t.title, t.description].filter(Boolean).join("\n");
-          
-          const sourceLower = (t.taskSource ?? "").toLowerCase();
-          const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
-          const atasanCheck = !isMeeting ? "✓" : "";
-          const meetingCheck = isMeeting ? "✓" : "";
+    body:
+      (tasks ?? []).length === 0
+        ? Array.from({ length: 5 }).map((_, index) => [
+            String(index + 1), // No
+            "", // Hari / Tanggal
+            "", // Uraian Tugas
+            "", // Atasan
+            "", // Meeting
+            "", // Target Selesai
+            "", // Out Put
+          ])
+        : (tasks ?? []).map((t, index) => {
+            const dayDateStr = format(
+              new Date(t.createdAt),
+              "EEE, dd MMMM yyyy",
+              {
+                locale: idLocale,
+              },
+            );
+            const descStr = [t.title, t.description].filter(Boolean).join("\n");
 
-          const targetStr = t.dueDate
-            ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale })
-            : "—";
-          const outputStr = t.outputDescription ?? "—";
-          return [String(index + 1), dayDateStr, descStr, atasanCheck, meetingCheck, targetStr, outputStr];
-        }),
+            const sourceLower = (t.taskSource ?? "").toLowerCase();
+            const isMeeting =
+              sourceLower.includes("meeting") || sourceLower.includes("rapat");
+            const atasanCheck = !isMeeting ? "✓" : "";
+            const meetingCheck = isMeeting ? "✓" : "";
+
+            const targetStr = t.dueDate
+              ? format(new Date(t.dueDate), "dd MMMM yyyy", {
+                  locale: idLocale,
+                })
+              : "—";
+            const outputStr = t.outputDescription ?? "—";
+            return [
+              String(index + 1),
+              dayDateStr,
+              descStr,
+              atasanCheck,
+              meetingCheck,
+              targetStr,
+              outputStr,
+            ];
+          }),
     theme: "grid",
-    headStyles: { 
-      fillColor: [0, 119, 182], 
-      textColor: [255, 255, 255], 
-      fontStyle: "bold", 
-      fontSize: 9, 
-      lineColor: [148, 163, 184], 
-      lineWidth: 0.3 
-    },
-    bodyStyles: { 
-      fontSize: 8.5, 
-      lineColor: [148, 163, 184], 
+    headStyles: {
+      fillColor: [0, 119, 182],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9,
+      lineColor: [148, 163, 184],
       lineWidth: 0.3,
-      textColor: [0, 0, 0]
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      lineColor: [148, 163, 184],
+      lineWidth: 0.3,
+      textColor: [0, 0, 0],
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252]
+      fillColor: [248, 250, 252],
     },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
@@ -413,7 +517,10 @@ async function generateMeetingPdf(
     },
     margin: { left: marginMm, right: marginMm },
     didDrawCell: (cellData) => {
-      if (cellData.row.section === "body" && (cellData.column.index === 3 || cellData.column.index === 4)) {
+      if (
+        cellData.row.section === "body" &&
+        (cellData.column.index === 3 || cellData.column.index === 4)
+      ) {
         drawAestheticCheckmark(doc, cellData, [59, 130, 246]);
       }
     },
@@ -440,7 +547,7 @@ async function generateMeetingPdf(
     `Jonggol, ${format(new Date(), "dd MMMM yyyy", { locale: idLocale })}`,
     sigLeftX,
     sigY,
-    { align: "center" }
+    { align: "center" },
   );
 
   const formatSig = (name: string | null | undefined, fallback: string) => {
@@ -454,15 +561,28 @@ async function generateMeetingPdf(
   doc.text("Yang Mengetahui", sigRightX, sigY + 6, { align: "center" });
 
   doc.setFont("helvetica", "bold");
-  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), sigLeftX, sigY + 28, { align: "center" });
-  
-  const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
+  doc.text(
+    formatSig(input.generatedByName, `( ${input.generatedByName} )`),
+    sigLeftX,
+    sigY + 28,
+    { align: "center" },
+  );
+
+  const hasChecker =
+    !!input.checkerName &&
+    input.checkerName.trim() !== "" &&
+    !input.checkerName.includes("...");
   if (hasChecker) {
     doc.setFont("helvetica", "bold");
   } else {
     doc.setFont("helvetica", "normal");
   }
-  doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
+  doc.text(
+    formatSig(input.checkerName, "( .................................... )"),
+    sigRightX,
+    sigY + 28,
+    { align: "center" },
+  );
   doc.setFont("helvetica", "normal");
 
   // Draw signature images if provided
@@ -511,7 +631,7 @@ async function generateMeetingPdf(
 // ponytail: Mengubah desain PDF Log Book Harian agar persis dengan template Excel yang diminta (split header status, kotak info, tandatangan, dan abu-abu)
 async function generateHarianPdf(
   input: ReportInput,
-  logs: any[],
+  logs: LogReportItem[],
   position: string,
   paper: string,
   orientation: "portrait" | "landscape",
@@ -541,8 +661,8 @@ async function generateHarianPdf(
 
   // 2. Metadata Info Box (2 rows)
   const metadataY = marginMm + 16;
-  const boxW = pageW - (marginMm * 2);
-  
+  const boxW = pageW - marginMm * 2;
+
   // Draw card background
   doc.setFillColor(248, 250, 252); // Slate 50
   doc.rect(marginMm, metadataY - 3, boxW, 14, "F");
@@ -566,7 +686,11 @@ async function generateHarianPdf(
   doc.setFont("helvetica", "bold");
   doc.text("Divisi", marginMm + 100, metadataY + 2);
   doc.setFont("helvetica", "normal");
-  doc.text(`: ${position}`, marginMm + 115, metadataY + 2);
+  doc.text(
+    `: ${input.divisionName || position || "—"}`,
+    marginMm + 115,
+    metadataY + 2,
+  );
 
   // Row 2: Bulan & Tahun
   doc.setFont("helvetica", "bold");
@@ -588,74 +712,108 @@ async function generateHarianPdf(
 
   // Table
   autoTable(doc, {
-    startY: doc.internal.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
+    startY: doc.getNumberOfPages() === 1 ? metadataY + 24 : marginMm + 24,
     head: [
       [
-        { content: "No", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Hari / Tanggal", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Jam", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Implementasi Kegiatan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        {
+          content: "No",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Hari / Tanggal",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Jam",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Implementasi Kegiatan",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
         { content: "Status", colSpan: 2, styles: { halign: "center" } },
-        { content: "Validasi Atasan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-        { content: "Keterangan", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+        {
+          content: "Validasi Atasan",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
+        {
+          content: "Keterangan",
+          rowSpan: 2,
+          styles: { halign: "center", valign: "middle" },
+        },
       ],
       [
         { content: "On Progres", styles: { halign: "center" } },
         { content: "Selesai", styles: { halign: "center" } },
-      ]
+      ],
     ],
-    body: (logs ?? []).length === 0
-      ? Array.from({ length: 5 }).map((_, index) => [
-          String(index + 1), // No
-          "", // Hari / Tanggal
-          "", // Jam
-          "", // Implementasi Kegiatan
-          "", // On Progres
-          "", // Selesai
-          "", // Validasi Atasan
-          ""  // Keterangan
-        ])
-      : (logs ?? []).map((l, index) => {
-          const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", {
-            locale: idLocale,
-          });
-          const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-          const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
-          
-          const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
-          const onProgresCheck = !isDone ? "✓" : "";
-          const selesaiCheck = isDone ? "✓" : "";
-          
-          const validatedStr = l.isValidated ? "✓" : "";
-          const remarksStr = l.remarks ?? "—";
-          return [
-            String(index + 1),
-            dayDateStr,
-            timeStr,
-            activityStr,
-            onProgresCheck,
-            selesaiCheck,
-            validatedStr,
-            remarksStr,
-          ];
-        }),
+    body:
+      (logs ?? []).length === 0
+        ? Array.from({ length: 5 }).map((_, index) => [
+            String(index + 1), // No
+            "", // Hari / Tanggal
+            "", // Jam
+            "", // Implementasi Kegiatan
+            "", // On Progres
+            "", // Selesai
+            "", // Validasi Atasan
+            "", // Keterangan
+          ])
+        : (logs ?? []).map((l, index) => {
+            const dayDateStr = format(
+              new Date(l.loggedDate),
+              "EEE, dd MMMM yyyy",
+              {
+                locale: idLocale,
+              },
+            );
+            const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+            const activityStr = [l.task?.title, l.note]
+              .filter(Boolean)
+              .join(" - ");
+
+            const isDone =
+              l.status === "Selesai" ||
+              l.status === "selesai" ||
+              l.task?.status === "done";
+            const onProgresCheck = !isDone ? "✓" : "";
+            const selesaiCheck = isDone ? "✓" : "";
+
+            const validatedStr = l.isValidated ? "✓" : "";
+            const remarksStr = l.remarks ?? "—";
+            return [
+              String(index + 1),
+              dayDateStr,
+              timeStr,
+              activityStr,
+              onProgresCheck,
+              selesaiCheck,
+              validatedStr,
+              remarksStr,
+            ];
+          }),
     theme: "grid",
-    headStyles: { 
-      fillColor: [0, 119, 182], 
-      textColor: [255, 255, 255], 
-      fontStyle: "bold", 
-      fontSize: 9, 
-      lineColor: [148, 163, 184], 
-      lineWidth: 0.3 
-    },
-    bodyStyles: { 
-      fontSize: 8.5, 
-      lineColor: [148, 163, 184], 
+    headStyles: {
+      fillColor: [0, 119, 182],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9,
+      lineColor: [148, 163, 184],
       lineWidth: 0.3,
-      textColor: [0, 0, 0]
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      lineColor: [148, 163, 184],
+      lineWidth: 0.3,
+      textColor: [0, 0, 0],
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252]
+      fillColor: [248, 250, 252],
     },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
@@ -669,7 +827,12 @@ async function generateHarianPdf(
     },
     margin: { left: marginMm, right: marginMm },
     didDrawCell: (cellData) => {
-      if (cellData.row.section === "body" && (cellData.column.index === 4 || cellData.column.index === 5 || cellData.column.index === 6)) {
+      if (
+        cellData.row.section === "body" &&
+        (cellData.column.index === 4 ||
+          cellData.column.index === 5 ||
+          cellData.column.index === 6)
+      ) {
         let color: [number, number, number] = [59, 130, 246];
         if (cellData.column.index === 4) {
           color = [245, 158, 11];
@@ -702,7 +865,7 @@ async function generateHarianPdf(
     `Jonggol, ${format(new Date(), "dd MMMM yyyy", { locale: idLocale })}`,
     sigLeftX,
     sigY,
-    { align: "center" }
+    { align: "center" },
   );
 
   const formatSig = (name: string | null | undefined, fallback: string) => {
@@ -716,15 +879,28 @@ async function generateHarianPdf(
   doc.text("Yang Mengetahui", sigRightX, sigY + 6, { align: "center" });
 
   doc.setFont("helvetica", "bold");
-  doc.text(formatSig(input.generatedByName, `( ${input.generatedByName} )`), sigLeftX, sigY + 28, { align: "center" });
-  
-  const hasChecker = !!input.checkerName && input.checkerName.trim() !== "" && !input.checkerName.includes("...");
+  doc.text(
+    formatSig(input.generatedByName, `( ${input.generatedByName} )`),
+    sigLeftX,
+    sigY + 28,
+    { align: "center" },
+  );
+
+  const hasChecker =
+    !!input.checkerName &&
+    input.checkerName.trim() !== "" &&
+    !input.checkerName.includes("...");
   if (hasChecker) {
     doc.setFont("helvetica", "bold");
   } else {
     doc.setFont("helvetica", "normal");
   }
-  doc.text(formatSig(input.checkerName, "( .................................... )"), sigRightX, sigY + 28, { align: "center" });
+  doc.text(
+    formatSig(input.checkerName, "( .................................... )"),
+    sigRightX,
+    sigY + 28,
+    { align: "center" },
+  );
   doc.setFont("helvetica", "normal");
 
   // Draw signature images if provided

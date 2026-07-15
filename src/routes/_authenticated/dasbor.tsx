@@ -61,7 +61,7 @@ const getDashboardData = createServerFn({ method: "GET" })
     const logsQuery = db.query.trackerLogs.findMany({
       where: and(
         eq(logsTable.userId, userId),
-        gte(logsTable.loggedDate, weekStartISO)
+        gte(logsTable.loggedDate, new Date(weekStartISO))
       ),
       columns: {
         durationMinutes: true,

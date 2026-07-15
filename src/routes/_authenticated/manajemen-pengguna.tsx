@@ -6,7 +6,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Search, Shield, ShieldOff, UserCog, Pencil, Trash2, Loader2 } from "lucide-react";
+import {
+  Search,
+  Shield,
+  ShieldOff,
+  UserCog,
+  Pencil,
+  Trash2,
+  Loader2,
+  Plus,
+  Key,
+  ShieldCheck,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,11 +39,18 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
-import { db } from "@/db";
-import { users as usersTable, accounts as accountsTable } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
+import { db } from "@/db";
+import {
+  users as usersTable,
+  accounts as accountsTable,
+  divisions as divisionsTable,
+  userDivisions as userDivisionsTable,
+  divisionValidators as divisionValidatorsTable,
+} from "@/db/schema";
+import { eq, desc, and, inArray } from "drizzle-orm";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +74,16 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABEL, type AppRole } from "@/lib/roles";
+
+export interface UserItem {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  position?: string | null;
+  isActive: boolean;
+  createdAt: Date | string | null;
+}
 
 // ponytail: Fungsi server untuk mengambil daftar pengguna
 const getUsersMgmt = createServerFn({ method: "GET" }).handler(async () => {
@@ -83,9 +111,11 @@ const toggleUserActive = createServerFn({ method: "POST" })
     if (!session || !session.user) throw new Error("Unauthorized");
     const role = session.user.role || "staff";
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
-    if (session.user.id === data.id) throw new Error("Cannot change own status");
+    if (session.user.id === data.id)
+      throw new Error("Cannot change own status");
 
-    await db.update(usersTable)
+    await db
+      .update(usersTable)
       .set({ isActive: data.active })
       .where(eq(usersTable.id, data.id));
   });
@@ -98,28 +128,133 @@ const changeUserRole = createServerFn({ method: "POST" })
     if (!session || !session.user) throw new Error("Unauthorized");
     const role = session.user.role || "staff";
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
-    if (session.user.id === data.userId) throw new Error("Cannot change own role");
+    if (session.user.id === data.userId)
+      throw new Error("Cannot change own role");
 
     if (data.newRole === "developer" && role !== "developer") {
       throw new Error("Only developers can assign developer role");
     }
 
-    await db.update(usersTable)
+    await db
+      .update(usersTable)
       .set({ role: data.newRole })
       .where(eq(usersTable.id, data.userId));
   });
 
-// ponytail: Fungsi server untuk memperbarui data pengguna oleh admin (termasuk email dan kata sandi)
+// ponytail: Fungsi server untuk mengambil semua divisi untuk form manajemen pengguna
+const getDivisionsListMgmt = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    return await db.select().from(divisionsTable).orderBy(divisionsTable.name);
+  },
+);
+
+// ponytail: Fungsi server untuk mengambil divisi kerja & divisi validasi milik user tertentu
+const getUserDivisionsAndValidatorsMgmt = createServerFn({ method: "GET" })
+  .validator(z.string())
+  .handler(async ({ data: userId }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    const activeDivisions = await db
+      .select({ divisionId: userDivisionsTable.divisionId })
+      .from(userDivisionsTable)
+      .where(eq(userDivisionsTable.userId, userId));
+
+    const validatedDivisions = await db
+      .select({ divisionId: divisionValidatorsTable.divisionId })
+      .from(divisionValidatorsTable)
+      .where(eq(divisionValidatorsTable.userId, userId));
+
+    return {
+      divisionIds: activeDivisions.map((d) => d.divisionId),
+      validationDivisionIds: validatedDivisions.map((d) => d.divisionId),
+    };
+  });
+
+// ponytail: Fungsi server untuk membuat pengguna baru beserta divisinya secara manual
+const createUserMgmt = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+      role: z.enum(["admin", "staff"]),
+      position: z.string().optional().nullable(),
+      password: z.string().min(6),
+      divisionIds: z.array(z.string()),
+      validationDivisionIds: z.array(z.string()),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
+
+    const existing = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, data.email))
+      .limit(1);
+    if (existing.length > 0) throw new Error("Email sudah terdaftar");
+
+    const crypto = await import("crypto");
+    const newUserId = crypto.randomUUID();
+    await db.insert(usersTable).values({
+      id: newUserId,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      position: data.position || null,
+      isActive: true,
+    });
+
+    const { hashPassword } = await import("better-auth/crypto");
+    const hashedPassword = await hashPassword(data.password);
+    await db.insert(accountsTable).values({
+      id: crypto.randomUUID(),
+      userId: newUserId,
+      accountId: data.email,
+      providerId: "email",
+      password: hashedPassword,
+    });
+
+    if (data.divisionIds.length > 0) {
+      const values = data.divisionIds.map((divId) => ({
+        userId: newUserId,
+        divisionId: divId,
+      }));
+      await db.insert(userDivisionsTable).values(values);
+    }
+
+    if (data.role === "admin" && data.validationDivisionIds.length > 0) {
+      const values = data.validationDivisionIds.map((divId) => ({
+        userId: newUserId,
+        divisionId: divId,
+      }));
+      await db.insert(divisionValidatorsTable).values(values);
+    }
+  });
+
+// ponytail: Fungsi server untuk memperbarui data pengguna oleh admin (termasuk email, kata sandi, dan divisi)
 const updateUserMgmt = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id: z.string(),
       name: z.string(),
       email: z.string().email(),
-      role: z.enum(["admin", "staff"]),
+      role: z.enum(["developer", "admin", "staff"]),
       position: z.string().optional().nullable(),
       password: z.string().optional().nullable(),
-    })
+      divisionIds: z.array(z.string()),
+      validationDivisionIds: z.array(z.string()),
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
@@ -128,7 +263,11 @@ const updateUserMgmt = createServerFn({ method: "POST" })
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
     // Developer tidak bisa diubah oleh admin, hanya developer lain / ybs yang bisa
-    const usersList = await db.select().from(usersTable).where(eq(usersTable.id, data.id)).limit(1);
+    const usersList = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, data.id))
+      .limit(1);
     const targetUser = usersList[0] || null;
     if (!targetUser) throw new Error("User tidak ditemukan");
     if (targetUser.role === "developer" && role !== "developer") {
@@ -136,11 +275,12 @@ const updateUserMgmt = createServerFn({ method: "POST" })
     }
 
     // 1. Perbarui tabel user
-    await db.update(usersTable)
+    await db
+      .update(usersTable)
       .set({
         name: data.name,
         email: data.email,
-        role: data.role,
+        role: targetUser.role === "developer" ? "developer" : data.role,
         position: data.position || null,
         updatedAt: new Date(),
       })
@@ -150,20 +290,22 @@ const updateUserMgmt = createServerFn({ method: "POST" })
     if (data.password && data.password.trim() !== "") {
       const { hashPassword } = await import("better-auth/crypto");
       const hashedPassword = await hashPassword(data.password);
-      
-      const existingAccounts = await db.select()
+
+      const existingAccounts = await db
+        .select()
         .from(accountsTable)
         .where(
           and(
             eq(accountsTable.userId, data.id),
-            eq(accountsTable.providerId, "email")
-          )
+            eq(accountsTable.providerId, "email"),
+          ),
         )
         .limit(1);
       const existingAccount = existingAccounts[0] || null;
 
       if (existingAccount) {
-        await db.update(accountsTable)
+        await db
+          .update(accountsTable)
           .set({
             password: hashedPassword,
             updatedAt: new Date(),
@@ -171,8 +313,8 @@ const updateUserMgmt = createServerFn({ method: "POST" })
           .where(
             and(
               eq(accountsTable.userId, data.id),
-              eq(accountsTable.providerId, "email")
-            )
+              eq(accountsTable.providerId, "email"),
+            ),
           );
       } else {
         const crypto = await import("crypto");
@@ -185,6 +327,30 @@ const updateUserMgmt = createServerFn({ method: "POST" })
         });
       }
     }
+
+    // 3. Perbarui divisi kerja
+    await db
+      .delete(userDivisionsTable)
+      .where(eq(userDivisionsTable.userId, data.id));
+    if (data.divisionIds.length > 0) {
+      const values = data.divisionIds.map((divId) => ({
+        userId: data.id,
+        divisionId: divId,
+      }));
+      await db.insert(userDivisionsTable).values(values);
+    }
+
+    // 4. Perbarui divisi validasi jika perannya admin
+    await db
+      .delete(divisionValidatorsTable)
+      .where(eq(divisionValidatorsTable.userId, data.id));
+    if (data.role === "admin" && data.validationDivisionIds.length > 0) {
+      const values = data.validationDivisionIds.map((divId) => ({
+        userId: data.id,
+        divisionId: divId,
+      }));
+      await db.insert(divisionValidatorsTable).values(values);
+    }
   });
 
 // ponytail: Fungsi server untuk menghapus pengguna
@@ -196,9 +362,14 @@ const deleteUserMgmt = createServerFn({ method: "POST" })
     const role = session.user.role || "staff";
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
-    if (session.user.id === userId) throw new Error("Tidak dapat menghapus diri sendiri");
+    if (session.user.id === userId)
+      throw new Error("Tidak dapat menghapus diri sendiri");
 
-    const usersList = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const usersList = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
     const targetUser = usersList[0] || null;
     if (!targetUser) throw new Error("User tidak ditemukan");
     if (targetUser.role === "developer" && role !== "developer") {
@@ -243,10 +414,10 @@ function ManajemenPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (data ?? []).filter((u) => {
+    return (data ?? []).filter((u: UserItem) => {
       if (!q) return true;
       return (
-        u.name.toLowerCase().includes(q) ||
+        (u.name?.toLowerCase() || "").includes(q) ||
         u.email.toLowerCase().includes(q) ||
         (u.position?.toLowerCase().includes(q) ?? false)
       );
@@ -254,7 +425,8 @@ function ManajemenPage() {
   }, [data, search]);
 
   const toggleActive = useMutation({
-    mutationFn: (v: { id: string; active: boolean }) => toggleUserActive({ data: v }),
+    mutationFn: (v: { id: string; active: boolean }) =>
+      toggleUserActive({ data: v }),
     onSuccess: (_r, v) => {
       toast.success(v.active ? "Akun diaktifkan" : "Akun dinonaktifkan");
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
@@ -263,7 +435,8 @@ function ManajemenPage() {
   });
 
   const changeRole = useMutation({
-    mutationFn: (v: { userId: string; newRole: AppRole }) => changeUserRole({ data: v }),
+    mutationFn: (v: { userId: string; newRole: AppRole }) =>
+      changeUserRole({ data: v }),
     onSuccess: () => {
       toast.success("Peran diperbarui");
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
@@ -272,26 +445,70 @@ function ManajemenPage() {
       toast.error("Gagal ubah peran", { description: e.message }),
   });
 
-  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Form states untuk edit
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "staff">("staff");
+  const [editRole, setEditRole] = useState<"developer" | "admin" | "staff">(
+    "staff",
+  );
   const [editPosition, setEditPosition] = useState("");
   const [editPassword, setEditPassword] = useState("");
+  const [editDivisions, setEditDivisions] = useState<string[]>([]);
+  const [editValidationDivisions, setEditValidationDivisions] = useState<
+    string[]
+  >([]);
+
+  // Form states untuk tambah pengguna baru
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createPosition, setCreatePosition] = useState("");
+  const [createRole, setCreateRole] = useState<"admin" | "staff">("staff");
+  const [createDivisions, setCreateDivisions] = useState<string[]>([]);
+  const [createValidationDivisions, setCreateValidationDivisions] = useState<
+    string[]
+  >([]);
+
+  const { data: divisionsList } = useQuery({
+    queryKey: ["divisions-list-mgmt"],
+    queryFn: () => getDivisionsListMgmt(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (v: Parameters<typeof createUserMgmt>[0]["data"]) =>
+      createUserMgmt({ data: v }),
+    onSuccess: () => {
+      toast.success("Pengguna baru berhasil didaftarkan");
+      setCreateOpen(false);
+      setCreateName("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreatePosition("");
+      setCreateRole("staff");
+      setCreateDivisions([]);
+      setCreateValidationDivisions([]);
+      qc.invalidateQueries({ queryKey: ["users-mgmt"] });
+    },
+    onError: (e: Error) =>
+      toast.error("Gagal menambahkan pengguna", { description: e.message }),
+  });
 
   const updateMutation = useMutation({
-    mutationFn: (v: any) => updateUserMgmt({ data: v }),
+    mutationFn: (v: Parameters<typeof updateUserMgmt>[0]["data"]) =>
+      updateUserMgmt({ data: v }),
     onSuccess: () => {
       toast.success("Data pengguna berhasil diperbarui");
       setEditOpen(false);
       setEditingUser(null);
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
     },
-    onError: (e: Error) => toast.error("Gagal memperbarui pengguna", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal memperbarui pengguna", { description: e.message }),
   });
 
   const deleteMutation = useMutation({
@@ -301,17 +518,30 @@ function ManajemenPage() {
       setDeletingId(null);
       qc.invalidateQueries({ queryKey: ["users-mgmt"] });
     },
-    onError: (e: Error) => toast.error("Gagal menghapus pengguna", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Gagal menghapus pengguna", { description: e.message }),
   });
 
-  const handleOpenEdit = (u: any) => {
+  const handleOpenEdit = async (u: UserItem) => {
     setEditingUser(u);
     setEditName(u.name || "");
     setEditEmail(u.email || "");
-    setEditRole(u.role === "admin" ? "admin" : "staff");
+    setEditRole(u.role as "developer" | "admin" | "staff");
     setEditPosition(u.position || "");
     setEditPassword("");
+    setEditDivisions([]);
+    setEditValidationDivisions([]);
     setEditOpen(true);
+    try {
+      const res = await getUserDivisionsAndValidatorsMgmt({ data: u.id });
+      setEditDivisions(res.divisionIds);
+      setEditValidationDivisions(res.validationDivisionIds);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      toast.error("Gagal memuat divisi pengguna", {
+        description: error.message,
+      });
+    }
   };
 
   return (
@@ -325,6 +555,14 @@ function ManajemenPage() {
             Kelola daftar pengguna, peran, dan status aktif akun.
           </p>
         </div>
+        {hasPermission("pengguna", "create") && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="rounded-2xl bg-primary text-white font-bold h-10 px-5 shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Tambah Pengguna
+          </Button>
+        )}
       </div>
 
       <Card className="surface-card border-0">
@@ -369,12 +607,11 @@ function ManajemenPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((u) => {
+                  {filtered.map((u: UserItem) => {
                     const isMe = me?.id === u.id;
                     const isDev = u.role === "developer";
-                    const currentEditable: AppRole = u.role === "admin"
-                      ? "admin"
-                      : "staff";
+                    const currentEditable: AppRole =
+                      u.role === "admin" ? "admin" : "staff";
                     return (
                       <TableRow key={u.id}>
                         <TableCell className="font-medium">{u.name}</TableCell>
@@ -396,7 +633,9 @@ function ManajemenPage() {
                                   newRole: v as AppRole,
                                 })
                               }
-                              disabled={isMe || !hasPermission("pengguna", "update")}
+                              disabled={
+                                isMe || !hasPermission("pengguna", "update")
+                              }
                             >
                               <SelectTrigger className="h-8 w-32">
                                 <SelectValue />
@@ -418,11 +657,17 @@ function ManajemenPage() {
                                   active: checked,
                                 })
                               }
-                              disabled={isMe || isDev || !hasPermission("pengguna", "update")}
+                              disabled={
+                                isMe ||
+                                isDev ||
+                                !hasPermission("pengguna", "update")
+                              }
                             />
                             <span
                               className={`text-xs font-semibold ${
-                                u.isActive ? "text-success" : "text-muted-foreground"
+                                u.isActive
+                                  ? "text-success"
+                                  : "text-muted-foreground"
                               }`}
                             >
                               {u.isActive ? "Aktif" : "Nonaktif"}
@@ -430,42 +675,47 @@ function ManajemenPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {u.createdAt ? format(new Date(u.createdAt), "d MMM yyyy", {
-                            locale: idLocale,
-                          }) : "—"}
+                          {u.createdAt
+                            ? format(new Date(u.createdAt), "d MMM yyyy", {
+                                locale: idLocale,
+                              })
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1.5">
-                            {!isDev && !isMe ? (
-                              <>
-                                {hasPermission("pengguna", "update") && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                    onClick={() => handleOpenEdit(u)}
-                                    title="Edit Pengguna"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </Button>
-                                )}
-                                {hasPermission("pengguna", "delete") && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => setDeletingId(u.id)}
-                                    title="Hapus Pengguna"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic px-2">
-                                {isMe ? "Akun Anda" : "Sistem"}
-                              </span>
-                            )}
+                            {/* Semua user termasuk dev/diri sendiri bisa diedit kecuali perubahan status/peran dibatasi */}
+                            {hasPermission("pengguna", "update") ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => handleOpenEdit(u)}
+                                title="Edit Pengguna"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : null}
+
+                            {!isDev &&
+                            !isMe &&
+                            hasPermission("pengguna", "delete") ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeletingId(u.id)}
+                                title="Hapus Pengguna"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : null}
+
+                            {(isDev || isMe) &&
+                              !hasPermission("pengguna", "update") && (
+                                <span className="text-xs text-muted-foreground italic px-2">
+                                  {isMe ? "Akun Anda" : "Sistem"}
+                                </span>
+                              )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -480,89 +730,225 @@ function ManajemenPage() {
 
       {/* Modal Dialog Edit Pengguna */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Edit Pengguna</DialogTitle>
-            <DialogDescription>
-              Ubah informasi nama, email, peran, jabatan, dan kata sandi pengguna ini.
+            <DialogTitle className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-primary" /> Edit Pengguna
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Ubah informasi nama, email, peran, jabatan, kata sandi, dan divisi
+              pengguna ini.
             </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               updateMutation.mutate({
-                id: editingUser?.id,
+                id: editingUser?.id || "",
                 name: editName,
                 email: editEmail,
                 role: editRole,
                 position: editPosition,
                 password: editPassword,
+                divisionIds: editDivisions,
+                validationDivisionIds:
+                  editRole === "admin" ? editValidationDivisions : [],
               });
             }}
-            className="space-y-4 py-2"
+            className="space-y-4 py-2 max-h-[50vh] overflow-y-auto pr-1"
           >
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nama Lengkap</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="edit-name"
+                className="text-xs font-bold text-slate-700"
+              >
+                Nama Lengkap
+              </Label>
               <Input
                 id="edit-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
+                className="rounded-2xl"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="edit-email"
+                className="text-xs font-bold text-slate-700"
+              >
+                Email
+              </Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
+                className="rounded-2xl"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">Kata Sandi Baru (Opsional)</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="edit-password"
+                className="text-xs font-bold text-slate-700 flex items-center gap-1"
+              >
+                <Key className="w-3.5 h-3.5" /> Reset Kata Sandi Baru (Opsional)
+              </Label>
               <Input
                 id="edit-password"
                 type="password"
                 placeholder="Kosongkan jika tidak ingin diubah"
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
+                className="rounded-2xl"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-position">Jabatan</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="edit-position"
+                className="text-xs font-bold text-slate-700"
+              >
+                Jabatan
+              </Label>
               <Input
                 id="edit-position"
                 value={editPosition}
                 onChange={(e) => setEditPosition(e.target.value)}
                 placeholder="Staff IT, Manajer, dll."
+                className="rounded-2xl"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Peran (Role)</Label>
-              <Select
-                value={editRole}
-                onValueChange={(v: "admin" | "staff") => setEditRole(v)}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="edit-role"
+                className="text-xs font-bold text-slate-700"
               >
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+                Peran (Role)
+              </Label>
+              {editingUser?.role === "developer" ? (
+                <Input
+                  id="edit-role"
+                  value="developer"
+                  disabled
+                  className="rounded-2xl bg-slate-50 uppercase font-bold text-slate-400"
+                />
+              ) : (
+                <Select
+                  value={editRole}
+                  onValueChange={(v: "developer" | "admin" | "staff") =>
+                    setEditRole(v)
+                  }
+                >
+                  <SelectTrigger id="edit-role" className="rounded-2xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
+
+            {/* Edit Divisi Kerja */}
+            <div className="space-y-2 border border-slate-100 bg-slate-50/20 p-3.5 rounded-2xl">
+              <Label className="text-xs font-bold text-slate-700 block">
+                Divisi Kerja
+              </Label>
+              {divisionsList && divisionsList.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {divisionsList.map((div: { id: string; name: string }) => (
+                    <label
+                      key={div.id}
+                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
+                    >
+                      <Checkbox
+                        id={`edit-div-${div.id}`}
+                        checked={editDivisions.includes(div.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditDivisions([...editDivisions, div.id]);
+                          } else {
+                            setEditDivisions(
+                              editDivisions.filter((id) => id !== div.id),
+                            );
+                          }
+                        }}
+                      />
+                      <span className="text-xs font-bold text-slate-650 truncate">
+                        {div.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  Belum ada divisi aktif
+                </p>
+              )}
+            </div>
+
+            {/* Edit Divisi Validasi (Hanya Admin) */}
+            {editRole === "admin" && (
+              <div className="space-y-2 border border-primary/5 bg-primary/2 p-3.5 rounded-2xl">
+                <Label className="text-xs font-bold text-primary flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-primary" /> Divisi
+                  Validasi (Tanggung Jawab Atasan)
+                </Label>
+                {divisionsList && divisionsList.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {divisionsList.map((div: { id: string; name: string }) => (
+                      <label
+                        key={div.id}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
+                      >
+                        <Checkbox
+                          id={`edit-val-${div.id}`}
+                          checked={editValidationDivisions.includes(div.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditValidationDivisions([
+                                ...editValidationDivisions,
+                                div.id,
+                              ]);
+                            } else {
+                              setEditValidationDivisions(
+                                editValidationDivisions.filter(
+                                  (id) => id !== div.id,
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                        <span className="text-xs font-bold text-slate-650 truncate">
+                          {div.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    Belum ada divisi aktif
+                  </p>
+                )}
+              </div>
+            )}
+
             <DialogFooter className="pt-2 gap-2 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditOpen(false)}
+                className="rounded-2xl"
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="rounded-2xl bg-primary text-white"
+              >
                 {updateMutation.isPending && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
@@ -573,8 +959,237 @@ function ManajemenPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal Dialog Tambah Pengguna Baru */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" /> Tambah Pengguna Baru
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Daftarkan akun Admin/Staff baru secara manual beserta divisi
+              kerjanya.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (createDivisions.length === 0) {
+                toast.error("Harap pilih minimal satu divisi kerja");
+                return;
+              }
+              createMutation.mutate({
+                name: createName,
+                email: createEmail,
+                role: createRole,
+                position: createPosition,
+                password: createPassword,
+                divisionIds: createDivisions,
+                validationDivisionIds:
+                  createRole === "admin" ? createValidationDivisions : [],
+              });
+            }}
+            className="space-y-4 py-2 max-h-[50vh] overflow-y-auto pr-1"
+          >
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-name"
+                className="text-xs font-bold text-slate-700"
+              >
+                Nama Lengkap
+              </Label>
+              <Input
+                id="create-name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Nama lengkap staf/admin"
+                className="rounded-2xl"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-email"
+                className="text-xs font-bold text-slate-700"
+              >
+                Email
+              </Label>
+              <Input
+                id="create-email"
+                type="email"
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                placeholder="email@perusahaan.com"
+                className="rounded-2xl"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-password"
+                className="text-xs font-bold text-slate-700"
+              >
+                Kata Sandi
+              </Label>
+              <Input
+                id="create-password"
+                type="password"
+                placeholder="Minimal 6 karakter"
+                value={createPassword}
+                onChange={(e) => setCreatePassword(e.target.value)}
+                className="rounded-2xl"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-position"
+                className="text-xs font-bold text-slate-700"
+              >
+                Jabatan
+              </Label>
+              <Input
+                id="create-position"
+                value={createPosition}
+                onChange={(e) => setCreatePosition(e.target.value)}
+                placeholder="Staff IT, Guru, dll."
+                className="rounded-2xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-role"
+                className="text-xs font-bold text-slate-700"
+              >
+                Peran (Role)
+              </Label>
+              <Select
+                value={createRole}
+                onValueChange={(v: "admin" | "staff") => setCreateRole(v)}
+              >
+                <SelectTrigger id="create-role" className="rounded-2xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="admin">Admin / Validator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pilihan Divisi Kerja */}
+            <div className="space-y-2 border border-slate-100 bg-slate-50/20 p-3.5 rounded-2xl">
+              <Label className="text-xs font-bold text-slate-700 block">
+                Pilih Divisi Kerja
+              </Label>
+              {divisionsList && divisionsList.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {divisionsList.map((div: { id: string; name: string }) => (
+                    <label
+                      key={div.id}
+                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
+                    >
+                      <Checkbox
+                        id={`create-div-${div.id}`}
+                        checked={createDivisions.includes(div.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setCreateDivisions([...createDivisions, div.id]);
+                          } else {
+                            setCreateDivisions(
+                              createDivisions.filter((id) => id !== div.id),
+                            );
+                          }
+                        }}
+                      />
+                      <span className="text-xs font-bold text-slate-650 truncate">
+                        {div.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  Belum ada divisi aktif
+                </p>
+              )}
+            </div>
+
+            {/* Pilihan Divisi Validasi (Hanya Admin) */}
+            {createRole === "admin" && (
+              <div className="space-y-2 border border-primary/5 bg-primary/2 p-3.5 rounded-2xl">
+                <Label className="text-xs font-bold text-primary flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-primary" /> Pilih Divisi
+                  Validasi (Tanggung Jawab Atasan)
+                </Label>
+                {divisionsList && divisionsList.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {divisionsList.map((div: { id: string; name: string }) => (
+                      <label
+                        key={div.id}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
+                      >
+                        <Checkbox
+                          id={`create-val-${div.id}`}
+                          checked={createValidationDivisions.includes(div.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setCreateValidationDivisions([
+                                ...createValidationDivisions,
+                                div.id,
+                              ]);
+                            } else {
+                              setCreateValidationDivisions(
+                                createValidationDivisions.filter(
+                                  (id) => id !== div.id,
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                        <span className="text-xs font-bold text-slate-650 truncate">
+                          {div.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    Belum ada divisi aktif
+                  </p>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="pt-2 gap-2 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-2xl"
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="rounded-2xl bg-primary text-white font-bold px-5"
+              >
+                {createMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Daftarkan User
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* AlertDialog Konfirmasi Hapus Pengguna */}
-      <AlertDialog open={!!deletingId} onOpenChange={(v) => !v && setDeletingId(null)}>
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(v) => !v && setDeletingId(null)}
+      >
         <AlertDialogContent className="surface-card border-none rounded-2xl p-6 shadow-soft max-w-sm mx-auto">
           <AlertDialogHeader className="space-y-3 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-650 scale-110">
@@ -584,7 +1199,9 @@ function ManajemenPage() {
               Hapus Pengguna?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
-              Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua sesi serta data terkait secara permanen.
+              Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak
+              dapat dibatalkan dan akan menghapus semua sesi serta data terkait
+              secara permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex gap-2">

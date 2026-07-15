@@ -15,15 +15,21 @@ import {
   users as usersTable,
   appConfig as appConfigTable,
   trackerLogs as trackerLogsTable,
-  tasks as tasksTable
+  tasks as tasksTable,
+  divisions,
+  userDivisions,
+  divisionValidators as validatorTable,
 } from "@/db/schema";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, inArray } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-permission";
 import { isAdminOrDev } from "@/lib/roles";
 import { todayISO } from "@/lib/tracker";
+import { getAppConfig } from "@/lib/app-config";
+import type { TaskReportItem, LogReportItem } from "@/lib/pdf-report";
 import { uploadToRustFS } from "@/lib/storage";
 import { sendTelegramNotification } from "@/lib/telegram";
+import { getSimpleUsers, getUserDivisionsListLaporan } from "@/lib/server-fns";
 import {
   Card,
   CardContent,
@@ -43,42 +49,28 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// ponytail: Fungsi server untuk mengambil daftar nama pengguna sederhana (untuk filter)
-export const getSimpleUsers = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
-  const role = session.user.role || "staff";
-  if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
-
-  return db.query.users.findMany({
-    columns: {
-      id: true,
-      name: true,
-    },
-    orderBy: [desc(usersTable.name)],
-  });
-});
-
 // ponytail: Fungsi server untuk mengambil riwayat laporan terbit
-const getReportsHistory = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
-  const role = session.user.role || "staff";
-  const canFilterUser = role === "admin" || role === "developer";
+const getReportsHistory = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
+    const role = session.user.role || "staff";
+    const canFilterUser = role === "admin" || role === "developer";
 
-  if (canFilterUser) {
-    return db.query.reports.findMany({
-      orderBy: [desc(reportsTable.createdAt)],
-      limit: 20,
-    });
-  } else {
-    return db.query.reports.findMany({
-      where: eq(reportsTable.generatedBy, session.user.id),
-      orderBy: [desc(reportsTable.createdAt)],
-      limit: 20,
-    });
-  }
-});
+    if (canFilterUser) {
+      return db.query.reports.findMany({
+        orderBy: [desc(reportsTable.createdAt)],
+        limit: 20,
+      });
+    } else {
+      return db.query.reports.findMany({
+        where: eq(reportsTable.generatedBy, session.user.id),
+        orderBy: [desc(reportsTable.createdAt)],
+        limit: 20,
+      });
+    }
+  },
+);
 
 // ponytail: Fungsi server untuk menyimpan log pembuatan laporan baru
 const saveReportRecord = createServerFn({ method: "POST" })
@@ -88,7 +80,7 @@ const saveReportRecord = createServerFn({ method: "POST" })
       periodStart: z.string(),
       periodEnd: z.string(),
       filterUserId: z.string().nullable().optional(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
@@ -96,8 +88,8 @@ const saveReportRecord = createServerFn({ method: "POST" })
 
     await db.insert(reportsTable).values({
       title: data.title,
-      periodStart: data.periodStart,
-      periodEnd: data.periodEnd,
+      periodStart: new Date(data.periodStart),
+      periodEnd: new Date(data.periodEnd),
       generatedBy: session.user.id,
       filterUserId: data.filterUserId || null,
     });
@@ -105,20 +97,21 @@ const saveReportRecord = createServerFn({ method: "POST" })
     // ponytail: Kirim notifikasi instan ke grup/channel Telegram
     await sendTelegramNotification(
       `📄 *Laporan Baru Diterbitkan*\n\n` +
-      `• *Judul*: ${data.title}\n` +
-      `• *Periode*: ${data.periodStart} s/d ${data.periodEnd}\n` +
-      `• *Dibuat Oleh*: ${session.user.name || session.user.email}`
+        `• *Judul*: ${data.title}\n` +
+        `• *Periode*: ${data.periodStart} s/d ${data.periodEnd}\n` +
+        `• *Dibuat Oleh*: ${session.user.name || session.user.email}`,
     );
   });
 
-// ponytail: Fungsi server untuk mengambil semua data yang dibutuhkan laporan (tugas, log, config, position) sekaligus
+// ponytail: Fungsi server untuk mengambil semua data yang dibutuhkan laporan (tugas, log, config, position) sekaligus dengan filter divisi
 const getReportData = createServerFn({ method: "POST" })
   .validator(
     z.object({
       periodStart: z.string(),
       periodEnd: z.string(),
       userId: z.string().nullable().optional(),
-    })
+      divisionId: z.string().nullable().optional(),
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
@@ -129,7 +122,18 @@ const getReportData = createServerFn({ method: "POST" })
       orderBy: [desc(appConfigTable.updatedAt)],
       limit: 1,
     });
-    const cfg = config[0] || null;
+    const cfg = config[0]
+      ? {
+          id: config[0].id,
+          logoUrl: config[0].logoUrl,
+          appName: config[0].appName,
+          pdfPaperSize: config[0].pdfPaperSize,
+          pdfOrientation: config[0].pdfOrientation,
+          pdfHeaderText: config[0].pdfHeaderText,
+          pdfFooterText: config[0].pdfFooterText,
+          logLimit: config[0].logLimit,
+        }
+      : null;
 
     // Fetch targeted employee position/name
     let position = "Staf";
@@ -137,103 +141,92 @@ const getReportData = createServerFn({ method: "POST" })
     if (data.userId) {
       const u = await db.query.users.findFirst({
         where: eq(usersTable.id, data.userId),
-        columns: { position: true, name: true }
+        columns: { position: true, name: true },
       });
       if (u?.position) position = u.position;
       if (u?.name) name = u.name;
     }
 
-    // Fetch tasks
-    let tasksQuery;
-    if (data.userId) {
-      tasksQuery = db.query.tasks.findMany({
-        where: and(
-          eq(tasksTable.assignedTo, data.userId),
-          gte(tasksTable.createdAt, new Date(data.periodStart + "T00:00:00")),
-          lte(tasksTable.createdAt, new Date(data.periodEnd + "T23:59:59"))
-        ),
-        orderBy: [desc(tasksTable.createdAt)]
+    // Fetch division & validator name
+    let divisionName = "";
+    let validatorName = "";
+    if (data.divisionId) {
+      const div = await db.query.divisions.findFirst({
+        where: eq(divisions.id, data.divisionId),
+        columns: { name: true },
       });
-    } else {
-      tasksQuery = db.query.tasks.findMany({
-        where: and(
-          gte(tasksTable.createdAt, new Date(data.periodStart + "T00:00:00")),
-          lte(tasksTable.createdAt, new Date(data.periodEnd + "T23:59:59"))
-        ),
-        orderBy: [desc(tasksTable.createdAt)]
-      });
+      if (div?.name) divisionName = div.name;
+
+      const val = await db
+        .select({ name: usersTable.name })
+        .from(validatorTable)
+        .innerJoin(usersTable, eq(validatorTable.userId, usersTable.id))
+        .where(eq(validatorTable.divisionId, data.divisionId))
+        .limit(1);
+      if (val[0]?.name) validatorName = val[0].name;
     }
+
+    // Fetch tasks
+    let tasksWhere = and(
+      gte(tasksTable.createdAt, new Date(data.periodStart + "T00:00:00")),
+      lte(tasksTable.createdAt, new Date(data.periodEnd + "T23:59:59")),
+    );
+    if (data.userId) {
+      tasksWhere = and(tasksWhere, eq(tasksTable.assignedTo, data.userId));
+    }
+    if (data.divisionId) {
+      tasksWhere = and(tasksWhere, eq(tasksTable.divisionId, data.divisionId));
+    }
+    const tasksQuery = db.query.tasks.findMany({
+      where: tasksWhere,
+      orderBy: [desc(tasksTable.createdAt)],
+    });
 
     // Fetch logs
-    let logsQuery;
+    let logsWhere = and(
+      gte(trackerLogsTable.loggedDate, new Date(data.periodStart)),
+      lte(trackerLogsTable.loggedDate, new Date(data.periodEnd)),
+    );
     if (data.userId) {
-      logsQuery = db
-        .select({
-          id: trackerLogsTable.id,
-          taskId: trackerLogsTable.taskId,
-          userId: trackerLogsTable.userId,
-          note: trackerLogsTable.note,
-          durationMinutes: trackerLogsTable.durationMinutes,
-          loggedDate: trackerLogsTable.loggedDate,
-          createdAt: trackerLogsTable.createdAt,
-          startTime: trackerLogsTable.startTime,
-          endTime: trackerLogsTable.endTime,
-          status: trackerLogsTable.status,
-          isValidated: trackerLogsTable.isValidated,
-          validatedBy: trackerLogsTable.validatedBy,
-          remarks: trackerLogsTable.remarks,
-          task: {
-            title: tasksTable.title,
-            status: tasksTable.status,
-          },
-        })
-        .from(trackerLogsTable)
-        .leftJoin(tasksTable, eq(trackerLogsTable.taskId, tasksTable.id))
-        .where(
-          and(
-            eq(trackerLogsTable.userId, data.userId),
-            gte(trackerLogsTable.loggedDate, data.periodStart),
-            lte(trackerLogsTable.loggedDate, data.periodEnd)
-          )
-        )
-        .orderBy(desc(trackerLogsTable.loggedDate));
-    } else {
-      logsQuery = db
-        .select({
-          id: trackerLogsTable.id,
-          taskId: trackerLogsTable.taskId,
-          userId: trackerLogsTable.userId,
-          note: trackerLogsTable.note,
-          durationMinutes: trackerLogsTable.durationMinutes,
-          loggedDate: trackerLogsTable.loggedDate,
-          createdAt: trackerLogsTable.createdAt,
-          startTime: trackerLogsTable.startTime,
-          endTime: trackerLogsTable.endTime,
-          status: trackerLogsTable.status,
-          isValidated: trackerLogsTable.isValidated,
-          validatedBy: trackerLogsTable.validatedBy,
-          remarks: trackerLogsTable.remarks,
-          task: {
-            title: tasksTable.title,
-            status: tasksTable.status,
-          },
-        })
-        .from(trackerLogsTable)
-        .leftJoin(tasksTable, eq(trackerLogsTable.taskId, tasksTable.id))
-        .where(
-          and(
-            gte(trackerLogsTable.loggedDate, data.periodStart),
-            lte(trackerLogsTable.loggedDate, data.periodEnd)
-          )
-        )
-        .orderBy(desc(trackerLogsTable.loggedDate));
+      logsWhere = and(logsWhere, eq(trackerLogsTable.userId, data.userId));
+    }
+    if (data.divisionId) {
+      logsWhere = and(
+        logsWhere,
+        eq(trackerLogsTable.divisionId, data.divisionId),
+      );
     }
 
+    const logsQuery = db
+      .select({
+        id: trackerLogsTable.id,
+        taskId: trackerLogsTable.taskId,
+        userId: trackerLogsTable.userId,
+        note: trackerLogsTable.note,
+        durationMinutes: trackerLogsTable.durationMinutes,
+        loggedDate: trackerLogsTable.loggedDate,
+        createdAt: trackerLogsTable.createdAt,
+        startTime: trackerLogsTable.startTime,
+        endTime: trackerLogsTable.endTime,
+        status: trackerLogsTable.status,
+        isValidated: trackerLogsTable.isValidated,
+        validatedBy: trackerLogsTable.validatedBy,
+        remarks: trackerLogsTable.remarks,
+        task: {
+          title: tasksTable.title,
+          status: tasksTable.status,
+        },
+      })
+      .from(trackerLogsTable)
+      .leftJoin(tasksTable, eq(trackerLogsTable.taskId, tasksTable.id))
+      .where(logsWhere)
+      .orderBy(desc(trackerLogsTable.loggedDate));
+
     const [tasks, rawLogs] = await Promise.all([tasksQuery, logsQuery]);
-    const logs = rawLogs.map((l: any) => ({
+    const logs = rawLogs.map((l) => ({
       ...l,
       task: l.task?.title ? l.task : null,
-    }));
+    })) as LogReportItem[];
 
     return {
       cfg,
@@ -241,6 +234,8 @@ const getReportData = createServerFn({ method: "POST" })
       name,
       tasks,
       logs,
+      divisionName,
+      validatorName,
     };
   });
 
@@ -281,8 +276,19 @@ function LaporanPage() {
   const [start, setStart] = useState(firstOfMonthISO());
   const [end, setEnd] = useState(todayISO());
   const [userId, setUserId] = useState<string>("me");
+
+  // States untuk multi-divisi
+  const [selectedDivId, setSelectedDivId] = useState<string>("all");
+
+  const { data: userDivs } = useQuery({
+    queryKey: ["user-divisions-list-laporan", me?.id],
+    enabled: !!me?.id,
+    queryFn: () => getUserDivisionsListLaporan(),
+  });
   const [paperSize, setPaperSize] = useState<"A4" | "F4">("A4");
-  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">(
+    "portrait",
+  );
   const [makerName, setMakerName] = useState("");
   const [checkerName, setCheckerName] = useState("");
   const [makerSigImg, setMakerSigImg] = useState<string | null>(null);
@@ -338,7 +344,7 @@ function LaporanPage() {
     try {
       const savedMakerName = localStorage.getItem("pdf_maker_name");
       if (savedMakerName) setMakerName(savedMakerName);
-      
+
       const savedCheckerName = localStorage.getItem("pdf_checker_name");
       if (savedCheckerName) setCheckerName(savedCheckerName);
 
@@ -349,34 +355,54 @@ function LaporanPage() {
       if (savedCheckerSig) setCheckerSigImg(savedCheckerSig);
 
       const savedPaperSize = localStorage.getItem("pdf_paper_size");
-      if (savedPaperSize === "A4" || savedPaperSize === "F4") setPaperSize(savedPaperSize as "A4" | "F4");
+      if (savedPaperSize === "A4" || savedPaperSize === "F4")
+        setPaperSize(savedPaperSize as "A4" | "F4");
 
       const savedOrientation = localStorage.getItem("pdf_orientation");
-      if (savedOrientation === "portrait" || savedOrientation === "landscape") setOrientation(savedOrientation as "portrait" | "landscape");
+      if (savedOrientation === "portrait" || savedOrientation === "landscape")
+        setOrientation(savedOrientation as "portrait" | "landscape");
 
       const savedMakerSigScale = localStorage.getItem("pdf_maker_sig_scale");
       if (savedMakerSigScale) setMakerSigScale(Number(savedMakerSigScale));
 
-      const savedMakerSigOffsetX = localStorage.getItem("pdf_maker_sig_offset_x");
-      if (savedMakerSigOffsetX) setMakerSigOffsetX(Number(savedMakerSigOffsetX));
+      const savedMakerSigOffsetX = localStorage.getItem(
+        "pdf_maker_sig_offset_x",
+      );
+      if (savedMakerSigOffsetX)
+        setMakerSigOffsetX(Number(savedMakerSigOffsetX));
 
-      const savedMakerSigOffsetY = localStorage.getItem("pdf_maker_sig_offset_y");
-      if (savedMakerSigOffsetY) setMakerSigOffsetY(Number(savedMakerSigOffsetY));
+      const savedMakerSigOffsetY = localStorage.getItem(
+        "pdf_maker_sig_offset_y",
+      );
+      if (savedMakerSigOffsetY)
+        setMakerSigOffsetY(Number(savedMakerSigOffsetY));
 
-      const savedCheckerSigScale = localStorage.getItem("pdf_checker_sig_scale");
-      if (savedCheckerSigScale) setCheckerSigScale(Number(savedCheckerSigScale));
+      const savedCheckerSigScale = localStorage.getItem(
+        "pdf_checker_sig_scale",
+      );
+      if (savedCheckerSigScale)
+        setCheckerSigScale(Number(savedCheckerSigScale));
 
-      const savedCheckerSigOffsetX = localStorage.getItem("pdf_checker_sig_offset_x");
-      if (savedCheckerSigOffsetX) setCheckerSigOffsetX(Number(savedCheckerSigOffsetX));
+      const savedCheckerSigOffsetX = localStorage.getItem(
+        "pdf_checker_sig_offset_x",
+      );
+      if (savedCheckerSigOffsetX)
+        setCheckerSigOffsetX(Number(savedCheckerSigOffsetX));
 
-      const savedCheckerSigOffsetY = localStorage.getItem("pdf_checker_sig_offset_y");
-      if (savedCheckerSigOffsetY) setCheckerSigOffsetY(Number(savedCheckerSigOffsetY));
+      const savedCheckerSigOffsetY = localStorage.getItem(
+        "pdf_checker_sig_offset_y",
+      );
+      if (savedCheckerSigOffsetY)
+        setCheckerSigOffsetY(Number(savedCheckerSigOffsetY));
     } catch (e) {
       console.error("Failed to load PDF config from localStorage", e);
     }
   }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (val: string | null) => void,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingSig(true);
@@ -388,15 +414,15 @@ function LaporanPage() {
               base64Data: reader.result as string,
               fileName: file.name,
               contentType: file.type || "image/png",
-            }
+            },
           });
           if (res?.url) {
             // ponytail: gunakan URL RustFS S3 untuk tanda tangan
             setter(res.url);
             toast.success("Tanda tangan berhasil di-upload ke S3");
           }
-        } catch (err: any) {
-          toast.error(err.message || "Gagal mengupload tanda tangan ke S3");
+        } catch (err) {
+          toast.error("Gagal mendapatkan status tanda tangan");
         } finally {
           setIsUploadingSig(false);
         }
@@ -426,14 +452,26 @@ function LaporanPage() {
         : userId;
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
-    queryKey: ["report-preview", start, end, targetUser, reportType],
-    enabled: !!me && !!start && !!end && !((reportType === "meeting" || reportType === "harian") && !targetUser),
+    queryKey: [
+      "report-preview",
+      start,
+      end,
+      targetUser,
+      reportType,
+      selectedDivId,
+    ],
+    enabled:
+      !!me &&
+      !!start &&
+      !!end &&
+      !((reportType === "meeting" || reportType === "harian") && !targetUser),
     queryFn: () =>
       getReportData({
         data: {
           periodStart: start,
           periodEnd: end,
           userId: targetUser,
+          divisionId: selectedDivId === "all" ? null : selectedDivId,
         },
       }),
   });
@@ -443,15 +481,26 @@ function LaporanPage() {
     if (previewData?.name) {
       setMakerName(previewData.name);
     }
+    if (previewData?.validatorName) {
+      setCheckerName(previewData.validatorName);
+    } else {
+      setCheckerName("");
+    }
     if (previewData?.cfg) {
       if (previewData.cfg.pdfPaperSize) {
-        setPaperSize(previewData.cfg.pdfPaperSize.toUpperCase() === "F4" ? "F4" : "A4");
+        setPaperSize(
+          previewData.cfg.pdfPaperSize.toUpperCase() === "F4" ? "F4" : "A4",
+        );
       }
       if (previewData.cfg.pdfOrientation) {
-        setOrientation(previewData.cfg.pdfOrientation === "landscape" ? "landscape" : "portrait");
+        setOrientation(
+          previewData.cfg.pdfOrientation === "landscape"
+            ? "landscape"
+            : "portrait",
+        );
       }
     }
-  }, [previewData?.name, previewData?.cfg]);
+  }, [previewData?.name, previewData?.validatorName, previewData?.cfg]);
 
   const generate = useMutation({
     mutationFn: async (fileFormat: "pdf" | "excel") => {
@@ -466,8 +515,13 @@ function LaporanPage() {
             : userId;
 
       // ponytail: Memastikan laporan Log Book Harian & Meeting tidak dibuat secara global/tanpa filter user
-      if ((reportType === "meeting" || reportType === "harian") && !targetUser) {
-        throw new Error(`Laporan ${appName} harus difilter untuk satu pengguna tertentu (tidak bisa Semua Pengguna).`);
+      if (
+        (reportType === "meeting" || reportType === "harian") &&
+        !targetUser
+      ) {
+        throw new Error(
+          `Laporan ${appName} harus difilter untuk satu pengguna tertentu (tidak bisa Semua Pengguna).`,
+        );
       }
 
       // ponytail: Mengambil semua data laporan dari Server Function sekaligus (YAGNI / optimasi database roundtrip)
@@ -476,7 +530,8 @@ function LaporanPage() {
           periodStart: start,
           periodEnd: end,
           userId: targetUser,
-        }
+          divisionId: selectedDivId === "all" ? null : selectedDivId,
+        },
       });
 
       let blob: Blob;
@@ -491,15 +546,17 @@ function LaporanPage() {
             periodEnd: end,
             generatedByName: makerName || me.name,
             userPosition: reportData.position,
-            checkerName: checkerName || null,
+            checkerName: checkerName || reportData.validatorName || null,
+            divisionName: reportData.divisionName || null,
           },
           {
             employeeName: makerName || reportData.name,
             employeePosition: reportData.position,
             tasks: reportData.tasks,
             logs: reportData.logs,
-            checkerName: checkerName || null,
-          }
+            checkerName: checkerName || reportData.validatorName || null,
+            divisionName: reportData.divisionName || null,
+          },
         );
         extension = "xlsx";
       } else {
@@ -511,7 +568,8 @@ function LaporanPage() {
             periodEnd: end,
             generatedByName: makerName || me.name,
             reportType,
-            checkerName: checkerName || null,
+            checkerName: checkerName || reportData.validatorName || null,
+            divisionName: reportData.divisionName || null,
             makerSigImg,
             makerSigScale,
             makerSigOffsetX,
@@ -530,7 +588,7 @@ function LaporanPage() {
             position: reportData.position,
             tasks: reportData.tasks,
             logs: reportData.logs,
-          }
+          },
         );
         extension = "pdf";
       }
@@ -552,7 +610,7 @@ function LaporanPage() {
           periodStart: start,
           periodEnd: end,
           filterUserId: targetUser,
-        }
+        },
       });
     },
     onSuccess: () => {
@@ -588,20 +646,22 @@ function LaporanPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Judul Laporan</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Format Laporan</Label>
                 <Select
                   value={reportType}
-                  onValueChange={(v) => {
-                    const type = v as "standard" | "meeting" | "harian";
-                    setReportType(type);
-                    if (type === "standard") {
+                  onValueChange={(v: "standard" | "meeting" | "harian") => {
+                    setReportType(v);
+                    if (v === "standard") {
                       setTitle("Laporan Kinerja");
                     } else {
-                      if (type === "meeting") setTitle(`${appName} Meeting`);
-                      else if (type === "harian") setTitle(`${appName} Harian`);
+                      if (v === "meeting") setTitle(`${appName} Meeting`);
+                      else if (v === "harian") setTitle(`${appName} Harian`);
                       if (userId === "all") setUserId("me");
                     }
                   }}
@@ -642,6 +702,28 @@ function LaporanPage() {
                 </div>
               </div>
 
+              {userDivs && userDivs.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Divisi Kerja</Label>
+                  <Select
+                    value={selectedDivId}
+                    onValueChange={setSelectedDivId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Divisi Saya</SelectItem>
+                      {userDivs.map((div: { id: string; name: string }) => (
+                        <SelectItem key={div.id} value={div.id}>
+                          {div.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {canFilterUser && (
                 <div className="space-y-2">
                   <Label>Filter Pengguna</Label>
@@ -654,11 +736,13 @@ function LaporanPage() {
                       {reportType === "standard" && (
                         <SelectItem value="all">Semua pengguna</SelectItem>
                       )}
-                      {(users ?? []).map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
+                      {(users ?? []).map(
+                        (u: { id: string; name: string | null }) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -669,7 +753,10 @@ function LaporanPage() {
                 <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div className="space-y-2">
                     <Label>Ukuran Kertas</Label>
-                    <Select value={paperSize} onValueChange={(v: any) => setPaperSize(v)}>
+                    <Select
+                      value={paperSize}
+                      onValueChange={(v: "A4" | "F4") => setPaperSize(v)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -681,7 +768,12 @@ function LaporanPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Orientasi</Label>
-                    <Select value={orientation} onValueChange={(v: any) => setOrientation(v)}>
+                    <Select
+                      value={orientation}
+                      onValueChange={(v: "portrait" | "landscape") =>
+                        setOrientation(v)
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -697,24 +789,32 @@ function LaporanPage() {
               {/* ponytail: Form nama tanda tangan custom & upload gambar ttd */}
               {(reportType === "meeting" || reportType === "harian") && (
                 <div className="space-y-4 border-t pt-4">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tanda Tangan Laporan</h4>
-                  
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Tanda Tangan Laporan
+                  </h4>
+
                   {/* Yang Membuat */}
                   <div className="space-y-2 border-b pb-3">
-                    <Label className="text-xs font-medium">Yang Membuat (Pembuat)</Label>
+                    <Label className="text-xs font-medium">
+                      Yang Membuat (Pembuat)
+                    </Label>
                     <Input
                       value={makerName}
                       onChange={(e) => setMakerName(e.target.value)}
                       placeholder="Nama Karyawan..."
                       className="h-9 text-xs"
                     />
-                    
+
                     <div className="space-y-1.5 mt-2 bg-muted/30 p-2 rounded-lg border border-border/50">
-                      <Label className="text-[11px] text-muted-foreground block font-medium">Upload Tanda Tangan (PNG/JPG)</Label>
+                      <Label className="text-[11px] text-muted-foreground block font-medium">
+                        Upload Tanda Tangan (PNG/JPG)
+                      </Label>
                       {makerSigImg ? (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] text-success font-semibold">Ttd Terunggah</span>
+                            <span className="text-[10px] text-success font-semibold">
+                              Ttd Terunggah
+                            </span>
                             <button
                               type="button"
                               onClick={() => {
@@ -737,7 +837,9 @@ function LaporanPage() {
                               min="20"
                               max="500"
                               value={makerSigScale}
-                              onChange={(e) => setMakerSigScale(Number(e.target.value))}
+                              onChange={(e) =>
+                                setMakerSigScale(Number(e.target.value))
+                              }
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                             />
                           </div>
@@ -749,7 +851,9 @@ function LaporanPage() {
                                 min="-30"
                                 max="30"
                                 value={makerSigOffsetX}
-                                onChange={(e) => setMakerSigOffsetX(Number(e.target.value))}
+                                onChange={(e) =>
+                                  setMakerSigOffsetX(Number(e.target.value))
+                                }
                                 className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                               />
                             </div>
@@ -760,7 +864,9 @@ function LaporanPage() {
                                 min="-30"
                                 max="30"
                                 value={makerSigOffsetY}
-                                onChange={(e) => setMakerSigOffsetY(Number(e.target.value))}
+                                onChange={(e) =>
+                                  setMakerSigOffsetY(Number(e.target.value))
+                                }
                                 className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                               />
                             </div>
@@ -771,7 +877,9 @@ function LaporanPage() {
                           <Input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleFileChange(e, setMakerSigImg)}
+                            onChange={(e) =>
+                              handleFileChange(e, setMakerSigImg)
+                            }
                             disabled={isUploadingSig}
                             className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
                           />
@@ -788,20 +896,26 @@ function LaporanPage() {
 
                   {/* Yang Mengetahui */}
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium">Yang Mengetahui (Atasan)</Label>
+                    <Label className="text-xs font-medium">
+                      Yang Mengetahui (Atasan)
+                    </Label>
                     <Input
                       value={checkerName}
                       onChange={(e) => setCheckerName(e.target.value)}
                       placeholder="Kosongkan untuk titik-titik"
                       className="h-9 text-xs"
                     />
-                    
+
                     <div className="space-y-1.5 mt-2 bg-muted/30 p-2 rounded-lg border border-border/50">
-                      <Label className="text-[11px] text-muted-foreground block font-medium">Upload Tanda Tangan (PNG/JPG)</Label>
+                      <Label className="text-[11px] text-muted-foreground block font-medium">
+                        Upload Tanda Tangan (PNG/JPG)
+                      </Label>
                       {checkerSigImg ? (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] text-success font-semibold">Ttd Terunggah</span>
+                            <span className="text-[10px] text-success font-semibold">
+                              Ttd Terunggah
+                            </span>
                             <button
                               type="button"
                               onClick={() => {
@@ -824,7 +938,9 @@ function LaporanPage() {
                               min="20"
                               max="500"
                               value={checkerSigScale}
-                              onChange={(e) => setCheckerSigScale(Number(e.target.value))}
+                              onChange={(e) =>
+                                setCheckerSigScale(Number(e.target.value))
+                              }
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                             />
                           </div>
@@ -836,7 +952,9 @@ function LaporanPage() {
                                 min="-30"
                                 max="30"
                                 value={checkerSigOffsetX}
-                                onChange={(e) => setCheckerSigOffsetX(Number(e.target.value))}
+                                onChange={(e) =>
+                                  setCheckerSigOffsetX(Number(e.target.value))
+                                }
                                 className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                               />
                             </div>
@@ -847,7 +965,9 @@ function LaporanPage() {
                                 min="-30"
                                 max="30"
                                 value={checkerSigOffsetY}
-                                onChange={(e) => setCheckerSigOffsetY(Number(e.target.value))}
+                                onChange={(e) =>
+                                  setCheckerSigOffsetY(Number(e.target.value))
+                                }
                                 className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-primary"
                               />
                             </div>
@@ -858,7 +978,9 @@ function LaporanPage() {
                           <Input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleFileChange(e, setCheckerSigImg)}
+                            onChange={(e) =>
+                              handleFileChange(e, setCheckerSigImg)
+                            }
                             disabled={isUploadingSig}
                             className="h-8 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
                           />
@@ -876,43 +998,68 @@ function LaporanPage() {
               )}
 
               <div className="flex flex-col gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      try {
-                        localStorage.setItem("pdf_maker_name", makerName);
-                        localStorage.setItem("pdf_checker_name", checkerName);
-                        if (makerSigImg) localStorage.setItem("pdf_maker_sig", makerSigImg);
-                        else localStorage.removeItem("pdf_maker_sig");
-                        if (checkerSigImg) localStorage.setItem("pdf_checker_sig", checkerSigImg);
-                        else localStorage.removeItem("pdf_checker_sig");
-                        localStorage.setItem("pdf_paper_size", paperSize);
-                        localStorage.setItem("pdf_orientation", orientation);
-                        localStorage.setItem("pdf_maker_sig_scale", String(makerSigScale));
-                        localStorage.setItem("pdf_maker_sig_offset_x", String(makerSigOffsetX));
-                        localStorage.setItem("pdf_maker_sig_offset_y", String(makerSigOffsetY));
-                        localStorage.setItem("pdf_checker_sig_scale", String(checkerSigScale));
-                        localStorage.setItem("pdf_checker_sig_offset_x", String(checkerSigOffsetX));
-                        localStorage.setItem("pdf_checker_sig_offset_y", String(checkerSigOffsetY));
-                        toast.success("Konfigurasi & tanda tangan berhasil disimpan!");
-                      } catch (e) {
-                        toast.error("Gagal menyimpan konfigurasi");
-                      }
-                    }}
-                    className="w-full text-xs font-semibold border-primary/20 text-[#0077B6] hover:bg-[#0077B6]/5 flex items-center justify-center gap-2 rounded-xl h-10 mb-2 cursor-pointer"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Simpan Konfigurasi & Ttd
-                  </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem("pdf_maker_name", makerName);
+                      localStorage.setItem("pdf_checker_name", checkerName);
+                      if (makerSigImg)
+                        localStorage.setItem("pdf_maker_sig", makerSigImg);
+                      else localStorage.removeItem("pdf_maker_sig");
+                      if (checkerSigImg)
+                        localStorage.setItem("pdf_checker_sig", checkerSigImg);
+                      else localStorage.removeItem("pdf_checker_sig");
+                      localStorage.setItem("pdf_paper_size", paperSize);
+                      localStorage.setItem("pdf_orientation", orientation);
+                      localStorage.setItem(
+                        "pdf_maker_sig_scale",
+                        String(makerSigScale),
+                      );
+                      localStorage.setItem(
+                        "pdf_maker_sig_offset_x",
+                        String(makerSigOffsetX),
+                      );
+                      localStorage.setItem(
+                        "pdf_maker_sig_offset_y",
+                        String(makerSigOffsetY),
+                      );
+                      localStorage.setItem(
+                        "pdf_checker_sig_scale",
+                        String(checkerSigScale),
+                      );
+                      localStorage.setItem(
+                        "pdf_checker_sig_offset_x",
+                        String(checkerSigOffsetX),
+                      );
+                      localStorage.setItem(
+                        "pdf_checker_sig_offset_y",
+                        String(checkerSigOffsetY),
+                      );
+                      toast.success(
+                        "Konfigurasi & tanda tangan berhasil disimpan!",
+                      );
+                    } catch (e) {
+                      toast.error("Gagal menyimpan konfigurasi");
+                    }
+                  }}
+                  className="w-full text-xs font-semibold border-primary/20 text-[#0077B6] hover:bg-[#0077B6]/5 flex items-center justify-center gap-2 rounded-xl h-10 mb-2 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Simpan Konfigurasi & Ttd
+                </Button>
                 <Button
                   onClick={() => generate.mutate("pdf")}
-                  disabled={generate.isPending || !hasPermission("laporan", "create")}
+                  disabled={
+                    generate.isPending || !hasPermission("laporan", "create")
+                  }
                   className="w-full"
                 >
                   {generate.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat PDF…
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat
+                      PDF…
                     </>
                   ) : (
                     <>
@@ -923,12 +1070,15 @@ function LaporanPage() {
                 <Button
                   variant="outline"
                   onClick={() => generate.mutate("excel")}
-                  disabled={generate.isPending || !hasPermission("laporan", "create")}
+                  disabled={
+                    generate.isPending || !hasPermission("laporan", "create")
+                  }
                   className="w-full"
                 >
                   {generate.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat Excel…
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Membuat
+                      Excel…
                     </>
                   ) : (
                     <>
@@ -948,7 +1098,9 @@ function LaporanPage() {
               {histLoading ? (
                 <Skeleton className="h-24 w-full" />
               ) : (history ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Belum ada laporan.</p>
+                <p className="text-sm text-muted-foreground">
+                  Belum ada laporan.
+                </p>
               ) : (
                 <ul className="divide-y divide-border/60">
                   {history!.map((r) => (
@@ -961,17 +1113,27 @@ function LaporanPage() {
                           {r.title}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {r.periodStart ? format(new Date(r.periodStart), "d MMM yyyy", {
-                            locale: idLocale,
-                          }) : ""}
+                          {r.periodStart
+                            ? format(new Date(r.periodStart), "d MMM yyyy", {
+                                locale: idLocale,
+                              })
+                            : ""}
                           {" — "}
-                          {r.periodEnd ? format(new Date(r.periodEnd), "d MMM yyyy", {
-                            locale: idLocale,
-                          }) : ""}
+                          {r.periodEnd
+                            ? format(new Date(r.periodEnd), "d MMM yyyy", {
+                                locale: idLocale,
+                              })
+                            : ""}
                           {" • "}
-                          {r.createdAt ? format(new Date(r.createdAt), "d MMM yyyy HH:mm", {
-                            locale: idLocale,
-                          }) : ""}
+                          {r.createdAt
+                            ? format(
+                                new Date(r.createdAt),
+                                "d MMM yyyy HH:mm",
+                                {
+                                  locale: idLocale,
+                                },
+                              )
+                            : ""}
                         </div>
                       </div>
                     </li>
@@ -986,7 +1148,7 @@ function LaporanPage() {
         <div className="flex-1 w-full overflow-hidden">
           <ReportPreviewGrid
             reportType={reportType}
-            data={previewData}
+            data={previewData ?? null}
             isLoading={previewLoading}
             paperSize={paperSize}
             orientation={orientation}
@@ -1026,7 +1188,27 @@ function ReportPreviewGrid({
   checkerSigOffsetY,
 }: {
   reportType: "standard" | "meeting" | "harian";
-  data: any;
+  data: {
+    cfg?: {
+      id?: string;
+      logoUrl?: string | null;
+      appName?: string | null;
+      pdfPaperSize?: string | null;
+      pdfOrientation?: string | null;
+      pdfHeaderText?: string | null;
+      pdfFooterText?: string | null;
+      logLimit?: number | null;
+      pdfMargin?: string | null;
+    } | null;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    name?: string | null;
+    position?: string | null;
+    divisionName?: string | null;
+    validatorName?: string | null;
+    tasks?: TaskReportItem[];
+    logs?: LogReportItem[];
+  } | null;
   isLoading: boolean;
   paperSize: "A4" | "F4";
   orientation: "portrait" | "landscape";
@@ -1042,19 +1224,30 @@ function ReportPreviewGrid({
   checkerSigOffsetY: number;
 }) {
   const [scale, setScale] = useState(1);
-  
-  const paperWidth = orientation === "landscape"
-    ? (paperSize === "F4" ? 1247 : 1122)
-    : (paperSize === "F4" ? 812 : 794);
-  const paperHeight = orientation === "landscape"
-    ? (paperSize === "F4" ? 812 : 794)
-    : (paperSize === "F4" ? 1247 : 1122);
+
+  const paperWidth =
+    orientation === "landscape"
+      ? paperSize === "F4"
+        ? 1247
+        : 1122
+      : paperSize === "F4"
+        ? 812
+        : 794;
+  const paperHeight =
+    orientation === "landscape"
+      ? paperSize === "F4"
+        ? 812
+        : 794
+      : paperSize === "F4"
+        ? 1247
+        : 1122;
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== "undefined") {
         const width = window.innerWidth;
-        if (width < 1024) { // on screens smaller than large desktop (e.g. tablet & mobile)
+        if (width < 1024) {
+          // on screens smaller than large desktop (e.g. tablet & mobile)
           const pad = width < 640 ? 32 : 48; // padding margin
           setScale(Math.max(0.2, Math.min(1, (width - pad) / paperWidth)));
         } else {
@@ -1090,7 +1283,14 @@ function ReportPreviewGrid({
 
   const isLogbook = reportType === "meeting" || reportType === "harian";
   const defaultMargin = isLogbook ? 10 : 20;
-  const marginMm = Math.max(5, Math.min(50, parseInt(data.cfg?.pdfMargin ?? String(defaultMargin), 10) || defaultMargin));
+  const marginMm = Math.max(
+    5,
+    Math.min(
+      50,
+      parseInt(data.cfg?.pdfMargin ?? String(defaultMargin), 10) ||
+        defaultMargin,
+    ),
+  );
 
   const formatSigText = (name: string | null | undefined, fallback: string) => {
     if (!name) return fallback;
@@ -1102,13 +1302,21 @@ function ReportPreviewGrid({
   // Pratinjau Kinerja Standar
   if (reportType === "standard") {
     const total = data.tasks?.length ?? 0;
-    const done = data.tasks?.filter((t: any) => t.status === "done").length ?? 0;
-    const inProg = data.tasks?.filter((t: any) => t.status === "in_progress").length ?? 0;
-    const todo = data.tasks?.filter((t: any) => t.status === "todo").length ?? 0;
+    const done =
+      data.tasks?.filter((t: TaskReportItem) => t.status === "done").length ??
+      0;
+    const inProg =
+      data.tasks?.filter((t: TaskReportItem) => t.status === "in_progress")
+        .length ?? 0;
+    const todo =
+      data.tasks?.filter((t: TaskReportItem) => t.status === "todo").length ??
+      0;
 
     return (
       <Card className="surface-card border-0 p-6 space-y-4">
-        <h3 className="font-semibold text-base">Pratinjau Laporan Kinerja (Standar)</h3>
+        <h3 className="font-semibold text-base">
+          Pratinjau Laporan Kinerja (Standar)
+        </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3 bg-muted rounded-lg text-center">
             <div className="text-2xl font-bold">{total}</div>
@@ -1135,7 +1343,7 @@ function ReportPreviewGrid({
   if (reportType === "meeting") {
     const tasks = data.tasks ?? [];
     const employeeName = makerName || data.name || "";
-    const employeePosition = data.position || "Staf";
+    const employeePosition = data.divisionName || data.position || "Staf";
     const dateStart = new Date(data.periodStart ?? new Date());
     const monthName = format(dateStart, "MMMM", { locale: idLocale });
     const yearName = format(dateStart, "yyyy", { locale: idLocale });
@@ -1143,19 +1351,24 @@ function ReportPreviewGrid({
     return (
       <div className="space-y-4 w-full">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base">Pratinjau Kertas ({paperSize} - {orientation === "landscape" ? "Landscape" : "Portrait"})</h3>
+          <h3 className="font-bold text-base">
+            Pratinjau Kertas ({paperSize} -{" "}
+            {orientation === "landscape" ? "Landscape" : "Portrait"})
+          </h3>
           <span className="text-xs text-muted-foreground font-mono">
             {tasks.length} Baris Ditemukan
           </span>
         </div>
 
-        <div 
+        <div
           className="w-full bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-start justify-center p-4 md:p-8 overflow-hidden"
-          style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
+          style={{
+            height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto",
+          }}
         >
-          <div 
+          <div
             className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
-            style={{ 
+            style={{
               padding: `${marginMm}mm`,
               width: `${paperWidth}px`,
               height: `${paperHeight}px`,
@@ -1165,13 +1378,19 @@ function ReportPreviewGrid({
           >
             {/* Watermark Background */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.12] select-none z-20">
-              <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
+              <img
+                src="/watermark.webp"
+                alt="watermark"
+                className="w-[50%] h-auto object-contain"
+              />
             </div>
 
             <div className="relative z-10 flex flex-col h-full">
               {/* Title */}
               <div className="text-center mb-6 flex flex-col items-center">
-                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK MEETING</h2>
+                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">
+                  LOG BOOK MEETING
+                </h2>
                 <div className="w-16 h-0.5 bg-[#0077B6] mt-1.5 rounded-full"></div>
               </div>
 
@@ -1180,19 +1399,29 @@ function ReportPreviewGrid({
                 <div className="grid grid-cols-12 gap-x-4 gap-y-1.5">
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Nama</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {employeeName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {employeeName}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
-                    <div className="col-span-3 font-bold text-black">Divisi</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {employeePosition}</div>
+                    <div className="col-span-3 font-bold text-black">
+                      Divisi
+                    </div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {employeePosition}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Bulan</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {monthName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {monthName}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Tahun</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {yearName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {yearName}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1203,56 +1432,125 @@ function ReportPreviewGrid({
               </div>
 
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-200" style={{ tableLayout: "fixed" }}>
+              <table
+                className="w-full text-left text-xs border-collapse border border-slate-200"
+                style={{ tableLayout: "fixed" }}
+              >
                 <thead>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[35%] font-bold text-white">Uraian Tugas</th>
-                    <th colSpan={2} className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white">Pemberi Tugas</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[12%] font-bold text-white">Target Selesai</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[13%] font-bold text-white">Out Put</th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white"
+                    >
+                      No
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white"
+                    >
+                      Hari / Tanggal
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[35%] font-bold text-white"
+                    >
+                      Uraian Tugas
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white"
+                    >
+                      Pemberi Tugas
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[12%] font-bold text-white"
+                    >
+                      Target Selesai
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[13%] font-bold text-white"
+                    >
+                      Out Put
+                    </th>
                   </tr>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
-                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Atasan</th>
-                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Meeting</th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">
+                      Atasan
+                    </th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">
+                      Meeting
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.length === 0 ? (
-                    Array.from({ length: 5 }).map((_, index) => (
-                      <tr key={`empty-task-${index}`} className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8">
-                        <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">{index + 1}</td>
-                        <td className="p-2 border border-slate-200"></td>
-                        <td className="p-2 border border-slate-200"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200"></td>
-                      </tr>
-                    ))
-                  ) : (
-                    tasks.map((t: any, index: number) => {
-                      const dayDateStr = format(new Date(t.createdAt), "EEE, dd MMMM yyyy", { locale: idLocale });
-                      const descStr = [t.title, t.description].filter(Boolean).join(" - ");
-                      const sourceLower = (t.taskSource ?? "").toLowerCase();
-                      const isMeeting = sourceLower.includes("meeting") || sourceLower.includes("rapat");
-                      const targetStr = t.dueDate ? format(new Date(t.dueDate), "dd MMMM yyyy", { locale: idLocale }) : "—";
-                      const outputStr = t.outputDescription ?? "—";
- 
-                      return (
-                        <tr key={t.id} className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black">
-                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">{index + 1}</td>
-                          <td className="p-2 border border-slate-200 font-medium text-slate-700">{dayDateStr}</td>
-                          <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">{descStr}</td>
-                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{!isMeeting ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{isMeeting ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-200 text-center text-slate-700">{targetStr}</td>
-                          <td className="p-2 border border-slate-200 text-slate-700">{outputStr}</td>
+                  {tasks.length === 0
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <tr
+                          key={`empty-task-${index}`}
+                          className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8"
+                        >
+                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">
+                            {index + 1}
+                          </td>
+                          <td className="p-2 border border-slate-200"></td>
+                          <td className="p-2 border border-slate-200"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200"></td>
                         </tr>
-                      );
-                    })
-                  )}
+                      ))
+                    : tasks.map((t: TaskReportItem, index: number) => {
+                        const dayDateStr = format(
+                          new Date(t.createdAt),
+                          "EEE, dd MMMM yyyy",
+                          { locale: idLocale },
+                        );
+                        const descStr = [t.title, t.description]
+                          .filter(Boolean)
+                          .join(" - ");
+                        const sourceLower = (t.taskSource ?? "").toLowerCase();
+                        const isMeeting =
+                          sourceLower.includes("meeting") ||
+                          sourceLower.includes("rapat");
+                        const targetStr = t.dueDate
+                          ? format(new Date(t.dueDate), "dd MMMM yyyy", {
+                              locale: idLocale,
+                            })
+                          : "—";
+                        const outputStr = t.outputDescription ?? "—";
+
+                        return (
+                          <tr
+                            key={t.id}
+                            className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black"
+                          >
+                            <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">
+                              {index + 1}
+                            </td>
+                            <td className="p-2 border border-slate-200 font-medium text-slate-700">
+                              {dayDateStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">
+                              {descStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">
+                              {!isMeeting ? "✓" : ""}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">
+                              {isMeeting ? "✓" : ""}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-slate-700">
+                              {targetStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-slate-700">
+                              {outputStr}
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
@@ -1262,7 +1560,10 @@ function ReportPreviewGrid({
               <div className="grid grid-cols-2 gap-8 text-center">
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
-                    <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div>
+                      Jonggol,{" "}
+                      {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}
+                    </div>
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
@@ -1282,11 +1583,16 @@ function ReportPreviewGrid({
                       <div className="h-12" />
                     )}
                   </div>
-                  <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
+                  <div className="font-bold">
+                    {formatSigText(employeeName, `( ${employeeName} )`)}
+                  </div>
                 </div>
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
-                    <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="opacity-0">
+                      Jonggol,{" "}
+                      {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}
+                    </div>
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
@@ -1306,11 +1612,15 @@ function ReportPreviewGrid({
                       <div className="h-12" />
                     )}
                   </div>
-                  <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
+                  <div className="font-bold">
+                    {formatSigText(
+                      checkerName,
+                      "( .................................... )",
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -1321,7 +1631,7 @@ function ReportPreviewGrid({
   if (reportType === "harian") {
     const logs = data.logs ?? [];
     const employeeName = makerName || data.name || "";
-    const employeePosition = data.position || "Staf";
+    const employeePosition = data.divisionName || data.position || "Staf";
     const dateStart = new Date(data.periodStart ?? new Date());
     const monthName = format(dateStart, "MMMM", { locale: idLocale });
     const yearName = format(dateStart, "yyyy", { locale: idLocale });
@@ -1329,19 +1639,24 @@ function ReportPreviewGrid({
     return (
       <div className="space-y-4 w-full">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base">Pratinjau Kertas ({paperSize} - {orientation === "landscape" ? "Landscape" : "Portrait"})</h3>
+          <h3 className="font-bold text-base">
+            Pratinjau Kertas ({paperSize} -{" "}
+            {orientation === "landscape" ? "Landscape" : "Portrait"})
+          </h3>
           <span className="text-xs text-muted-foreground font-mono">
             {logs.length} Baris Ditemukan
           </span>
         </div>
 
-        <div 
+        <div
           className="w-full bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-start justify-center p-4 md:p-8 overflow-hidden"
-          style={{ height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto" }}
+          style={{
+            height: scale < 1 ? `${paperHeight * scale + 64}px` : "auto",
+          }}
         >
-          <div 
+          <div
             className="relative bg-white text-black shadow-2xl border border-slate-300 flex flex-col font-sans transition-all duration-300 origin-top shrink-0 mx-auto overflow-hidden"
-            style={{ 
+            style={{
               padding: `${marginMm}mm`,
               width: `${paperWidth}px`,
               height: `${paperHeight}px`,
@@ -1351,13 +1666,19 @@ function ReportPreviewGrid({
           >
             {/* Watermark Background */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.12] select-none z-20">
-              <img src="/watermark.webp" alt="watermark" className="w-[50%] h-auto object-contain" />
+              <img
+                src="/watermark.webp"
+                alt="watermark"
+                className="w-[50%] h-auto object-contain"
+              />
             </div>
 
             <div className="relative z-10 flex flex-col h-full">
               {/* Title */}
               <div className="text-center mb-6 flex flex-col items-center">
-                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">LOG BOOK KEGIATAN HARIAN</h2>
+                <h2 className="text-lg font-bold tracking-wide text-[#0077B6] uppercase">
+                  LOG BOOK KEGIATAN HARIAN
+                </h2>
                 <div className="w-16 h-0.5 bg-[#0077B6] mt-1.5 rounded-full"></div>
               </div>
 
@@ -1366,19 +1687,29 @@ function ReportPreviewGrid({
                 <div className="grid grid-cols-12 gap-x-4 gap-y-1.5">
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Nama</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {employeeName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {employeeName}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
-                    <div className="col-span-3 font-bold text-black">Divisi</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {employeePosition}</div>
+                    <div className="col-span-3 font-bold text-black">
+                      Divisi
+                    </div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {employeePosition}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Bulan</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {monthName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {monthName}
+                    </div>
                   </div>
                   <div className="col-span-6 grid grid-cols-12 items-center">
                     <div className="col-span-3 font-bold text-black">Tahun</div>
-                    <div className="col-span-9 truncate font-semibold text-black">: {yearName}</div>
+                    <div className="col-span-9 truncate font-semibold text-black">
+                      : {yearName}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1389,59 +1720,132 @@ function ReportPreviewGrid({
               </div>
 
               {/* Table */}
-              <table className="w-full text-left text-xs border-collapse border border-slate-200" style={{ tableLayout: "fixed" }}>
+              <table
+                className="w-full text-left text-xs border-collapse border border-slate-200"
+                style={{ tableLayout: "fixed" }}
+              >
                 <thead>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white">No</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white">Hari / Tanggal</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Jam</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[30%] font-bold text-white">Implementasi Kegiatan</th>
-                    <th colSpan={2} className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white">Status</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Validasi Atasan</th>
-                    <th rowSpan={2} className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white">Keterangan</th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[5%] font-bold text-white"
+                    >
+                      No
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[15%] font-bold text-white"
+                    >
+                      Hari / Tanggal
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white"
+                    >
+                      Jam
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[30%] font-bold text-white"
+                    >
+                      Implementasi Kegiatan
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="p-2.5 border border-slate-200 text-center w-[20%] font-bold text-white"
+                    >
+                      Status
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white"
+                    >
+                      Validasi Atasan
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="p-2.5 border border-slate-200 text-center align-middle w-[10%] font-bold text-white"
+                    >
+                      Keterangan
+                    </th>
                   </tr>
                   <tr className="bg-[#0077B6] border-b border-slate-200">
-                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">On Progres</th>
-                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">Selesai</th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">
+                      On Progres
+                    </th>
+                    <th className="p-1.5 border border-slate-200 text-center w-[10%] font-bold text-white">
+                      Selesai
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.length === 0 ? (
-                    Array.from({ length: 5 }).map((_, index) => (
-                      <tr key={`empty-log-${index}`} className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8">
-                        <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">{index + 1}</td>
-                        <td className="p-2 border border-slate-200"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200 text-center"></td>
-                        <td className="p-2 border border-slate-200"></td>
-                      </tr>
-                    ))
-                  ) : (
-                    logs.map((l: any, index: number) => {
-                      const dayDateStr = format(new Date(l.loggedDate), "EEE, dd MMMM yyyy", { locale: idLocale });
-                      const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
-                      const activityStr = [l.task?.title, l.note].filter(Boolean).join(" - ");
-                      const isDone = l.status === "Selesai" || l.status === "selesai" || l.task?.status === "done";
-                      const validatedStr = l.isValidated ? "✓" : "";
-                      const remarksStr = l.remarks ?? "—";
- 
-                      return (
-                        <tr key={l.id} className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black">
-                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">{index + 1}</td>
-                          <td className="p-2 border border-slate-200 font-medium text-slate-700">{dayDateStr}</td>
-                          <td className="p-2 border border-slate-200 text-center text-slate-700">{timeStr}</td>
-                          <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">{activityStr}</td>
-                          <td className="p-2 border border-slate-200 text-center text-amber-500 font-bold text-sm">{!isDone ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-200 text-center text-emerald-500 font-bold text-sm">{isDone ? "✓" : ""}</td>
-                          <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">{validatedStr}</td>
-                          <td className="p-2 border border-slate-200 text-slate-700">{remarksStr}</td>
+                  {logs.length === 0
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <tr
+                          key={`empty-log-${index}`}
+                          className="even:bg-slate-50/30 odd:bg-white border-b border-slate-200 text-black h-8"
+                        >
+                          <td className="p-2 border border-slate-200 text-center font-medium text-slate-400">
+                            {index + 1}
+                          </td>
+                          <td className="p-2 border border-slate-200"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200 text-center"></td>
+                          <td className="p-2 border border-slate-200"></td>
                         </tr>
-                      );
-                    })
-                  )}
+                      ))
+                    : logs.map((l: LogReportItem, index: number) => {
+                        const dayDateStr = format(
+                          new Date(l.loggedDate),
+                          "EEE, dd MMMM yyyy",
+                          { locale: idLocale },
+                        );
+                        const timeStr = `${l.startTime ?? "08:00"} - ${l.endTime ?? "17:00"}`;
+                        const activityStr = [l.task?.title, l.note]
+                          .filter(Boolean)
+                          .join(" - ");
+                        const isDone =
+                          l.status === "Selesai" ||
+                          l.status === "selesai" ||
+                          l.task?.status === "done";
+                        const validatedStr = l.isValidated ? "✓" : "";
+                        const remarksStr = l.remarks ?? "—";
+
+                        return (
+                          <tr
+                            key={l.id}
+                            className="even:bg-slate-50/30 odd:bg-white hover:bg-slate-100/30 border-b border-slate-200 text-black"
+                          >
+                            <td className="p-2 border border-slate-200 text-center font-medium text-slate-500">
+                              {index + 1}
+                            </td>
+                            <td className="p-2 border border-slate-200 font-medium text-slate-700">
+                              {dayDateStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-slate-700">
+                              {timeStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 whitespace-pre-line text-slate-800">
+                              {activityStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-amber-500 font-bold text-sm">
+                              {!isDone ? "✓" : ""}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-emerald-500 font-bold text-sm">
+                              {isDone ? "✓" : ""}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-center text-[#0077B6] font-bold text-sm">
+                              {validatedStr}
+                            </td>
+                            <td className="p-2 border border-slate-200 text-slate-700">
+                              {remarksStr}
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
@@ -1451,7 +1855,10 @@ function ReportPreviewGrid({
               <div className="grid grid-cols-2 gap-8 text-center">
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
-                    <div>Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div>
+                      Jonggol,{" "}
+                      {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}
+                    </div>
                     <div className="mt-1">Yang Membuat</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
@@ -1471,11 +1878,16 @@ function ReportPreviewGrid({
                       <div className="h-12" />
                     )}
                   </div>
-                  <div className="font-bold">{formatSigText(employeeName, `( ${employeeName} )`)}</div>
+                  <div className="font-bold">
+                    {formatSigText(employeeName, `( ${employeeName} )`)}
+                  </div>
                 </div>
                 <div className="space-y-4 relative flex flex-col items-center">
                   <div>
-                    <div className="opacity-0">Jonggol, {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}</div>
+                    <div className="opacity-0">
+                      Jonggol,{" "}
+                      {format(new Date(), "dd MMMM yyyy", { locale: idLocale })}
+                    </div>
                     <div className="mt-1">Yang Mengetahui</div>
                   </div>
                   <div className="h-12 w-full relative flex items-center justify-center">
@@ -1495,11 +1907,15 @@ function ReportPreviewGrid({
                       <div className="h-12" />
                     )}
                   </div>
-                  <div className="font-bold">{formatSigText(checkerName, "( .................................... )")}</div>
+                  <div className="font-bold">
+                    {formatSigText(
+                      checkerName,
+                      "( .................................... )",
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
