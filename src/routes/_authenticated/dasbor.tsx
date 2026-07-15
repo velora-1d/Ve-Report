@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { db } from "@/db";
-import { tasks as tasksTable, trackerLogs as logsTable, schedules as schedulesTable } from "@/db/schema";
+import {
+  tasks as tasksTable,
+  trackerLogs as logsTable,
+  schedules as schedulesTable,
+} from "@/db/schema";
 import { eq, gte, and, desc } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isAdminOrDev } from "@/lib/roles";
@@ -23,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, PriorityBadge } from "@/components/tasks/status-badges";
 import { formatDuration, todayISO } from "@/lib/tracker";
+import type { TaskPriority, TaskStatus } from "@/lib/tasks";
 
 // ponytail: Fungsi server untuk mengambil data statistik dasbor terpadu
 const getDashboardData = createServerFn({ method: "GET" })
@@ -61,19 +66,19 @@ const getDashboardData = createServerFn({ method: "GET" })
     const logsQuery = db.query.trackerLogs.findMany({
       where: and(
         eq(logsTable.userId, userId),
-        gte(logsTable.loggedDate, new Date(weekStartISO))
+        gte(logsTable.loggedDate, new Date(weekStartISO)),
       ),
       columns: {
         durationMinutes: true,
         loggedDate: true,
-      }
+      },
     });
 
     // 3. Ambil Jadwal Terdekat hari ini ke depan
     const schedulesQuery = db.query.schedules.findMany({
       where: and(
         eq(schedulesTable.userId, userId),
-        gte(schedulesTable.startTime, now)
+        gte(schedulesTable.startTime, now),
       ),
       orderBy: [desc(schedulesTable.startTime)],
       limit: 5,
@@ -123,7 +128,10 @@ function DasborPage() {
     const todo = tasks.filter((t) => t.status === "todo").length;
     const inProgress = tasks.filter((t) => t.status === "in_progress").length;
     const doneToday = tasks.filter(
-      (t) => t.status === "done" && t.updatedAt && new Date(t.updatedAt).toISOString().slice(0, 10) === today,
+      (t) =>
+        t.status === "done" &&
+        t.updatedAt &&
+        new Date(t.updatedAt).toISOString().slice(0, 10) === today,
     ).length;
     const weekMin = (data?.logs ?? []).reduce(
       (s, l) => s + (l.durationMinutes ?? 0),
@@ -191,13 +199,15 @@ function DasborPage() {
         {cards.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label} className="surface-card border-0">
+            <Card key={s.label} className="neumorphic-stat border-0">
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     {s.label}
                   </span>
-                  <Icon className={`w-4 h-4 ${s.tone}`} />
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center neumorphic-inset">
+                    <Icon className={`w-4 h-4 ${s.tone}`} />
+                  </div>
                 </div>
                 <div className="text-2xl font-semibold tracking-tight">
                   {isLoading ? <Skeleton className="h-7 w-12" /> : s.value}
@@ -238,7 +248,7 @@ function DasborPage() {
                         {t.title}
                       </Link>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <PriorityBadge priority={t.priority as any} />
+                        <PriorityBadge priority={t.priority as TaskPriority} />
                         <span className="text-xs text-muted-foreground">
                           {t.days === 0
                             ? "Hari ini"
@@ -318,8 +328,8 @@ function DasborPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <PriorityBadge priority={t.priority as any} />
-                    <StatusBadge status={t.status as any} />
+                    <PriorityBadge priority={t.priority as TaskPriority} />
+                    <StatusBadge status={t.status as TaskStatus} />
                   </div>
                 </li>
               ))}

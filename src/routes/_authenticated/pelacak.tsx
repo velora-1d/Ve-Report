@@ -19,7 +19,14 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { getAppConfig } from "@/lib/app-config";
 import { db } from "@/db";
-import { trackerLogs as logsTable, tasks as tasksTable, users as usersTable, divisions, userDivisions, divisionValidators as divisionValidatorsTable } from "@/db/schema";
+import {
+  trackerLogs as logsTable,
+  tasks as tasksTable,
+  users as usersTable,
+  divisions,
+  userDivisions,
+  divisionValidators as divisionValidatorsTable,
+} from "@/db/schema";
 import { eq, desc, and, gte, inArray, or, aliasedTable } from "drizzle-orm";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { sendTelegramNotification } from "@/lib/telegram";
@@ -60,13 +67,15 @@ export const getTrackerLogs = createServerFn({ method: "GET" })
     if (!session || !session.user) throw new Error("Unauthorized");
 
     const role = session.user.role || "staff";
-    let whereClause = role === "staff"
-      ? eq(logsTable.userId, session.user.id)
-      : undefined;
+    let whereClause =
+      role === "staff" ? eq(logsTable.userId, session.user.id) : undefined;
 
     if (data.divisionId && data.divisionId !== "all") {
       if (whereClause) {
-        whereClause = and(whereClause, eq(logsTable.divisionId, data.divisionId));
+        whereClause = and(
+          whereClause,
+          eq(logsTable.divisionId, data.divisionId),
+        );
       } else {
         whereClause = eq(logsTable.divisionId, data.divisionId);
       }
@@ -76,10 +85,13 @@ export const getTrackerLogs = createServerFn({ method: "GET" })
         .from(divisionValidatorsTable)
         .where(eq(divisionValidatorsTable.userId, session.user.id));
       const validIds = validDivs.map((d) => d.id);
-      
+
       if (validIds.length > 0) {
         if (whereClause) {
-          whereClause = and(whereClause, inArray(logsTable.divisionId, validIds));
+          whereClause = and(
+            whereClause,
+            inArray(logsTable.divisionId, validIds),
+          );
         } else {
           whereClause = inArray(logsTable.divisionId, validIds);
         }
@@ -157,15 +169,19 @@ export const getAssignableTasks = createServerFn({ method: "GET" })
     if (!session || !session.user) throw new Error("Unauthorized");
 
     const role = session.user.role || "staff";
-    let whereClause = role === "staff"
-      ? and(
-          inArray(tasksTable.status, ["todo", "in_progress", "review"]),
-          eq(tasksTable.assignedTo, session.user.id)
-        )
-      : inArray(tasksTable.status, ["todo", "in_progress", "review"]);
+    let whereClause =
+      role === "staff"
+        ? and(
+            inArray(tasksTable.status, ["todo", "in_progress", "review"]),
+            eq(tasksTable.assignedTo, session.user.id),
+          )
+        : inArray(tasksTable.status, ["todo", "in_progress", "review"]);
 
     if (data.divisionId) {
-      whereClause = and(whereClause, eq(tasksTable.divisionId, data.divisionId));
+      whereClause = and(
+        whereClause,
+        eq(tasksTable.divisionId, data.divisionId),
+      );
     }
 
     const tasksList = await db.query.tasks.findMany({
@@ -195,7 +211,7 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       status: z.string().optional(),
       remarks: z.string().nullable().optional(),
       divisionId: z.string().nullable().optional(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
@@ -224,7 +240,7 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       if (data.taskId) {
         const t = await db.query.tasks.findFirst({
           where: eq(tasksTable.id, data.taskId),
-          columns: { title: true }
+          columns: { title: true },
         });
         if (t?.title) taskTitle = t.title;
       }
@@ -232,35 +248,37 @@ export const saveTrackerLog = createServerFn({ method: "POST" })
       // ponytail: Kirim notifikasi instan ke grup/channel Telegram
       await sendTelegramNotification(
         `🕒 *Log Book Harian Baru*\n\n` +
-        `• *Oleh*: ${session.user.name || session.user.email}\n` +
-        `• *Tanggal*: ${data.loggedDate}\n` +
-        `• *Durasi*: ${data.durationMinutes} menit (${data.startTime || "08:00"} - ${data.endTime || "17:00"})\n` +
-        (taskTitle ? `• *Tugas*: ${taskTitle}\n` : "") +
-        `• *Catatan*: ${data.note || "-"}`
+          `• *Oleh*: ${session.user.name || session.user.email}\n` +
+          `• *Tanggal*: ${data.loggedDate}\n` +
+          `• *Durasi*: ${data.durationMinutes} menit (${data.startTime || "08:00"} - ${data.endTime || "17:00"})\n` +
+          (taskTitle ? `• *Tugas*: ${taskTitle}\n` : "") +
+          `• *Catatan*: ${data.note || "-"}`,
       );
     }
   });
 
 // ponytail: Fungsi server untuk mengambil daftar divisi milik user saat ini
-export const getUserDivisionsList = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSession();
-  if (!session || !session.user) throw new Error("Unauthorized");
+export const getUserDivisionsList = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const session = await getSession();
+    if (!session || !session.user) throw new Error("Unauthorized");
 
-  const role = session.user.role || "staff";
-  if (role === "admin" || role === "developer") {
-    return await db.select().from(divisions).orderBy(divisions.name);
-  }
+    const role = session.user.role || "staff";
+    if (role === "admin" || role === "developer") {
+      return await db.select().from(divisions).orderBy(divisions.name);
+    }
 
-  return await db
-    .select({
-      id: divisions.id,
-      name: divisions.name,
-    })
-    .from(userDivisions)
-    .innerJoin(divisions, eq(userDivisions.divisionId, divisions.id))
-    .where(eq(userDivisions.userId, session.user.id))
-    .orderBy(divisions.name);
-});
+    return await db
+      .select({
+        id: divisions.id,
+        name: divisions.name,
+      })
+      .from(userDivisions)
+      .innerJoin(divisions, eq(userDivisions.divisionId, divisions.id))
+      .where(eq(userDivisions.userId, session.user.id))
+      .orderBy(divisions.name);
+  },
+);
 
 // ponytail: Fungsi server untuk menghapus log pelacak waktu
 export const deleteTrackerLog = createServerFn({ method: "POST" })
@@ -269,7 +287,8 @@ export const deleteTrackerLog = createServerFn({ method: "POST" })
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
 
-    await db.delete(logsTable)
+    await db
+      .delete(logsTable)
       .where(and(eq(logsTable.id, id), eq(logsTable.userId, session.user.id)));
   });
 
@@ -279,16 +298,17 @@ export const validateTrackerLog = createServerFn({ method: "POST" })
     z.object({
       id: z.string(),
       isValidated: z.boolean(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
-    
+
     const role = session.user.role || "staff";
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
-    await db.update(logsTable)
+    await db
+      .update(logsTable)
       .set({
         isValidated: data.isValidated,
         validatedBy: data.isValidated ? session.user.id : null,
@@ -302,18 +322,19 @@ export const bulkValidateTrackerLogs = createServerFn({ method: "POST" })
     z.object({
       ids: z.array(z.string()),
       isValidated: z.boolean(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session || !session.user) throw new Error("Unauthorized");
-    
+
     const role = session.user.role || "staff";
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
     if (data.ids.length === 0) return { success: true, count: 0 };
 
-    await db.update(logsTable)
+    await db
+      .update(logsTable)
       .set({
         isValidated: data.isValidated,
         validatedBy: data.isValidated ? session.user.id : null,
@@ -347,7 +368,9 @@ function PelacakPage() {
   });
   const appName = config?.appName || "Log Book";
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<
+    Awaited<ReturnType<typeof getTrackerLogs>>[number] | null
+  >(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // States untuk multi-divisi
@@ -402,11 +425,12 @@ function PelacakPage() {
     for (const l of logs ?? []) {
       const m = l.durationMinutes ?? 0;
       totalMin += m;
-      const logDateStr = l.loggedDate instanceof Date
-        ? l.loggedDate.toISOString().slice(0, 10)
-        : typeof l.loggedDate === "string"
-          ? (l.loggedDate as string).slice(0, 10)
-          : "";
+      const logDateStr =
+        l.loggedDate instanceof Date
+          ? l.loggedDate.toISOString().slice(0, 10)
+          : typeof l.loggedDate === "string"
+            ? (l.loggedDate as string).slice(0, 10)
+            : "";
       if (logDateStr === today) todayMin += m;
       if (logDateStr >= weekStartISO) weekMin += m;
       const key = l.task?.id ?? l.taskId ?? "manual";
@@ -515,13 +539,15 @@ function PelacakPage() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label} className="surface-card border-0">
+            <Card key={s.label} className="neumorphic-stat border-0">
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     {s.label}
                   </span>
-                  <Icon className={`w-4 h-4 ${s.tone}`} />
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center neumorphic-inset">
+                    <Icon className={`w-4 h-4 ${s.tone}`} />
+                  </div>
                 </div>
                 <div className="text-2xl font-semibold tracking-tight">
                   {s.value}
@@ -569,16 +595,25 @@ function PelacakPage() {
                       const activityStr = l.note || l.task?.title || "—";
                       const isDone = l.status === "done";
                       const statusStr = isDone ? "Selesai" : "On Progres";
-                      const validatedStr = l.isValidated ? "Disetujui" : "Belum";
+                      const validatedStr = l.isValidated
+                        ? "Disetujui"
+                        : "Belum";
                       const remarksStr = l.remarks ?? "—";
-                      const canEditOrDeleteLog = !l.isValidated || showStaffName;
+                      const canEditOrDeleteLog =
+                        !l.isValidated || showStaffName;
 
                       return (
                         <TableRow key={l.id}>
                           <TableCell className="whitespace-nowrap text-sm">
-                            {l.loggedDate ? format(new Date(l.loggedDate), "EEE, d MMM yyyy", {
-                              locale: idLocale,
-                            }) : "—"}
+                            {l.loggedDate
+                              ? format(
+                                  new Date(l.loggedDate),
+                                  "EEE, d MMM yyyy",
+                                  {
+                                    locale: idLocale,
+                                  },
+                                )
+                              : "—"}
                           </TableCell>
                           {showStaffName && (
                             <TableCell className="text-sm font-semibold text-slate-700 dark:text-slate-350">
@@ -597,7 +632,9 @@ function PelacakPage() {
                             )}
                           </TableCell>
                           <TableCell className="text-sm">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-sky-50 text-sky-700 border border-sky-200'}`}>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDone ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-sky-50 text-sky-700 border border-sky-200"}`}
+                            >
                               {statusStr}
                             </span>
                           </TableCell>
@@ -606,13 +643,20 @@ function PelacakPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className={`px-2 py-0.5 h-auto text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                onClick={() => validateMutation.mutate({ id: l.id, isValidated: !l.isValidated })}
+                                className={`px-2 py-0.5 h-auto text-xs font-bold ${l.isValidated ? "bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                onClick={() =>
+                                  validateMutation.mutate({
+                                    id: l.id,
+                                    isValidated: !l.isValidated,
+                                  })
+                                }
                               >
                                 {validatedStr}
                               </Button>
                             ) : (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${l.isValidated ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500'}`}>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${l.isValidated ? "bg-indigo-50 text-indigo-700 border border-indigo-100" : "bg-slate-50 text-slate-500"}`}
+                              >
                                 {validatedStr}
                               </span>
                             )}
@@ -622,7 +666,9 @@ function PelacakPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              {canEditOrDeleteLog && (hasPermission("pelacak", "update") || hasPermission("pelacak", "delete")) ? (
+                              {canEditOrDeleteLog &&
+                              (hasPermission("pelacak", "update") ||
+                                hasPermission("pelacak", "delete")) ? (
                                 <>
                                   {hasPermission("pelacak", "update") && (
                                     <Button
@@ -649,7 +695,9 @@ function PelacakPage() {
                                   )}
                                 </>
                               ) : (
-                                <span className="text-xs text-muted-foreground px-2 py-1">Terkunci</span>
+                                <span className="text-xs text-muted-foreground px-2 py-1">
+                                  Terkunci
+                                </span>
                               )}
                             </div>
                           </TableCell>
@@ -732,7 +780,8 @@ function PelacakPage() {
               Hapus Log Harian?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-center">
-              Log waktu ini akan dihapus secara permanen dari sistem pelacakan harian Anda. Tindakan ini tidak dapat dibatalkan.
+              Log waktu ini akan dihapus secara permanen dari sistem pelacakan
+              harian Anda. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex gap-2">
@@ -748,7 +797,6 @@ function PelacakPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }
