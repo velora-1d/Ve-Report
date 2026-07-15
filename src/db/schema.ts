@@ -227,6 +227,7 @@ export const userDivisions = mysqlTable(
     divisionId: varchar("division_id", { length: 36 })
       .notNull()
       .references(() => divisions.id, { onDelete: "cascade" }),
+    position: varchar("position", { length: 100 }),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.divisionId] }),

@@ -73,7 +73,6 @@ const updateProfile = createServerFn({ method: "POST" })
       .where(eq(usersTable.id, session.user.id));
   });
 
-// ponytail: Fungsi server untuk mengambil daftar divisi milik user saat ini
 const getUserDivisions = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession();
   if (!session || !session.user) throw new Error("Unauthorized");
@@ -82,6 +81,7 @@ const getUserDivisions = createServerFn({ method: "GET" }).handler(async () => {
     .select({
       id: divisions.id,
       name: divisions.name,
+      position: userDivisions.position,
     })
     .from(userDivisions)
     .innerJoin(divisions, eq(userDivisions.divisionId, divisions.id))
@@ -453,9 +453,14 @@ function ProfileForm() {
                   <Badge
                     key={div.id}
                     variant="secondary"
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-none"
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-none flex items-center gap-1.5"
                   >
-                    {div.name}
+                    <span>{div.name}</span>
+                    {div.position && (
+                      <span className="text-[10px] font-normal opacity-70 bg-slate-300 dark:bg-slate-700 px-1.5 py-0.5 rounded-md">
+                        {div.position}
+                      </span>
+                    )}
                   </Badge>
                 ))}
               </div>

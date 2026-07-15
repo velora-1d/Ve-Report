@@ -145,6 +145,17 @@ const getReportData = createServerFn({ method: "POST" })
       });
       if (u?.position) position = u.position;
       if (u?.name) name = u.name;
+
+      if (data.divisionId) {
+        const ud = await db.query.userDivisions.findFirst({
+          where: and(
+            eq(userDivisions.userId, data.userId),
+            eq(userDivisions.divisionId, data.divisionId),
+          ),
+          columns: { position: true },
+        });
+        if (ud?.position) position = ud.position;
+      }
     }
 
     // Fetch division & validator name

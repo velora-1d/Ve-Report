@@ -163,7 +163,10 @@ const getUserDivisionsAndValidatorsMgmt = createServerFn({ method: "GET" })
     if (role !== "admin" && role !== "developer") throw new Error("Forbidden");
 
     const activeDivisions = await db
-      .select({ divisionId: userDivisionsTable.divisionId })
+      .select({
+        id: userDivisionsTable.divisionId,
+        position: userDivisionsTable.position,
+      })
       .from(userDivisionsTable)
       .where(eq(userDivisionsTable.userId, userId));
 
@@ -173,7 +176,10 @@ const getUserDivisionsAndValidatorsMgmt = createServerFn({ method: "GET" })
       .where(eq(divisionValidatorsTable.userId, userId));
 
     return {
-      divisionIds: activeDivisions.map((d) => d.divisionId),
+      divisionPositions: activeDivisions.map((d) => ({
+        id: d.id,
+        position: d.position || "",
+      })),
       validationDivisionIds: validatedDivisions.map((d) => d.divisionId),
     };
   });
@@ -187,7 +193,12 @@ const createUserMgmt = createServerFn({ method: "POST" })
       role: z.enum(["admin", "staff"]),
       position: z.string().optional().nullable(),
       password: z.string().min(6),
-      divisionIds: z.array(z.string()),
+      divisionPositions: z.array(
+        z.object({
+          id: z.string(),
+          position: z.string().optional().nullable(),
+        }),
+      ),
       validationDivisionIds: z.array(z.string()),
     }),
   )
@@ -225,10 +236,11 @@ const createUserMgmt = createServerFn({ method: "POST" })
       password: hashedPassword,
     });
 
-    if (data.divisionIds.length > 0) {
-      const values = data.divisionIds.map((divId) => ({
+    if (data.divisionPositions.length > 0) {
+      const values = data.divisionPositions.map((dp) => ({
         userId: newUserId,
-        divisionId: divId,
+        divisionId: dp.id,
+        position: dp.position || null,
       }));
       await db.insert(userDivisionsTable).values(values);
     }
@@ -252,7 +264,12 @@ const updateUserMgmt = createServerFn({ method: "POST" })
       role: z.enum(["developer", "admin", "staff"]),
       position: z.string().optional().nullable(),
       password: z.string().optional().nullable(),
-      divisionIds: z.array(z.string()),
+      divisionPositions: z.array(
+        z.object({
+          id: z.string(),
+          position: z.string().optional().nullable(),
+        }),
+      ),
       validationDivisionIds: z.array(z.string()),
     }),
   )
@@ -332,10 +349,11 @@ const updateUserMgmt = createServerFn({ method: "POST" })
     await db
       .delete(userDivisionsTable)
       .where(eq(userDivisionsTable.userId, data.id));
-    if (data.divisionIds.length > 0) {
-      const values = data.divisionIds.map((divId) => ({
+    if (data.divisionPositions.length > 0) {
+      const values = data.divisionPositions.map((dp) => ({
         userId: data.id,
-        divisionId: divId,
+        divisionId: dp.id,
+        position: dp.position || null,
       }));
       await db.insert(userDivisionsTable).values(values);
     }
@@ -457,7 +475,9 @@ function ManajemenPage() {
   );
   const [editPosition, setEditPosition] = useState("");
   const [editPassword, setEditPassword] = useState("");
-  const [editDivisions, setEditDivisions] = useState<string[]>([]);
+  const [editDivisions, setEditDivisions] = useState<
+    { id: string; position: string }[]
+  >([]);
   const [editValidationDivisions, setEditValidationDivisions] = useState<
     string[]
   >([]);
@@ -469,7 +489,9 @@ function ManajemenPage() {
   const [createPassword, setCreatePassword] = useState("");
   const [createPosition, setCreatePosition] = useState("");
   const [createRole, setCreateRole] = useState<"admin" | "staff">("staff");
-  const [createDivisions, setCreateDivisions] = useState<string[]>([]);
+  const [createDivisions, setCreateDivisions] = useState<
+    { id: string; position: string }[]
+  >([]);
   const [createValidationDivisions, setCreateValidationDivisions] = useState<
     string[]
   >([]);
@@ -534,7 +556,7 @@ function ManajemenPage() {
     setEditOpen(true);
     try {
       const res = await getUserDivisionsAndValidatorsMgmt({ data: u.id });
-      setEditDivisions(res.divisionIds);
+      setEditDivisions(res.divisionPositions);
       setEditValidationDivisions(res.validationDivisionIds);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -750,7 +772,7 @@ function ManajemenPage() {
                 role: editRole,
                 position: editPosition,
                 password: editPassword,
-                divisionIds: editDivisions,
+                divisionPositions: editDivisions,
                 validationDivisionIds:
                   editRole === "admin" ? editValidationDivisions : [],
               });
@@ -857,30 +879,56 @@ function ManajemenPage() {
                 Divisi Kerja
               </Label>
               {divisionsList && divisionsList.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {divisionsList.map((div: { id: string; name: string }) => (
-                    <label
-                      key={div.id}
-                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
-                    >
-                      <Checkbox
-                        id={`edit-div-${div.id}`}
-                        checked={editDivisions.includes(div.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setEditDivisions([...editDivisions, div.id]);
-                          } else {
-                            setEditDivisions(
-                              editDivisions.filter((id) => id !== div.id),
-                            );
-                          }
-                        }}
-                      />
-                      <span className="text-xs font-bold text-slate-650 truncate">
-                        {div.name}
-                      </span>
-                    </label>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                  {divisionsList.map((div: { id: string; name: string }) => {
+                    const mappedDiv = editDivisions.find(
+                      (d) => d.id === div.id,
+                    );
+                    const isChecked = !!mappedDiv;
+                    return (
+                      <div
+                        key={div.id}
+                        className="flex flex-col gap-1.5 p-2.5 border border-slate-100 rounded-xl bg-slate-50/30"
+                      >
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <Checkbox
+                            id={`edit-div-${div.id}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setEditDivisions([
+                                  ...editDivisions,
+                                  { id: div.id, position: "" },
+                                ]);
+                              } else {
+                                setEditDivisions(
+                                  editDivisions.filter((d) => d.id !== div.id),
+                                );
+                              }
+                            }}
+                          />
+                          <span className="text-xs font-bold text-slate-750 truncate">
+                            {div.name}
+                          </span>
+                        </label>
+                        {isChecked && (
+                          <Input
+                            placeholder="Jabatan di divisi ini"
+                            value={mappedDiv.position}
+                            onChange={(e) => {
+                              const pos = e.target.value;
+                              setEditDivisions(
+                                editDivisions.map((d) =>
+                                  d.id === div.id ? { ...d, position: pos } : d,
+                                ),
+                              );
+                            }}
+                            className="h-8 text-xs rounded-lg mt-0.5"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic">
@@ -984,7 +1032,7 @@ function ManajemenPage() {
                 role: createRole,
                 position: createPosition,
                 password: createPassword,
-                divisionIds: createDivisions,
+                divisionPositions: createDivisions,
                 validationDivisionIds:
                   createRole === "admin" ? createValidationDivisions : [],
               });
@@ -1083,30 +1131,58 @@ function ManajemenPage() {
                 Pilih Divisi Kerja
               </Label>
               {divisionsList && divisionsList.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {divisionsList.map((div: { id: string; name: string }) => (
-                    <label
-                      key={div.id}
-                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all"
-                    >
-                      <Checkbox
-                        id={`create-div-${div.id}`}
-                        checked={createDivisions.includes(div.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setCreateDivisions([...createDivisions, div.id]);
-                          } else {
-                            setCreateDivisions(
-                              createDivisions.filter((id) => id !== div.id),
-                            );
-                          }
-                        }}
-                      />
-                      <span className="text-xs font-bold text-slate-650 truncate">
-                        {div.name}
-                      </span>
-                    </label>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                  {divisionsList.map((div: { id: string; name: string }) => {
+                    const mappedDiv = createDivisions.find(
+                      (d) => d.id === div.id,
+                    );
+                    const isChecked = !!mappedDiv;
+                    return (
+                      <div
+                        key={div.id}
+                        className="flex flex-col gap-1.5 p-2.5 border border-slate-100 rounded-xl bg-slate-50/30"
+                      >
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <Checkbox
+                            id={`create-div-${div.id}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setCreateDivisions([
+                                  ...createDivisions,
+                                  { id: div.id, position: "" },
+                                ]);
+                              } else {
+                                setCreateDivisions(
+                                  createDivisions.filter(
+                                    (d) => d.id !== div.id,
+                                  ),
+                                );
+                              }
+                            }}
+                          />
+                          <span className="text-xs font-bold text-slate-750 truncate">
+                            {div.name}
+                          </span>
+                        </label>
+                        {isChecked && (
+                          <Input
+                            placeholder="Jabatan di divisi ini"
+                            value={mappedDiv.position}
+                            onChange={(e) => {
+                              const pos = e.target.value;
+                              setCreateDivisions(
+                                createDivisions.map((d) =>
+                                  d.id === div.id ? { ...d, position: pos } : d,
+                                ),
+                              );
+                            }}
+                            className="h-8 text-xs rounded-lg mt-0.5"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic">
