@@ -31,8 +31,9 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   trustHost: true,
   trustedOrigins: getTrustedOrigins(),
+  // ponytail: Mengubah provider Better Auth drizzleAdapter ke "pg"
   database: drizzleAdapter(db, {
-    provider: "mysql",
+    provider: "pg",
     schema: {
       user: schema.users,
       session: schema.sessions,

@@ -1,20 +1,21 @@
+// ponytail: Migrasi skema Drizzle ORM dari mysql-core ke pg-core
 import {
-  mysqlTable,
+  pgTable,
   varchar,
   text,
   timestamp,
   boolean,
-  int,
+  integer,
   date,
   json,
   primaryKey,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import crypto from "crypto";
 
 // ===== USERS (Better Auth compatible + custom fields) =====
-export const users = mysqlTable("user", {
-  id: varchar("id", { length: 36 })
+export const users = pgTable("user", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
@@ -33,7 +34,7 @@ export const users = mysqlTable("user", {
 });
 
 // ===== SESSIONS (Better Auth standard) =====
-export const sessions = mysqlTable("session", {
+export const sessions = pgTable("session", {
   id: varchar("id", { length: 255 }).primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: varchar("token", { length: 255 }).notNull().unique(),
@@ -41,17 +42,17 @@ export const sessions = mysqlTable("session", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  userId: varchar("user_id", { length: 36 })
+  userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
 // ===== ACCOUNTS (Better Auth standard) =====
-export const accounts = mysqlTable("account", {
+export const accounts = pgTable("account", {
   id: varchar("id", { length: 255 }).primaryKey(),
   accountId: varchar("account_id", { length: 255 }).notNull(),
   providerId: varchar("provider_id", { length: 255 }).notNull(),
-  userId: varchar("user_id", { length: 36 })
+  userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
@@ -64,7 +65,7 @@ export const accounts = mysqlTable("account", {
 });
 
 // ===== VERIFICATIONS (Better Auth standard) =====
-export const verifications = mysqlTable("verification", {
+export const verifications = pgTable("verification", {
   id: varchar("id", { length: 255 }).primaryKey(),
   identifier: varchar("identifier", { length: 255 }).notNull(),
   value: text("value").notNull(),
@@ -74,19 +75,19 @@ export const verifications = mysqlTable("verification", {
 });
 
 // ===== TASKS =====
-export const tasks = mysqlTable("tasks", {
-  id: varchar("id", { length: 36 })
+export const tasks = pgTable("tasks", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
   status: varchar("status", { length: 50 }).notNull().default("todo"), // 'todo' | 'in_progress' | 'review' | 'done'
   priority: varchar("priority", { length: 50 }).notNull().default("medium"), // 'low' | 'medium' | 'high' | 'urgent'
-  assignedTo: varchar("assigned_to", { length: 36 }).references(
+  assignedTo: varchar("assigned_to", { length: 255 }).references(
     () => users.id,
     { onDelete: "set null" },
   ),
-  createdBy: varchar("created_by", { length: 36 })
+  createdBy: varchar("created_by", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   dueDate: timestamp("due_date"),
@@ -98,45 +99,45 @@ export const tasks = mysqlTable("tasks", {
   // Logbook columns
   taskSource: varchar("task_source", { length: 20 }).default("atasan"), // 'atasan' | 'meeting'
   outputDescription: text("output_description"),
-  divisionId: varchar("division_id", { length: 36 }).references(
+  divisionId: varchar("division_id", { length: 255 }).references(
     () => divisions.id,
     { onDelete: "set null" },
   ),
 });
 
 // ===== SCHEDULE / CALENDAR =====
-export const schedules = mysqlTable("schedules", {
-  id: varchar("id", { length: 36 })
+export const schedules = pgTable("schedules", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
-  taskId: varchar("task_id", { length: 36 }).references(() => tasks.id, {
+  taskId: varchar("task_id", { length: 255 }).references(() => tasks.id, {
     onDelete: "set null",
   }),
-  userId: varchar("user_id", { length: 36 })
+  userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  reminderMinutesBefore: int("reminder_minutes_before").default(30),
+  reminderMinutesBefore: integer("reminder_minutes_before").default(30),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ===== TRACKER LOGS =====
-export const trackerLogs = mysqlTable("tracker_logs", {
-  id: varchar("id", { length: 36 })
+export const trackerLogs = pgTable("tracker_logs", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  taskId: varchar("task_id", { length: 36 }).references(() => tasks.id, {
+  taskId: varchar("task_id", { length: 255 }).references(() => tasks.id, {
     onDelete: "cascade",
   }),
-  userId: varchar("user_id", { length: 36 })
+  userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   note: text("note"),
-  durationMinutes: int("duration_minutes"),
-  loggedDate: date("logged_date").notNull(),
+  durationMinutes: integer("duration_minutes"),
+  loggedDate: date("logged_date", { mode: "date" }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 
   // Logbook columns
@@ -144,29 +145,29 @@ export const trackerLogs = mysqlTable("tracker_logs", {
   endTime: varchar("end_time", { length: 10 }).default("17:00"),
   status: varchar("status", { length: 20 }).default("progress"), // 'progress' | 'done'
   isValidated: boolean("is_validated").default(false),
-  validatedBy: varchar("validated_by", { length: 36 }).references(
+  validatedBy: varchar("validated_by", { length: 255 }).references(
     () => users.id,
     { onDelete: "set null" },
   ),
   remarks: text("remarks"),
-  divisionId: varchar("division_id", { length: 36 }).references(
+  divisionId: varchar("division_id", { length: 255 }).references(
     () => divisions.id,
     { onDelete: "set null" },
   ),
 });
 
 // ===== REPORTS =====
-export const reports = mysqlTable("reports", {
-  id: varchar("id", { length: 36 })
+export const reports = pgTable("reports", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 200 }).notNull(),
-  generatedBy: varchar("generated_by", { length: 36 })
+  generatedBy: varchar("generated_by", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  periodStart: date("period_start").notNull(),
-  periodEnd: date("period_end").notNull(),
-  filterUserId: varchar("filter_user_id", { length: 36 }).references(
+  periodStart: date("period_start", { mode: "date" }).notNull(),
+  periodEnd: date("period_end", { mode: "date" }).notNull(),
+  filterUserId: varchar("filter_user_id", { length: 255 }).references(
     () => users.id,
     { onDelete: "set null" },
   ),
@@ -175,42 +176,41 @@ export const reports = mysqlTable("reports", {
 });
 
 // ===== APP CONFIG (Branding & PDF Settings) =====
-export const appConfig = mysqlTable("app_config", {
-  id: varchar("id", { length: 36 })
+export const appConfig = pgTable("app_config", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   logoUrl: text("logo_url"),
-  appName: varchar("app_name", { length: 255 }).default("Log Book"), // ponytail: Menambahkan nama aplikasi dinamis
-  permissions: json("permissions"), // ponytail: Kolom permissions RBAC Matrix dinamis
+  appName: varchar("app_name", { length: 255 }).default("Log Book"),
+  permissions: json("permissions"),
   pdfPaperSize: varchar("pdf_paper_size", { length: 20 }).default("A4"),
   pdfOrientation: varchar("pdf_orientation", { length: 20 }).default(
     "portrait",
   ),
   pdfHeaderText: text("pdf_header_text"),
   pdfFooterText: text("pdf_footer_text"),
-  logLimit: int("log_limit").default(200),
+  logLimit: integer("log_limit").default(200),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ===== SYSTEM LOGS =====
-export const systemLogs = mysqlTable("system_logs", {
-  id: varchar("id", { length: 36 })
+export const systemLogs = pgTable("system_logs", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   level: varchar("level", { length: 20 }).notNull().default("info"), // 'info' | 'warning' | 'error' | 'critical'
   category: varchar("category", { length: 50 }),
   message: text("message").notNull(),
   metadata: json("metadata"),
-  userId: varchar("user_id", { length: 36 }).references(() => users.id, {
+  userId: varchar("user_id", { length: 255 }).references(() => users.id, {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ===== DIVISIONS & VALIDATORS (Multi-Divisi) =====
-// ponytail: Struktur tabel divisi dan pivot table relasi user/validator demi mendukung validasi per divisi
-export const divisions = mysqlTable("divisions", {
-  id: varchar("id", { length: 36 })
+export const divisions = pgTable("divisions", {
+  id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: varchar("name", { length: 100 }).notNull().unique(),
@@ -218,13 +218,13 @@ export const divisions = mysqlTable("divisions", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const userDivisions = mysqlTable(
+export const userDivisions = pgTable(
   "user_divisions",
   {
-    userId: varchar("user_id", { length: 36 })
+    userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    divisionId: varchar("division_id", { length: 36 })
+    divisionId: varchar("division_id", { length: 255 })
       .notNull()
       .references(() => divisions.id, { onDelete: "cascade" }),
     position: varchar("position", { length: 100 }),
@@ -234,13 +234,13 @@ export const userDivisions = mysqlTable(
   }),
 );
 
-export const divisionValidators = mysqlTable(
+export const divisionValidators = pgTable(
   "division_validators",
   {
-    divisionId: varchar("division_id", { length: 36 })
+    divisionId: varchar("division_id", { length: 255 })
       .notNull()
       .references(() => divisions.id, { onDelete: "cascade" }),
-    userId: varchar("user_id", { length: 36 })
+    userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
   },
@@ -342,3 +342,4 @@ export const divisionValidatorsRelations = relations(
     }),
   }),
 );
+

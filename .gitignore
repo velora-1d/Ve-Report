@@ -46,3 +46,4 @@ lerna-debug.log*
 
 # Temporary Scratch Scripts
 scratch/
+scripts/

@@ -1,27 +1,26 @@
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+// ponytail: Migrasi koneksi database ke PostgreSQL menggunakan node-postgres (pg.Pool)
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import * as schema from "./schema";
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "mysql://root:password@localhost:3306/ve_report";
+  "postgresql://postgres:password@localhost:5432/ve_report";
 
 const globalQueryClient = globalThis as unknown as {
-  queryClient: mysql.Pool | undefined;
+  queryClient: pg.Pool | undefined;
 };
 
 if (!globalQueryClient.queryClient) {
-  globalQueryClient.queryClient = mysql.createPool({
-    uri: connectionString,
-    ssl: {
-      rejectUnauthorized: true,
-    },
-    waitForConnections: true,
-    connectionLimit: 10,
-    maxIdle: 10,
-    idleTimeout: 60000,
-    queueLimit: 0,
+  globalQueryClient.queryClient = new pg.Pool({
+    connectionString,
+    ssl: connectionString.includes("localhost")
+      ? false
+      : { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 60000,
   });
 }
 
-export const db = drizzle(globalQueryClient.queryClient, { schema, mode: "default" });
+export const db = drizzle(globalQueryClient.queryClient, { schema });
+
