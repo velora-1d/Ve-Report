@@ -6,21 +6,37 @@ import { appConfig as configTable } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+// ponytail: Caching appConfig di memori selama 60 detik untuk mempercepat navigasi tanpa query DB berulang
+let cachedConfigResult: any = null;
+let lastConfigFetchTime = 0;
+
 export const getAppConfig = createServerFn({ method: "GET" }).handler(
   async () => {
+    const now = Date.now();
+    if (cachedConfigResult && now - lastConfigFetchTime < 60000) {
+      return cachedConfigResult;
+    }
+
     const configs = await db.query.appConfig.findMany({
       orderBy: [desc(configTable.updatedAt)],
       limit: 1,
     });
     const cfg = configs[0];
-    if (!cfg) return null;
-    return {
+    if (!cfg) {
+      cachedConfigResult = null;
+      lastConfigFetchTime = now;
+      return null;
+    }
+    const result = {
       ...cfg,
       permissions: cfg.permissions as Record<
         string,
         { menus?: string[]; actions?: Record<string, string[]> }
       >,
     };
+    cachedConfigResult = result;
+    lastConfigFetchTime = now;
+    return result;
   },
 );
 
@@ -94,4 +110,6 @@ export const saveAppConfig = createServerFn({ method: "POST" })
     } else {
       await db.insert(configTable).values(payload);
     }
+    cachedConfigResult = null;
+    lastConfigFetchTime = 0;
   });

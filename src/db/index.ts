@@ -19,6 +19,8 @@ if (!globalQueryClient.queryClient) {
       : { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    keepAlive: true,
   });
 }
 

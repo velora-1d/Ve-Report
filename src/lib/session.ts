@@ -11,9 +11,14 @@ export const getSession = createServerFn({ method: "GET" }).handler(async () => 
   return session;
 });
 
-// ponytail: Caching session di sisi client selama 5 detik untuk mereduksi beban network request server function pada navigasi rute TanStack
+// ponytail: Caching session di sisi client selama 30 detik untuk mereduksi beban network request server function pada navigasi rute TanStack
 let clientSessionCache: any = null;
 let lastSessionFetchTime = 0;
+
+export function clearClientSessionCache() {
+  clientSessionCache = null;
+  lastSessionFetchTime = 0;
+}
 
 export async function getClientSession() {
   if (typeof window === "undefined") {
@@ -21,7 +26,7 @@ export async function getClientSession() {
   }
 
   const now = Date.now();
-  if (clientSessionCache && now - lastSessionFetchTime < 5000) {
+  if (clientSessionCache && now - lastSessionFetchTime < 30000) {
     return clientSessionCache;
   }
 
