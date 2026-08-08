@@ -436,11 +436,11 @@ function AuthPage() {
 
 function translateAuthError(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes("invalid login") || m.includes("invalid credential")) return "Email atau kata sandi salah.";
+  if (m.includes("invalid login") || m.includes("invalid credential") || m.includes("invalid email or password")) return "Email atau kata sandi salah.";
   if (m.includes("email not confirmed")) return "Email belum dikonfirmasi.";
   if (m.includes("already registered") || m.includes("already been registered"))
     return "Email sudah terdaftar. Silakan masuk.";
-  if (m.includes("password"))
+  if (m.includes("password") && (m.includes("short") || m.includes("length") || m.includes("at least")))
     return "Kata sandi tidak valid (minimal 6 karakter).";
   if (m.includes("rate limit"))
     return "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.";
