@@ -539,13 +539,13 @@ function PelacakPage() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label} className="neumorphic-stat border-0">
+            <Card key={s.label} className="transition-all duration-200 hover:shadow-md">
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     {s.label}
                   </span>
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center neumorphic-inset">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-muted/60 border border-border/40">
                     <Icon className={`w-4 h-4 ${s.tone}`} />
                   </div>
                 </div>

@@ -204,11 +204,11 @@ function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-slate-100 dark:border-slate-800 bg-gradient-to-b from-[#FAFCFF] via-white to-[#F0F4FA] dark:from-slate-900 dark:to-slate-950 shadow-[1px_0_24px_rgba(0,119,182,0.025)] transition-all duration-300"
+      className="border-r border-border bg-sidebar text-sidebar-foreground transition-all duration-200"
     >
       <SidebarHeader
         className={
-          isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-5 pb-4"
+          isCollapsed ? "p-2 flex justify-center items-center h-16" : "p-4 pb-3"
         }
       >
         <Link
@@ -216,10 +216,10 @@ function AppSidebar() {
           className={
             isCollapsed
               ? "flex items-center justify-center w-full"
-              : "flex items-center gap-3.5 w-full pl-1.5"
+              : "flex items-center gap-3 w-full pl-1"
           }
         >
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0077B6] to-[#48CAE4] flex items-center justify-center shadow-[0_8px_16px_rgba(0,119,182,0.22)] shrink-0 overflow-hidden transition-all duration-500 hover:scale-105 hover:rotate-6 ring-4 ring-[#90E0EF]/15 relative">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-sm shrink-0 overflow-hidden relative">
             {logoUrl ? (
               <img
                 src={logoUrl}
@@ -227,18 +227,18 @@ function AppSidebar() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <FileText className="w-5 h-5 text-white" strokeWidth={2.5} />
+              <FileText className="w-4 h-4 text-white" strokeWidth={2} />
             )}
           </div>
           {!isCollapsed && (
             <div className="flex flex-col justify-center min-w-0">
               <div
-                className="font-extrabold tracking-tight text-slate-850 dark:text-white text-base leading-tight truncate max-w-[130px]"
+                className="font-bold tracking-tight text-foreground text-sm leading-tight truncate max-w-[130px]"
                 title={appName}
               >
                 {appName}
               </div>
-              <div className="text-[9px] uppercase font-bold tracking-widest text-[#0077B6] dark:text-[#48CAE4] leading-none mt-1">
+              <div className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground leading-none mt-1">
                 Workspace
               </div>
             </div>
@@ -250,8 +250,7 @@ function AppSidebar() {
         {allowedMain.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase px-3.5 py-1.5">
                 Utama
               </SidebarGroupLabel>
             )}
@@ -272,8 +271,7 @@ function AppSidebar() {
         {allowedAdmin.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase px-3.5 py-1.5">
                 Administrasi
               </SidebarGroupLabel>
             )}
@@ -294,8 +292,7 @@ function AppSidebar() {
         {(allowedSettings.length > 0 || (canDev && DEV_NAV.length > 0)) && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-[#0077B6]/50 dark:text-slate-400 uppercase px-3.5 py-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0077B6]/40" />
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase px-3.5 py-1.5">
                 Pengaturan
               </SidebarGroupLabel>
             )}
@@ -502,18 +499,18 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       <SidebarMenuButton
         asChild
         isActive={active}
-        className={`rounded-xl transition-all duration-300 ${
+        className={`rounded-xl transition-all duration-200 ${
           isCollapsed
             ? "justify-center px-0 mx-auto w-10 h-10"
-            : "pl-3.5 py-5.5"
+            : "pl-3.5 py-2.5"
         } ${
           active
             ? isCollapsed
-              ? "bg-[#0077B6]/12 text-[#0077B6] font-bold shadow-[0_4px_12px_-2px_rgba(0,119,182,0.15)] scale-105 border border-[#0077B6]/20"
-              : "bg-gradient-to-r from-[#0077B6]/8 via-[#0077B6]/3 to-transparent text-[#0077B6] font-bold shadow-[inset_3px_0_0_0_#0077B6] scale-[1.01]"
+              ? "bg-primary/10 text-primary font-semibold border border-primary/20"
+              : "bg-primary/10 text-primary font-semibold rounded-xl"
             : isCollapsed
-              ? "text-slate-800 dark:text-slate-200 font-bold hover:bg-[#0077B6]/6 hover:text-[#0077B6] hover:scale-105"
-              : "text-slate-700 dark:text-slate-350 font-bold hover:bg-[#0077B6]/5 hover:text-[#0077B6] hover:translate-x-1 pl-4"
+              ? "text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900"
+              : "text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900"
         }`}
       >
         <Link
@@ -525,14 +522,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
           }
         >
           <Icon
-            strokeWidth={3.0}
-            className={`w-[18px] h-[18px] transition-all duration-300 shrink-0 ${
+            strokeWidth={2.0}
+            className={`w-4 h-4 transition-colors duration-200 shrink-0 ${
               active
-                ? "text-[#0077B6] scale-110 drop-shadow-[0_0_8px_rgba(0,119,182,0.35)]"
-                : "text-slate-900 dark:text-slate-50 hover:text-[#0077B6]"
+                ? "text-primary"
+                : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
             }`}
           />
-          {!isCollapsed && <span className="font-bold">{item.label}</span>}
+          {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
