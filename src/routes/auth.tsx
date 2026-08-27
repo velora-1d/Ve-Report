@@ -78,7 +78,7 @@ function AuthPage() {
     queryFn: () => getAppConfig(),
   });
   const appName = config?.appName || "Log Book";
-  const logoUrl = config?.logoUrl || null;
+  const logoUrl = config?.logoUrl || "/logo.webp";
 
   const { data: divisionsList } = useQuery({
     queryKey: ["divisions-list"],

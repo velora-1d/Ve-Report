@@ -135,7 +135,7 @@ function AppSidebar() {
     queryFn: () => getAppConfig(),
   });
   const appName = config?.appName || "Log Book";
-  const logoUrl = config?.logoUrl || null;
+  const logoUrl = config?.logoUrl || "/logo.webp";
   const permissions =
     (config?.permissions as Record<string, { menus?: string[] }>) || null;
 
